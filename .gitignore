@@ -262,4 +262,9 @@ poetry.toml
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,jupyternotebooks,images
+docs/*
+data/*
+logs/*
+*.pth
+src/semantic_segmentation/unet/trained_models/*
+src/multi-label/*

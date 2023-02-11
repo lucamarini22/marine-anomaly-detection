@@ -1,0 +1,19 @@
+name: marida
+#channel_priority: strict
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pytorch
+  - cudatoolkit
+  - gdal
+  - rasterio
+  - scikit-learn
+  - numpy
+  - tensorboard
+  - torchvision
+  - scikit-image
+  - pandas
+  - pytables
+  - tqdm
+  - matplotlib
