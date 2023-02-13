@@ -33,7 +33,7 @@ def acquire_data(file_name):
 
 
 def tif_2_rgb(file_path: str) -> np.ndarray:
-    img, _ = acquire_data(file_path)
+    img, coords = acquire_data(file_path)
 
     img_b = img[:, :, 1].reshape(img.shape[0], img.shape[1], 1)
     img_g = img[:, :, 2].reshape(img.shape[0], img.shape[1], 1)
@@ -41,6 +41,7 @@ def tif_2_rgb(file_path: str) -> np.ndarray:
 
     img_rgb = np.concatenate((img_r, img_g, img_b), 2)
     img_rgb = img_rgb / img_rgb.max()
+    print(coords)
     return img_rgb
 
 
