@@ -96,7 +96,7 @@ bands_std = np.array(
 ###############################################################
 # Pixel-level Semantic Segmentation Data Loader               #
 ###############################################################
-dataset_path = os.path.join(up(up(up(__file__))), "data")
+dataset_path = os.path.join(up(up(up(up(__file__)))), "data")
 
 
 class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class

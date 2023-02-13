@@ -37,7 +37,7 @@ from dataloader import (
 sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from metrics import Evaluation
 
-root_path = up(up(up(os.path.abspath(__file__))))
+root_path = up(up(up(up(os.path.abspath(__file__)))))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "log_unet.log"),
