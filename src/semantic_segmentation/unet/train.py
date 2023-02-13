@@ -23,6 +23,8 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
+from src.utils.assets import labels
+
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
 from dataloader import (
@@ -37,7 +39,7 @@ from dataloader import (
 sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from metrics import Evaluation
 
-root_path = up(up(up(os.path.abspath(__file__))))
+root_path = up(up(up(up(os.path.abspath(__file__)))))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "log_unet.log"),
@@ -103,13 +105,13 @@ def main(options):
             "train",
             transform=transform_train,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
         dataset_test = GenDEBRIS(
             "val",
             transform=transform_test,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
 
         train_loader = DataLoader(
@@ -142,7 +144,7 @@ def main(options):
             "test",
             transform=transform_test,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
 
         test_loader = DataLoader(
@@ -191,16 +193,37 @@ def main(options):
             torch.cuda.empty_cache()
 
     global class_distr
-    # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["agg_to_water"]:
-        agg_distr = sum(
-            class_distr[-4:]
-        )  # Density of Mixed Water, Wakes, Cloud Shadows, Waves
-        class_distr[6] += agg_distr  # To Water
-        class_distr = class_distr[:-4]  # Drop Mixed Water, Wakes, Cloud Shadows, Waves
+    if options["aggregate_classes"] == "multi":
+        # TODO
+        # Aggregate Distributions:
+        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water','Waves',
+        #   'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
+        agg_distr = sum(class_distr[-8:])
+        class_distr[labels.index("Marine Water")] += agg_distr  # To Water
+        class_distr = class_distr[
+            :-8
+        ]  # Drop class distribution of the aggregated classes
+        # Aggregate Distributions:
+        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic Material'
+        agg_distr = sum(class_distr[1:3])
+        class_distr[
+            labels.index("Natural Organic Material")
+        ] += agg_distr  # To Natural Organic Material
+        class_distr = [class_distr[0]] + class_distr[
+            3:
+        ]  # Drop class distribution of the aggregated classes
+
+    elif options["aggregate_classes"] == "binary":
+        # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
+        agg_distr = sum(class_distr[1:])
+        # Move the class distrib of Others to the 2nd position
+        class_distr[1] = agg_distr
+        # Drop class distribution of the aggregated classes
+        class_distr = class_distr[:2]
 
     # Weighted Cross Entropy Loss & adam optimizer
     weight = gen_weights(class_distr, c=options["weight_param"])
+
     criterion = torch.nn.CrossEntropyLoss(
         ignore_index=-1, reduction="mean", weight=weight.to(device)
     )
@@ -417,10 +440,14 @@ if __name__ == "__main__":
 
     # Options
     parser.add_argument(
-        "--agg_to_water",
-        default=True,
-        type=bool,
-        help="Aggregate Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water",
+        "--aggregate_classes",
+        choices=["multi", "binary", "no"],
+        default="binary",
+        type=str,
+        help="Aggregate classes into:\
+            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
+                binary (Marine Debris and Other); \
+                    no (keep the original 15 classes)",
     )
 
     parser.add_argument("--mode", default="train", help="select between train or test ")
@@ -439,7 +466,7 @@ if __name__ == "__main__":
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
-        "--output_channels", default=11, type=int, help="Number of output classes"
+        "--output_channels", default=2, type=int, help="Number of output classes"
     )
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"

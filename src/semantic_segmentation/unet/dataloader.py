@@ -16,6 +16,7 @@ from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
+from src.utils.assets import cat_mapping, labels
 
 random.seed(0)
 np.random.seed(0)
@@ -96,7 +97,7 @@ bands_std = np.array(
 ###############################################################
 # Pixel-level Semantic Segmentation Data Loader               #
 ###############################################################
-dataset_path = os.path.join(up(up(up(__file__))), "data")
+dataset_path = os.path.join(up(up(up(up(__file__)))), "data")
 
 
 class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
@@ -106,7 +107,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         transform=None,
         standardization=None,
         path=dataset_path,
-        agg_to_water=True,
+        aggregate_classes="multi",
     ):
 
         if mode == "train":
@@ -147,11 +148,30 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             temp = np.copy(ds.ReadAsArray().astype(np.int64))
 
             # Aggregation
-            if agg_to_water:
-                temp[temp == 15] = 7  # Mixed Water to Marine Water Class
-                temp[temp == 14] = 7  # Wakes to Marine Water Class
-                temp[temp == 13] = 7  # Cloud Shadows to Marine Water Class
-                temp[temp == 12] = 7  # Waves to Marine Water Class
+            if aggregate_classes == "multi":
+                # Keep classes: Marine Water, Cloud, Ship, Marine Debris, Algae/Organic Material
+
+                # Aggregate 'Sediment-Laden Water', 'Foam','Turbid Water',
+                # 'Shallow Water','Waves','Cloud Shadows','Wakes',
+                # 'Mixed Water' to 'Marine Water'
+                water_classes_names = labels[-8:]
+                super_water_class_name = labels[6]
+                temp = self.aggregate_classes_to_super_class(
+                    temp, water_classes_names, super_water_class_name
+                )
+
+                # Aggregate 'Dense Sargassum','Sparse Sargassum' to 'Natural Organic Material'
+                algae_classes_names = labels[1:3]
+                super_organic_material_class_name = labels[3]
+                temp = self.aggregate_classes_to_super_class(
+                    temp, algae_classes_names, super_organic_material_class_name
+                )
+
+            elif aggregate_classes == "binary":
+                # Keep classes: Marine Debris and Other
+                # Aggregate all classes (except Marine Debris) to Marine Water Class
+                for idx_class in range(2, len(class_distr) + 1):
+                    temp[temp == idx_class] = 7
 
             # Categories from 1 to 0
             temp = np.copy(temp - 1)
@@ -171,7 +191,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         self.standardization = standardization
         self.length = len(self.y)
         self.path = path
-        self.agg_to_water = agg_to_water
+        self.aggregate_classes = aggregate_classes
 
     def __len__(self):
 
@@ -207,6 +227,13 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             img = self.standardization(img)
 
         return img, target
+
+    def aggregate_classes_to_super_class(
+        self, temp, classes_names_to_aggregate, super_class_name
+    ):
+        for class_name in classes_names_to_aggregate:
+            temp[temp == cat_mapping[class_name]] = cat_mapping[super_class_name]
+        return temp
 
 
 ###############################################################
