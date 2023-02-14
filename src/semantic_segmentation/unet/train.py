@@ -23,7 +23,7 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
-from src.utils.assets import labels
+from src.utils.assets import labels, labels_binary, labels_multi
 
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
@@ -216,8 +216,8 @@ def main(options):
     elif options["aggregate_classes"] == "binary":
         # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
         agg_distr = sum(class_distr[1:])
-        # Move the class distrib of Others to the 2nd position
-        class_distr[1] = agg_distr
+        # Move the class distrib of Other to the 2nd position
+        class_distr[labels_binary.index("Other")] = agg_distr
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[:2]
 
