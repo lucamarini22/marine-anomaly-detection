@@ -296,7 +296,7 @@ def main(options):
             ###############################################################
             # Start Evaluation                                            #
             ###############################################################
-            """
+
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
@@ -384,7 +384,6 @@ def main(options):
                     scheduler.step()
 
                 model.train()
-        """
 
     # CODE ONLY FOR EVALUATION - TESTING MODE !
     elif options["mode"] == "test":
@@ -453,7 +452,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--mode", default="train", help="select between train or test ")
     parser.add_argument(
-        "--epochs", default=20000, type=int, help="Number of epochs to run"  # 45
+        "--epochs", default=3, type=int, help="Number of epochs to run"  # 45
     )
     parser.add_argument("--batch", default=5, type=int, help="Batch size")
     parser.add_argument(

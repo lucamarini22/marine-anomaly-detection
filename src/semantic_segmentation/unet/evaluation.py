@@ -34,7 +34,7 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
-root_path = up(up(up(os.path.abspath(__file__))))
+root_path = up(up(up(up(os.path.abspath(__file__)))))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
@@ -57,15 +57,20 @@ def main(options):
         "test",
         transform=transform_test,
         standardization=standardization,
-        agg_to_water=options["agg_to_water"],
+        aggregate_classes=options["aggregate_classes"],
     )
 
     test_loader = DataLoader(dataset_test, batch_size=options["batch"], shuffle=False)
 
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["agg_to_water"]:
+    if options["aggregate_classes"] == "multi":
+        # TODO
         labels = labels[:-4]  # Drop Mixed Water, Wakes, Cloud Shadows, Waves
+    elif options["aggregate_classes"] == "binary":
+        # Keep only Marine Debris and Others classes
+        labels = labels[:2]
+        labels[1] = "Others"
 
     # Use gpu or cpu
     if torch.cuda.is_available():
@@ -204,10 +209,14 @@ if __name__ == "__main__":
 
     # Options
     parser.add_argument(
-        "--agg_to_water",
-        default=True,
-        type=bool,
-        help="Aggregate Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water",
+        "--aggregate_classes",
+        choices=["multi", "binary", "no"],
+        default="binary",
+        type=str,
+        help="Aggregate classes into:\
+            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
+                binary (Marine Debris and Other); \
+                    no (keep the original 15 classes)",
     )
 
     parser.add_argument("--batch", default=5, type=int, help="Number of epochs to run")
@@ -217,7 +226,7 @@ if __name__ == "__main__":
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
-        "--output_channels", default=11, type=int, help="Number of output classes"
+        "--output_channels", default=2, type=int, help="Number of output classes"
     )
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
@@ -227,7 +236,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)), "trained_models", "730", "model.pth"
+            up(os.path.abspath(__file__)), "trained_models", "2", "model.pth"
         ),
         help="Path to Unet pytorch model",
     )

@@ -171,7 +171,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
                 # Keep classes: Marine Debris and Other
                 # Aggregate all classes (except Marine Debris) to Marine Water Class
                 for idx_class in range(2, len(class_distr) + 1):
-                    temp[temp == idx_class] = 7
+                    temp[temp == idx_class] = 2
 
             # Categories from 1 to 0
             temp = np.copy(temp - 1)
