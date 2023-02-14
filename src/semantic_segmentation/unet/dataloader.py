@@ -226,9 +226,6 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
                     cat_mapping_binary,
                 )
 
-                # for idx_class in range(2, len(class_distr) + 1):
-                #    temp[temp == idx_class] = 2
-
             # Categories from 1 to 0
             temp = np.copy(temp - 1)
             ds = None  # Close file
