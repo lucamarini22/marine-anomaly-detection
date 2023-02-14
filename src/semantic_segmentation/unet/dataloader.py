@@ -156,23 +156,61 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
 
             # Aggregation
             if aggregate_classes == "multi":
-                # TODO
                 # Keep classes: Marine Water, Cloud, Ship, Marine Debris, Algae/Organic Material
+                # Note: make sure you aggregate classes according to the increasing order
+                # specified in assets.
+
+                # Aggregate 'Dense Sargassum','Sparse Sargassum', 'Natural Organic Material' to
+                # Algae/Natural Organic Material
+                algae_classes_names = labels[
+                    labels.index("Dense Sargassum") : labels.index(
+                        "Natural Organic Material"
+                    )
+                    + 1
+                ]
+                super_organic_material_class_name = labels_multi[1]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    algae_classes_names,
+                    super_organic_material_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+                # Aggregate Ship to new position
+                ship_class_name = [labels[4]]
+                super_ship_class_name = labels[4]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    ship_class_name,
+                    super_ship_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+                # Aggregate Clouds to new position
+                clouds_class_name = [labels[5]]
+                super_clouds_class_name = labels[5]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    clouds_class_name,
+                    super_clouds_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
 
                 # Aggregate 'Sediment-Laden Water', 'Foam','Turbid Water',
                 # 'Shallow Water','Waves','Cloud Shadows','Wakes',
                 # 'Mixed Water' to 'Marine Water'
-                water_classes_names = labels[-8:]
+                water_classes_names = labels[-9:]
                 super_water_class_name = labels[6]
-                temp = self.aggregate_classes_to_super_class(
-                    temp, water_classes_names, super_water_class_name
-                )
 
-                # Aggregate 'Dense Sargassum','Sparse Sargassum' to 'Natural Organic Material'
-                algae_classes_names = labels[1:3]
-                super_organic_material_class_name = labels[3]
                 temp = self.aggregate_classes_to_super_class(
-                    temp, algae_classes_names, super_organic_material_class_name
+                    temp,
+                    water_classes_names,
+                    super_water_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
                 )
 
             elif aggregate_classes == "binary":
