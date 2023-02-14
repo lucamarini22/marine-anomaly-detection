@@ -341,7 +341,7 @@ def main(options):
 
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
-                    logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
+                    logging.info("Val loss was: " + str(sum(test_loss) / test_batches))
                     logging.info("STATISTICS AFTER EPOCH " + str(epoch) + ": \n")
                     logging.info("Evaluation: " + str(acc))
 
@@ -353,31 +353,31 @@ def main(options):
                     writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Test loss": sum(test_loss) / test_batches,
+                            "Val loss": sum(test_loss) / test_batches,
                             "Train loss": sum(training_loss) / training_batches,
                         },
                         epoch,
                     )
 
                     writer.add_scalar(
-                        "Precision/test macroPrec", acc["macroPrec"], epoch
+                        "Precision/val macroPrec", acc["macroPrec"], epoch
                     )
                     writer.add_scalar(
-                        "Precision/test microPrec", acc["microPrec"], epoch
+                        "Precision/val microPrec", acc["microPrec"], epoch
                     )
                     writer.add_scalar(
-                        "Precision/test weightPrec", acc["weightPrec"], epoch
+                        "Precision/val weightPrec", acc["weightPrec"], epoch
                     )
 
-                    writer.add_scalar("Recall/test macroRec", acc["macroRec"], epoch)
-                    writer.add_scalar("Recall/test microRec", acc["microRec"], epoch)
-                    writer.add_scalar("Recall/test weightRec", acc["weightRec"], epoch)
+                    writer.add_scalar("Recall/val macroRec", acc["macroRec"], epoch)
+                    writer.add_scalar("Recall/val microRec", acc["microRec"], epoch)
+                    writer.add_scalar("Recall/val weightRec", acc["weightRec"], epoch)
 
-                    writer.add_scalar("F1/test macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/test microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/test weightF1", acc["weightF1"], epoch)
+                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
+                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
+                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
 
-                    writer.add_scalar("IoU/test MacroIoU", acc["IoU"], epoch)
+                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
