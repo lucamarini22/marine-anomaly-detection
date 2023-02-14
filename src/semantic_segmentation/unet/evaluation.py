@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: evaluation.py includes the code in order to produce
-             the evaluation for each class as well as the prediction
-             masks for the pixel-level semantic segmentation.
-"""
-
 import os
 import sys
 import random

@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: dataloader.py includes the appropriate data loader for 
-             pixel-level semantic segmentation.
-"""
-
 import os
 import torch
 import random

@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: train.py includes the training process for the
-             pixel-level semantic segmentation.
-"""
-
 import os
 import ast
 import sys
