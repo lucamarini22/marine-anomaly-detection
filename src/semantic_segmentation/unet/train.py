@@ -296,7 +296,7 @@ def main(options):
             ###############################################################
             # Start Evaluation                                            #
             ###############################################################
-
+            """
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
@@ -384,6 +384,7 @@ def main(options):
                     scheduler.step()
 
                 model.train()
+        """
 
     # CODE ONLY FOR EVALUATION - TESTING MODE !
     elif options["mode"] == "test":
