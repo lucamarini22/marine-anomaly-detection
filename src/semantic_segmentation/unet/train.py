@@ -17,6 +17,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
+import datetime
 
 import torch
 import torchvision.transforms as transforms
@@ -24,6 +25,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
 from src.utils.assets import labels, labels_binary, labels_multi
+from src.utils.utils import get_today_str
 
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
@@ -81,7 +83,9 @@ def main(options):
     g.manual_seed(0)
 
     # Tensorboard
-    writer = SummaryWriter(os.path.join(root_path, "logs", options["tensorboard"]))
+    writer = SummaryWriter(
+        os.path.join(root_path, "logs", options["tensorboard"], options["today_str"])
+    )
 
     # Transformations
 
@@ -443,12 +447,13 @@ def main(options):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    today_str = get_today_str()
 
     # Options
     parser.add_argument(
         "--aggregate_classes",
         choices=["multi", "binary", "no"],
-        default="multi",
+        default="binary",
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -458,7 +463,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--mode", default="train", help="select between train or test ")
     parser.add_argument(
-        "--epochs", default=3, type=int, help="Number of epochs to run"  # 45
+        "--epochs", default=20000, type=int, help="Number of epochs to run"  # 45
     )
     parser.add_argument("--batch", default=5, type=int, help="Batch size")
     parser.add_argument(
@@ -472,7 +477,7 @@ if __name__ == "__main__":
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
-        "--output_channels", default=5, type=int, help="Number of output classes"
+        "--output_channels", default=2, type=int, help="Number of output classes"
     )
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
@@ -503,7 +508,11 @@ if __name__ == "__main__":
     # Evaluation/Checkpointing
     parser.add_argument(
         "--checkpoint_path",
-        default=os.path.join(up(os.path.abspath(__file__)), "trained_models"),
+        default=os.path.join(
+            up(os.path.abspath(__file__)),
+            "trained_models",
+            today_str,
+        ),
         help="folder to save checkpoints into (empty = this folder)",
     )
     parser.add_argument(
@@ -543,6 +552,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    args.today_str = today_str
     options = vars(args)  # convert to ordinary dict
 
     # lr_steps list or single float
