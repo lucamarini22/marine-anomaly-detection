@@ -28,7 +28,7 @@ from dataloader import GenDEBRIS, bands_mean, bands_std
 
 sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from metrics import Evaluation, confusion_matrix
-from assets import labels
+from assets import labels, labels_binary, labels_multi
 
 random.seed(0)
 np.random.seed(0)
@@ -65,12 +65,11 @@ def main(options):
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
     if options["aggregate_classes"] == "multi":
-        # TODO
-        labels = labels[:-4]  # Drop Mixed Water, Wakes, Cloud Shadows, Waves
+        # Keep Marine Debris, Algae/Natural Organic Material, Ship, Clouds, Marine Water classes
+        labels = labels_multi
     elif options["aggregate_classes"] == "binary":
         # Keep only Marine Debris and Others classes
-        labels = labels[:2]
-        labels[1] = "Others"
+        labels = labels_binary
 
     # Use gpu or cpu
     if torch.cuda.is_available():
