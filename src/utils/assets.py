@@ -25,6 +25,11 @@ cat_mapping = {
     "Mixed Water": 15,
 }
 
+cat_mapping_binary = {
+    "Marine Debris": 1,
+    "Other": 2,
+}
+
 cat_mapping_multi = {
     "Marine Debris": 1,
     "Algae/Natural Organic Material": 2,

@@ -194,24 +194,30 @@ def main(options):
 
     global class_distr
     if options["aggregate_classes"] == "multi":
-        # TODO
+        # clone class_distrib tensor
+        class_distr_tmp = class_distr.detach().clone()
         # Aggregate Distributions:
         # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water','Waves',
         #   'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
-        agg_distr = sum(class_distr[-8:])
-        class_distr[labels.index("Marine Water")] += agg_distr  # To Water
-        class_distr = class_distr[
-            :-8
-        ]  # Drop class distribution of the aggregated classes
+        agg_distr_water = sum(class_distr_tmp[-9:])
+
         # Aggregate Distributions:
         # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic Material'
-        agg_distr = sum(class_distr[1:3])
+        agg_distr_algae_nom = sum(class_distr_tmp[1:4])
+
+        agg_distr_ship = class_distr_tmp[labels.index("Ship")]
+        agg_distr_cloud = class_distr_tmp[labels.index("Clouds")]
+
         class_distr[
-            labels.index("Natural Organic Material")
-        ] += agg_distr  # To Natural Organic Material
-        class_distr = [class_distr[0]] + class_distr[
-            3:
-        ]  # Drop class distribution of the aggregated classes
+            labels_multi.index("Algae/Natural Organic Material")
+        ] = agg_distr_algae_nom
+        class_distr[labels_multi.index("Marine Water")] = agg_distr_water
+
+        class_distr[labels_multi.index("Ship")] = agg_distr_ship
+        class_distr[labels_multi.index("Clouds")] = agg_distr_cloud
+
+        # Drop class distribution of the aggregated classes
+        class_distr = class_distr[: len(labels_multi)]
 
     elif options["aggregate_classes"] == "binary":
         # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
@@ -219,7 +225,7 @@ def main(options):
         # Move the class distrib of Other to the 2nd position
         class_distr[labels_binary.index("Other")] = agg_distr
         # Drop class distribution of the aggregated classes
-        class_distr = class_distr[:2]
+        class_distr = class_distr[: len(labels_binary)]
 
     # Weighted Cross Entropy Loss & adam optimizer
     weight = gen_weights(class_distr, c=options["weight_param"])

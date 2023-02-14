@@ -16,7 +16,14 @@ from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
-from src.utils.assets import cat_mapping, labels
+from src.utils.assets import (
+    cat_mapping,
+    cat_mapping_binary,
+    cat_mapping_multi,
+    labels,
+    labels_binary,
+    labels_multi,
+)
 
 random.seed(0)
 np.random.seed(0)
@@ -149,6 +156,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
 
             # Aggregation
             if aggregate_classes == "multi":
+                # TODO
                 # Keep classes: Marine Water, Cloud, Ship, Marine Debris, Algae/Organic Material
 
                 # Aggregate 'Sediment-Laden Water', 'Foam','Turbid Water',
@@ -170,8 +178,18 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             elif aggregate_classes == "binary":
                 # Keep classes: Marine Debris and Other
                 # Aggregate all classes (except Marine Debris) to Marine Water Class
-                for idx_class in range(2, len(class_distr) + 1):
-                    temp[temp == idx_class] = 2
+                other_classes_names = labels[labels_binary.index("Other") :]
+                super_class_name = labels_binary[labels_binary.index("Other")]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    other_classes_names,
+                    super_class_name,
+                    cat_mapping,
+                    cat_mapping_binary,
+                )
+
+                # for idx_class in range(2, len(class_distr) + 1):
+                #    temp[temp == idx_class] = 2
 
             # Categories from 1 to 0
             temp = np.copy(temp - 1)
@@ -229,10 +247,17 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         return img, target
 
     def aggregate_classes_to_super_class(
-        self, temp, classes_names_to_aggregate, super_class_name
+        self,
+        temp,
+        classes_names_to_aggregate,
+        super_class_name,
+        cat_mapping_old,
+        cat_mapping_new,
     ):
         for class_name in classes_names_to_aggregate:
-            temp[temp == cat_mapping[class_name]] = cat_mapping[super_class_name]
+            temp[temp == cat_mapping_old[class_name]] = cat_mapping_new[
+                super_class_name
+            ]
         return temp
 
 
