@@ -225,7 +225,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)), "trained_models", "2", "model.pth"
+            up(os.path.abspath(__file__)),
+            "trained_models",
+            "2023_02_17_H_23_02_04",
+            "500",
+            "model.pth",
         ),
         help="Path to Unet pytorch model",
     )
