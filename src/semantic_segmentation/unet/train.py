@@ -229,9 +229,10 @@ def main(options):
     # criterion = torch.nn.CrossEntropyLoss(
     #    ignore_index=-1, reduction="mean", weight=weight.to(device)
     # )
-    alphas = torch.Tensor(
-        [10, 0.1, 0.8, 0.3, 0.001]
-    )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
+    alphas = 1 - class_distr
+    # alphas = torch.Tensor(
+    #    [0.25, 1]
+    # )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
     criterion = FocalLoss(
         alpha=alphas.to(device),
@@ -455,7 +456,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--aggregate_classes",
         choices=["multi", "binary", "no"],
-        default="multi",
+        default="binary",
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -479,7 +480,7 @@ if __name__ == "__main__":
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
-        "--output_channels", default=5, type=int, help="Number of output classes"
+        "--output_channels", default=2, type=int, help="Number of output classes"
     )
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
