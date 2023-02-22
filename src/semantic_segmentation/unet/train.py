@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: train.py includes the training process for the
-             pixel-level semantic segmentation.
+Initial Implementation: Ioannis Kakogeorgiou
+This modified implementation: Luca Marini
 """
-
 import os
 import ast
 import sys
@@ -17,11 +12,15 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
+import datetime
 
 import torch
 import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
+
+from src.utils.assets import labels, labels_binary, labels_multi
+from src.utils.utils import get_today_str
 
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
@@ -79,7 +78,9 @@ def main(options):
     g.manual_seed(0)
 
     # Tensorboard
-    writer = SummaryWriter(os.path.join(root_path, "logs", options["tensorboard"]))
+    writer = SummaryWriter(
+        os.path.join(root_path, "logs", options["tensorboard"], options["today_str"])
+    )
 
     # Transformations
 
@@ -103,13 +104,13 @@ def main(options):
             "train",
             transform=transform_train,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
         dataset_test = GenDEBRIS(
             "val",
             transform=transform_test,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
 
         train_loader = DataLoader(
@@ -142,7 +143,7 @@ def main(options):
             "test",
             transform=transform_test,
             standardization=standardization,
-            agg_to_water=options["agg_to_water"],
+            aggregate_classes=options["aggregate_classes"],
         )
 
         test_loader = DataLoader(
@@ -157,7 +158,14 @@ def main(options):
             generator=g,
         )
     else:
-        raise
+        raise Exception("The mode option should be 'train or 'test'")
+
+    if options["aggregate_classes"] == "multi":
+        output_channels = len(labels_multi)
+    elif options["aggregate_classes"] == "binary":
+        output_channels = len(labels_binary)
+    else:
+        raise Exception("The aggregated_classes option should be 'binary or 'multi'")
 
     # Use gpu or cpu
 
@@ -168,7 +176,7 @@ def main(options):
 
     model = UNet(
         input_bands=options["input_channels"],
-        output_classes=options["output_channels"],
+        output_classes=output_channels,
         hidden_channels=options["hidden_channels"],
     )
 
@@ -191,16 +199,43 @@ def main(options):
             torch.cuda.empty_cache()
 
     global class_distr
-    # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["agg_to_water"]:
-        agg_distr = sum(
-            class_distr[-4:]
-        )  # Density of Mixed Water, Wakes, Cloud Shadows, Waves
-        class_distr[6] += agg_distr  # To Water
-        class_distr = class_distr[:-4]  # Drop Mixed Water, Wakes, Cloud Shadows, Waves
+    if options["aggregate_classes"] == "multi":
+        # clone class_distrib tensor
+        class_distr_tmp = class_distr.detach().clone()
+        # Aggregate Distributions:
+        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water','Waves',
+        #   'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
+        agg_distr_water = sum(class_distr_tmp[-9:])
+
+        # Aggregate Distributions:
+        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic Material'
+        agg_distr_algae_nom = sum(class_distr_tmp[1:4])
+
+        agg_distr_ship = class_distr_tmp[labels.index("Ship")]
+        agg_distr_cloud = class_distr_tmp[labels.index("Clouds")]
+
+        class_distr[
+            labels_multi.index("Algae/Natural Organic Material")
+        ] = agg_distr_algae_nom
+        class_distr[labels_multi.index("Marine Water")] = agg_distr_water
+
+        class_distr[labels_multi.index("Ship")] = agg_distr_ship
+        class_distr[labels_multi.index("Clouds")] = agg_distr_cloud
+
+        # Drop class distribution of the aggregated classes
+        class_distr = class_distr[: len(labels_multi)]
+
+    elif options["aggregate_classes"] == "binary":
+        # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
+        agg_distr = sum(class_distr[1:])
+        # Move the class distrib of Other to the 2nd position
+        class_distr[labels_binary.index("Other")] = agg_distr
+        # Drop class distribution of the aggregated classes
+        class_distr = class_distr[: len(labels_binary)]
 
     # Weighted Cross Entropy Loss & adam optimizer
     weight = gen_weights(class_distr, c=options["weight_param"])
+
     criterion = torch.nn.CrossEntropyLoss(
         ignore_index=-1, reduction="mean", weight=weight.to(device)
     )
@@ -294,7 +329,7 @@ def main(options):
 
                         # Accuracy metrics only on annotated pixels
                         logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                        logits = logits.reshape((-1, options["output_channels"]))
+                        logits = logits.reshape((-1, output_channels))
                         target = target.reshape(-1)
                         mask = target != -1
                         logits = logits[mask]
@@ -317,7 +352,7 @@ def main(options):
 
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
-                    logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
+                    logging.info("Val loss was: " + str(sum(test_loss) / test_batches))
                     logging.info("STATISTICS AFTER EPOCH " + str(epoch) + ": \n")
                     logging.info("Evaluation: " + str(acc))
 
@@ -329,31 +364,31 @@ def main(options):
                     writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Test loss": sum(test_loss) / test_batches,
+                            "Val loss": sum(test_loss) / test_batches,
                             "Train loss": sum(training_loss) / training_batches,
                         },
                         epoch,
                     )
 
                     writer.add_scalar(
-                        "Precision/test macroPrec", acc["macroPrec"], epoch
+                        "Precision/val macroPrec", acc["macroPrec"], epoch
                     )
                     writer.add_scalar(
-                        "Precision/test microPrec", acc["microPrec"], epoch
+                        "Precision/val microPrec", acc["microPrec"], epoch
                     )
                     writer.add_scalar(
-                        "Precision/test weightPrec", acc["weightPrec"], epoch
+                        "Precision/val weightPrec", acc["weightPrec"], epoch
                     )
 
-                    writer.add_scalar("Recall/test macroRec", acc["macroRec"], epoch)
-                    writer.add_scalar("Recall/test microRec", acc["microRec"], epoch)
-                    writer.add_scalar("Recall/test weightRec", acc["weightRec"], epoch)
+                    writer.add_scalar("Recall/val macroRec", acc["macroRec"], epoch)
+                    writer.add_scalar("Recall/val microRec", acc["microRec"], epoch)
+                    writer.add_scalar("Recall/val weightRec", acc["weightRec"], epoch)
 
-                    writer.add_scalar("F1/test macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/test microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/test weightF1", acc["weightF1"], epoch)
+                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
+                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
+                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
 
-                    writer.add_scalar("IoU/test MacroIoU", acc["IoU"], epoch)
+                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
@@ -384,7 +419,7 @@ def main(options):
 
                 # Accuracy metrics only on annotated pixels
                 logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                logits = logits.reshape((-1, options["output_channels"]))
+                logits = logits.reshape((-1, output_channels))
                 target = target.reshape(-1)
                 mask = target != -1
                 logits = logits[mask]
@@ -414,13 +449,18 @@ def main(options):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    today_str = get_today_str()
 
     # Options
     parser.add_argument(
-        "--agg_to_water",
-        default=True,
-        type=bool,
-        help="Aggregate Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water",
+        "--aggregate_classes",
+        choices=["multi", "binary", "no"],
+        default="binary",
+        type=str,
+        help="Aggregate classes into:\
+            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
+                binary (Marine Debris and Other); \
+                    no (keep the original 15 classes)",
     )
 
     parser.add_argument("--mode", default="train", help="select between train or test ")
@@ -437,9 +477,6 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--input_channels", default=11, type=int, help="Number of input bands"
-    )
-    parser.add_argument(
-        "--output_channels", default=11, type=int, help="Number of output classes"
     )
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
@@ -470,7 +507,11 @@ if __name__ == "__main__":
     # Evaluation/Checkpointing
     parser.add_argument(
         "--checkpoint_path",
-        default=os.path.join(up(os.path.abspath(__file__)), "trained_models"),
+        default=os.path.join(
+            up(os.path.abspath(__file__)),
+            "trained_models",
+            today_str,
+        ),
         help="folder to save checkpoints into (empty = this folder)",
     )
     parser.add_argument(
@@ -510,6 +551,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    args.today_str = today_str
     options = vars(args)  # convert to ordinary dict
 
     # lr_steps list or single float

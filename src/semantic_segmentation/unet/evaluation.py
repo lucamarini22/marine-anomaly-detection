@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: evaluation.py includes the code in order to produce
-             the evaluation for each class as well as the prediction
-             masks for the pixel-level semantic segmentation.
+Initial Implementation: Ioannis Kakogeorgiou
+This modified implementation: Luca Marini
 """
-
 import os
 import sys
 import random
@@ -28,13 +22,13 @@ from dataloader import GenDEBRIS, bands_mean, bands_std
 
 sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from metrics import Evaluation, confusion_matrix
-from assets import labels
+from assets import labels, labels_binary, labels_multi
 
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
-root_path = up(up(up(os.path.abspath(__file__))))
+root_path = up(up(up(up(os.path.abspath(__file__)))))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
@@ -57,15 +51,23 @@ def main(options):
         "test",
         transform=transform_test,
         standardization=standardization,
-        agg_to_water=options["agg_to_water"],
+        aggregate_classes=options["aggregate_classes"],
     )
 
     test_loader = DataLoader(dataset_test, batch_size=options["batch"], shuffle=False)
 
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["agg_to_water"]:
-        labels = labels[:-4]  # Drop Mixed Water, Wakes, Cloud Shadows, Waves
+    if options["aggregate_classes"] == "multi":
+        # Keep Marine Debris, Algae/Natural Organic Material, Ship, Clouds, Marine Water classes
+        labels = labels_multi
+        output_channels = len(labels_multi)
+    elif options["aggregate_classes"] == "binary":
+        # Keep only Marine Debris and Others classes
+        labels = labels_binary
+        output_channels = len(labels_binary)
+    else:
+        raise Exception("The aggregated_classes option should be 'binary or 'multi'")
 
     # Use gpu or cpu
     if torch.cuda.is_available():
@@ -75,7 +77,7 @@ def main(options):
 
     model = UNet(
         input_bands=options["input_channels"],
-        output_classes=options["output_channels"],
+        output_classes=output_channels,
         hidden_channels=options["hidden_channels"],
     )
 
@@ -107,7 +109,7 @@ def main(options):
 
             # Accuracy metrics only on annotated pixels
             logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-            logits = logits.reshape((-1, options["output_channels"]))
+            logits = logits.reshape((-1, output_channels))
             target = target.reshape(-1)
             mask = target != -1
             logits = logits[mask]
@@ -204,10 +206,14 @@ if __name__ == "__main__":
 
     # Options
     parser.add_argument(
-        "--agg_to_water",
-        default=True,
-        type=bool,
-        help="Aggregate Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water",
+        "--aggregate_classes",
+        choices=["multi", "binary", "no"],
+        default="multi",
+        type=str,
+        help="Aggregate classes into:\
+            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
+                binary (Marine Debris and Other); \
+                    no (keep the original 15 classes)",
     )
 
     parser.add_argument("--batch", default=5, type=int, help="Number of epochs to run")
@@ -217,9 +223,6 @@ if __name__ == "__main__":
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
-        "--output_channels", default=11, type=int, help="Number of output classes"
-    )
-    parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
     )
 
@@ -227,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)), "trained_models", "730", "model.pth"
+            up(os.path.abspath(__file__)), "trained_models", "2", "model.pth"
         ),
         help="Path to Unet pytorch model",
     )

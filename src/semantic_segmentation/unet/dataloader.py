@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
-Description: dataloader.py includes the appropriate data loader for 
-             pixel-level semantic segmentation.
+Initial Implementation: Ioannis Kakogeorgiou
+This modified implementation: Luca Marini
 """
-
 import os
 import torch
 import random
@@ -16,6 +11,14 @@ from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
+from src.utils.assets import (
+    cat_mapping,
+    cat_mapping_binary,
+    cat_mapping_multi,
+    labels,
+    labels_binary,
+    labels_multi,
+)
 
 random.seed(0)
 np.random.seed(0)
@@ -106,7 +109,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         transform=None,
         standardization=None,
         path=dataset_path,
-        agg_to_water=True,
+        aggregate_classes="multi",
     ):
 
         if mode == "train":
@@ -147,11 +150,76 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             temp = np.copy(ds.ReadAsArray().astype(np.int64))
 
             # Aggregation
-            if agg_to_water:
-                temp[temp == 15] = 7  # Mixed Water to Marine Water Class
-                temp[temp == 14] = 7  # Wakes to Marine Water Class
-                temp[temp == 13] = 7  # Cloud Shadows to Marine Water Class
-                temp[temp == 12] = 7  # Waves to Marine Water Class
+            if aggregate_classes == "multi":
+                # Keep classes: Marine Water, Cloud, Ship, Marine Debris, Algae/Organic Material
+                # Note: make sure you aggregate classes according to the increasing order
+                # specified in assets.
+
+                # Aggregate 'Dense Sargassum','Sparse Sargassum', 'Natural Organic Material' to
+                # Algae/Natural Organic Material
+                algae_classes_names = labels[
+                    labels.index("Dense Sargassum") : labels.index(
+                        "Natural Organic Material"
+                    )
+                    + 1
+                ]
+                super_organic_material_class_name = labels_multi[1]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    algae_classes_names,
+                    super_organic_material_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+                # Aggregate Ship to new position
+                ship_class_name = [labels[4]]
+                super_ship_class_name = labels[4]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    ship_class_name,
+                    super_ship_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+                # Aggregate Clouds to new position
+                clouds_class_name = [labels[5]]
+                super_clouds_class_name = labels[5]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    clouds_class_name,
+                    super_clouds_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+                # Aggregate 'Sediment-Laden Water', 'Foam','Turbid Water',
+                # 'Shallow Water','Waves','Cloud Shadows','Wakes',
+                # 'Mixed Water' to 'Marine Water'
+                water_classes_names = labels[-9:]
+                super_water_class_name = labels[6]
+
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    water_classes_names,
+                    super_water_class_name,
+                    cat_mapping,
+                    cat_mapping_multi,
+                )
+
+            elif aggregate_classes == "binary":
+                # Keep classes: Marine Debris and Other
+                # Aggregate all classes (except Marine Debris) to Marine Water Class
+                other_classes_names = labels[labels_binary.index("Other") :]
+                super_class_name = labels_binary[labels_binary.index("Other")]
+                temp = self.aggregate_classes_to_super_class(
+                    temp,
+                    other_classes_names,
+                    super_class_name,
+                    cat_mapping,
+                    cat_mapping_binary,
+                )
 
             # Categories from 1 to 0
             temp = np.copy(temp - 1)
@@ -171,7 +239,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         self.standardization = standardization
         self.length = len(self.y)
         self.path = path
-        self.agg_to_water = agg_to_water
+        self.aggregate_classes = aggregate_classes
 
     def __len__(self):
 
@@ -207,6 +275,38 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             img = self.standardization(img)
 
         return img, target
+
+    def aggregate_classes_to_super_class(
+        self,
+        temp: np.ndarray,
+        classes_names_to_aggregate: list[str],
+        super_class_name: str,
+        cat_mapping_old: dict[str, int],
+        cat_mapping_new: dict[str, int],
+    ) -> np.ndarray:
+        """Change the values of pixels of image corresponding to class ids
+        included in classes_names_to_aggregate to the class id of
+        super_class_name.
+
+        Args:
+            temp (np.ndarray): image.
+            classes_names_to_aggregate (list[str]): list of names of the
+              classes to aggregate.
+            super_class_name (str): name of the class that aggregates other 
+              classes.
+            cat_mapping_old (dict[str, int]): dictionary that maps old class 
+              names to their class ids.
+            cat_mapping_new (dict[str, int]): dictionary that maps updated 
+              class names to their updated class ids.
+
+        Returns:
+            np.ndarray: updated image.
+        """
+        for class_name in classes_names_to_aggregate:
+            temp[temp == cat_mapping_old[class_name]] = cat_mapping_new[
+                super_class_name
+            ]
+        return temp
 
 
 ###############################################################
