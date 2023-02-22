@@ -147,9 +147,8 @@ texture_mapping = {
     "Class": 7,
 }
 
+# Confidence level of annotation
 conf_mapping = {"High": 1, "Moderate": 2, "Low": 3}
-
-report_mapping = {"Very close": 1, "Away": 2, "No": 3}
 
 rf_features = [
     "nm440",
