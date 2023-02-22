@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 
 from src.utils.assets import labels, labels_binary, labels_multi
 from src.utils.utils import get_today_str
+from src.semantic_segmentation.unet.focal_loss import FocalLoss
 
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
@@ -236,8 +237,19 @@ def main(options):
     # Weighted Cross Entropy Loss & adam optimizer
     weight = gen_weights(class_distr, c=options["weight_param"])
 
-    criterion = torch.nn.CrossEntropyLoss(
-        ignore_index=-1, reduction="mean", weight=weight.to(device)
+    # criterion = torch.nn.CrossEntropyLoss(
+    #    ignore_index=-1, reduction="mean", weight=weight.to(device)
+    # )
+    alphas = 1 - class_distr
+    # alphas = torch.Tensor(
+    #    [0.25, 1]
+    # )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
+    # alphas = alphas / max(alphas)  # normalize
+    criterion = FocalLoss(
+        alpha=alphas.to(device),
+        gamma=2.0,
+        reduction="mean",
+        ignore_index=-1,
     )
 
     optimizer = torch.optim.Adam(
@@ -478,6 +490,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
+
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
     )

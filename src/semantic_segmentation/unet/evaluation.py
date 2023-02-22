@@ -208,7 +208,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--aggregate_classes",
         choices=["multi", "binary", "no"],
-        default="multi",
+        default="binary",
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -222,6 +222,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
+
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
     )
@@ -230,7 +231,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)), "trained_models", "2", "model.pth"
+            up(os.path.abspath(__file__)),
+            "trained_models",
+            "2023_02_20_H_09_07_57",
+            "312",
+            "model.pth",
         ),
         help="Path to Unet pytorch model",
     )
