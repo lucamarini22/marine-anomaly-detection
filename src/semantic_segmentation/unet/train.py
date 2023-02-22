@@ -155,7 +155,14 @@ def main(options):
             generator=g,
         )
     else:
-        raise
+        raise Exception("The mode option should be 'train or 'test'")
+
+    if options["aggregate_classes"] == "multi":
+        output_channels = len(labels_multi)
+    elif options["aggregate_classes"] == "binary":
+        output_channels = len(labels_binary)
+    else:
+        raise Exception("The aggregated_classes option should be 'binary or 'multi'")
 
     # Use gpu or cpu
 
@@ -166,7 +173,7 @@ def main(options):
 
     model = UNet(
         input_bands=options["input_channels"],
-        output_classes=options["output_channels"],
+        output_classes=output_channels,
         hidden_channels=options["hidden_channels"],
     )
 
@@ -330,7 +337,7 @@ def main(options):
 
                         # Accuracy metrics only on annotated pixels
                         logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                        logits = logits.reshape((-1, options["output_channels"]))
+                        logits = logits.reshape((-1, output_channels))
                         target = target.reshape(-1)
                         mask = target != -1
                         logits = logits[mask]
@@ -420,7 +427,7 @@ def main(options):
 
                 # Accuracy metrics only on annotated pixels
                 logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                logits = logits.reshape((-1, options["output_channels"]))
+                logits = logits.reshape((-1, output_channels))
                 target = target.reshape(-1)
                 mask = target != -1
                 logits = logits[mask]
@@ -479,9 +486,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
-    parser.add_argument(
-        "--output_channels", default=2, type=int, help="Number of output classes"
-    )
+
     parser.add_argument(
         "--hidden_channels", default=16, type=int, help="Number of hidden features"
     )
