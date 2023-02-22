@@ -1,3 +1,8 @@
+"""
+Initial Pytorch Implementation: Alexandre Milesi (https://github.com/milesial/Pytorch-UNet)
+Modified implementation: Ioannis Kakogeorgiou
+This modified implementation: Luca Marini
+"""
 import torch
 import numpy as np
 from torch import nn

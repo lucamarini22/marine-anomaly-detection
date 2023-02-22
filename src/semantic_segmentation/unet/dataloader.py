@@ -1,3 +1,7 @@
+"""
+Initial Implementation: Ioannis Kakogeorgiou
+This modified implementation: Luca Marini
+"""
 import os
 import torch
 import random
