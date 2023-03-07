@@ -3,7 +3,8 @@ import os
 from src.utils.constants import BAND_NAMES_IN_MARIDA, NOT_TO_CONSIDER_MARIDA
 from src.utils.utils import *
 
-TEMP = ["S2_18-9-20_16PCC", "S2_24-3-20_18QYF", "S2_24-3-20_18QYF"]
+# TODO: Remove this
+TEMP = ["S2_24-3-20_18QYF", "S2_24-3-20_18QYF"]
 
 
 def save_marida_and_cop_hub_2_png(
@@ -56,14 +57,9 @@ def save_marida_and_cop_hub_2_png(
                     for band_cop_hub in BAND_NAMES_IN_MARIDA:
 
                         band_marida = get_marida_band_idx(band_cop_hub)
-
-                        # marida_path = os.path.join(
-                        #    marida_patches_path,
-                        #    marida_patch_name,
-                        #    marida_patch_name + separator + number + ext,
-                        # )
+                        # .tif marida patch
                         img_marida, _ = acquire_data(marida_tif_path)
-
+                        # .tif copernicus hub patch
                         img_cop_hub_tif_path = os.path.join(
                             cop_hub_patches_path,
                             marida_patch_folder_name,
@@ -81,12 +77,11 @@ def save_marida_and_cop_hub_2_png(
                             + out_img_ext
                         )
                         img_marida = scale_img_to_0_255(img_marida[:, :, band_marida])
-                        # print(img_marida.shape)
                         save_img(
                             img_marida,
                             os.path.join(output_folder_path, name_marida_img),
                         )
-                        # Saves copernicu hub patch as .png
+                        # Saves copernicus hub patch as .png
                         name_cop_hub_img = (
                             base_name_cop_hub_img
                             + separator
@@ -96,7 +91,6 @@ def save_marida_and_cop_hub_2_png(
                             + out_img_ext
                         )
                         img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
-                        # print(img_cop_hub.shape)
                         save_img(
                             img_cop_hub,
                             os.path.join(output_folder_path, name_cop_hub_img),
@@ -115,9 +109,7 @@ if __name__ == "__main__":
 
     pairs_file_path = "/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs/cop_hub_marida_pairs.txt"
 
-    # number = "6"
     ext = ".tif"
-    # marida_tile_name = "S2_29-8-17_51RVQ"  # "S2_29-11-15_16PEC"
     L1C = "_l1c_"
 
     base_name_marida_img = "mar"
@@ -132,6 +124,7 @@ if __name__ == "__main__":
         base_name_cop_hub_img,
         output_folder_path,
         pairs_file_path,
-        ext,
-        L1C,
+        ext=ext,
+        l1c=L1C,
+        out_img_ext=".png",
     )
