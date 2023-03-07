@@ -1,4 +1,9 @@
+import numpy as np
+import cv2 as cv
+import rasterio
 import datetime
+
+from src.utils.constants import BAND_NAMES_IN_MARIDA
 
 
 def get_patch_name_from_prediction_name(pred_name: str) -> str:
@@ -18,3 +23,98 @@ def get_today_str() -> str:
         .replace("-", "_")
         .replace("T", "_H_")
     )
+
+
+def get_marida_band_idx(band_name: str) -> int:
+    """Gets the index of the marida band given the name of the band.
+
+    Args:
+        band_name (str): name of the band.
+
+    Raises:
+        Exception: raises an exception if the band is unknown.
+        Exception: raises an exception if the band is B09 or B10.
+
+    Returns:
+        int: the index of the corresponding marida band.
+    """
+    if band_name not in BAND_NAMES_IN_MARIDA:
+        raise Exception("Unknown band")
+    elif band_name == "B09" or band_name == "B10":
+        raise Exception("MARIDA removed bands B09 and B10")
+    elif band_name == "B11" or band_name == "B12":
+        # we subtract 2 if it is band B11 or B12 due to the removal of previous bands B09 and B10
+        band_marida_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 2
+    elif band_name == "B8A":
+        band_marida_idx = 8
+    else:
+        band_marida_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+    return band_marida_idx
+
+
+def number_starting_with_zero_2_number(number_str: str) -> str:
+    """Removes the first character of a string if it is a zero
+
+    Args:
+        number_str (str): string version of the number to consider
+
+    Returns:
+        str: string version of the number without the zero
+    """
+    if int(number_str[0]) == 0:
+        number_str = number_str[-1]
+    return number_str
+
+
+def acquire_data(file_name):
+    """Read an L1C Sentinel-2 image from a cropped TIF. The image is represented as TOA reflectance.
+    Args:
+        file_name (str): event ID.
+    Raises:
+        ValueError: impossible to find information on the database.
+    Returns:
+        np.array: array containing B8A, B11, B12 of a Seintel-2 L1C cropped tif.
+        dictionary: dictionary containing lat and lon for every image point.
+    """
+
+    with rasterio.open(file_name) as raster:
+        img_np = raster.read()
+        sentinel_img = img_np.astype(np.float32)
+        height = sentinel_img.shape[1]
+        width = sentinel_img.shape[2]
+        cols, rows = np.meshgrid(np.arange(width), np.arange(height))
+        xs, ys = rasterio.transform.xy(raster.transform, rows, cols)
+        lons = np.array(ys)
+        lats = np.array(xs)
+        coords_dict = {"lat": lats, "lon": lons}
+
+    sentinel_img = sentinel_img.transpose(
+        1, 2, 0
+    )  # / 10000 + 1e-13  # Diving for the default quantification value
+
+    return sentinel_img, coords_dict
+
+
+def scale_img_to_0_255(img: np.ndarray) -> np.ndarray:
+    return ((img - img.min()) * (1 / (img.max() - img.min()) * 255)).astype("uint8")
+
+
+def save_img(img: np.ndarray, path: str):
+    cv.imwrite(path, img)
+
+
+def remove_extension_from_name(name: str, ext: str) -> str:
+    """Removes the extension from a name
+
+    Args:
+        name (str): string of the name that contains the extension
+        ext (str): extension to remove
+
+    Returns:
+        str: updated name without extension
+    """
+    if ext not in name:
+        return name
+    else:
+        len_ext = len(ext)
+        return name[:-len_ext]
