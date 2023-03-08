@@ -267,6 +267,6 @@ data/*
 logs/*
 *.pth
 src/semantic_segmentation/unet/trained_models/*
-src/multi-label/*
 
+src/multi-label/*
 *.npz
