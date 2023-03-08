@@ -1,6 +1,10 @@
 import os
 
-from src.utils.constants import BAND_NAMES_IN_MARIDA, NOT_TO_CONSIDER_MARIDA
+from src.utils.constants import (
+    BAND_NAMES_IN_MARIDA,
+    NOT_TO_CONSIDER_MARIDA,
+    COP_HUB_BASE_NAME,
+)
 from src.utils.utils import *
 
 # TODO: Remove this
@@ -113,7 +117,7 @@ if __name__ == "__main__":
     L1C = "_l1c_"
 
     base_name_marida_img = "mar"
-    base_name_cop_hub_img = "cop_hub"
+    base_name_cop_hub_img = COP_HUB_BASE_NAME
 
     output_folder_path = f"/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
 
