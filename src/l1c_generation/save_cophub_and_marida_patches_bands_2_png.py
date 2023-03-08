@@ -8,7 +8,7 @@ from src.utils.constants import (
 from src.utils.utils import *
 
 # TODO: Remove this
-TEMP = ["S2_24-3-20_18QYF", "S2_24-3-20_18QYF"]
+TEMP = ["S2_24-3-20_18QYF", "S2_29-8-17_51RVQ"]
 
 
 def save_marida_and_cop_hub_2_png(
