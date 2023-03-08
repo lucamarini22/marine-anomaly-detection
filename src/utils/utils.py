@@ -118,3 +118,7 @@ def remove_extension_from_name(name: str, ext: str) -> str:
     else:
         len_ext = len(ext)
         return name[:-len_ext]
+
+
+def get_coords_of_keypoint(keypoint: np.ndarray) -> tuple[float, float]:
+    return keypoint[0], keypoint[1]
