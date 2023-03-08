@@ -8,9 +8,8 @@ from src.utils.constants import (
     NOT_A_MATCH,
     COP_HUB_BASE_NAME,
     HALF_MARIDA_SIZE_X,
-    HALF_MARIDA_SIZE_Y 
+    HALF_MARIDA_SIZE_Y,
 )
-
 
 
 def discard_means_out_of_std_dev(
@@ -45,7 +44,7 @@ def get_band_and_patch_names_from_keypoint_file_name(
 ) -> tuple[str, str]:
     # file_name has the form: dataset_S2_dd-mm-yy_id_num_bandname_...
     tokens = file_name.split(separator)
-    patch_name = tokens[1:5].join(separator)
+    patch_name = separator.join(tokens[1:5])
     band_name = tokens[5]
     dataset_name = tokens[0]
 
@@ -131,7 +130,7 @@ def get_patch_name_and_axis_id_from_key(
     y_axis: str = "y",
 ) -> tuple[str, int]:
     # key has the form: S2_dd-mm-yy_id_num_axis-str-id
-    patch_name = key.split(separator)[:-1].join(separator)
+    patch_name = separator.join(key.split(separator)[:-1])
     axis_str_id = key.split(separator)[-1]
     if axis_str_id == x_axis:
         axis_id = 0
@@ -197,10 +196,10 @@ def compute_and_update_mean_of_diffs(
     for key in patches_mean_diffs:
         # Mean of horizontal or vertical differences of a patch
         mean_diffs = np.mean(patches_mean_diffs[key])
-        print(mean_diffs)
+        # print(mean_diffs)
         # Standard deviation of horizontal or vertical differences of a patch
         std_dev_diffs = np.std(patches_mean_diffs[key])
-        print(std_dev_diffs)
+        # print(std_dev_diffs)
         # Discard differences whose value is not in the interval [mean_diff - std_dev, mean_diff + std_dev]
         # and do this for both horizontal and vertical differences
         discard_means_out_of_std_dev(
@@ -220,68 +219,117 @@ def compute_and_update_mean_of_diffs(
             mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
         )
 
-        print(mean_diff_patch_dict[patch_name])
+    print(mean_diff_patch_dict)
     return mean_diff_patch_dict
 
 
-def apply_shift(mean_diff_patch_dict: dict, cop_hub_png_imgs_path: str,
-                separator: str = "_", out_ext: str = ".png"):
-    for img_file_name in os.listdir(mean_diff_patch_dict):
-        band_name, patch_name, dataset_name = get_band_and_patch_names_from_keypoint_file_name(
-            img_file_name
-        )
-        if dataset_name == COP_HUB_BASE_NAME:
-            patch_img_path = os.path.join(cop_hub_png_imgs_path, img_file_name)
-            
-            mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[patch_name]
-            # Crop a Copernicus Hub patch according to its shift compared to its corresponding MARIDA patch
-            # To do this:
-            # 1. get coordinates of the center of the MARIDA patch
-            # 2. shift them (horizontally and vertically) by the mean of differences previously computed
-            # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
-            
-            # Read Copernicus Hub patch
-            cop_hub_img = cv.imread(patch_img_path, cv.IMREAD_GRAYSCALE)
-            #print(cop_hub_img.shape)
-            # 1. get coordinates of the center of the MARIDA patch
-            center_marida_x = HALF_MARIDA_SIZE_X
-            center_marida_y = HALF_MARIDA_SIZE_Y
-            # 2. shift them (horizontally and vertically) by the mean of differences previously computed
-            corresponding_center_cop_hub_x = center_marida_x + mean_diffs_x
-            corresponding_center_cop_hub_y = center_marida_y + mean_diffs_y
-            # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
-            cop_hub_2_marida_img = cop_hub_img[
-                corresponding_center_cop_hub_y
-                - HALF_MARIDA_SIZE_Y : corresponding_center_cop_hub_y
-                + HALF_MARIDA_SIZE_Y,
-                corresponding_center_cop_hub_x
-                - HALF_MARIDA_SIZE_X : corresponding_center_cop_hub_x
-                + HALF_MARIDA_SIZE_X,
-            ]
-            
-            output_shifted_img_path = COP_HUB_BASE_NAME + separator + patch_name \
-                + band_name + separator + "shifted" + out_ext
-            save_img(cop_hub_2_marida_img, os.path.join(cop_hub_png_imgs_path, output_shifted_img_path))
-        
-            # TODO: collect each band of a patch (collect also band B09 and B10 that were 
-            # escluded and apply shift on those), and save patch as a tif
+def shift_and_crop_cophub_images(
+    mean_diff_patch_dict: dict,
+    cop_hub_png_input_imgs_path: str,
+    cop_hub_png_output_imgs_path: str,
+    separator: str = "_",
+    out_ext: str = ".png",
+):
+    """Shifts and crops Copernicus Hub images to make them similar to MARIDA images.
+
+    Args:
+        mean_diff_patch_dict (dict): dictionary with each key corresponding to a
+          tuple containing the mean horizontal and mean
+          verical difference between all matching keypoints of all bands of a patch.
+        cop_hub_png_input_imgs_path (str): path to images that are not yet shifted and cropped.
+        cop_hub_png_output_imgs_path (str): path to store shifted and cropped images.
+        separator (str, optional): separator. Defaults to "_".
+        out_ext (str, optional): extension of output images. Defaults to ".png".
+    """
+    # Creates folder where to store output images if it does not exist
+    if not os.path.exists(cop_hub_png_output_imgs_path):
+        os.makedirs(cop_hub_png_output_imgs_path)
+    # Cycles through all input images
+    for img_file_name in os.listdir(cop_hub_png_input_imgs_path):
+        # Considers only images with out_ext extension
+        if img_file_name.endswith(out_ext):
+            # Removes extension from name
+            img_file_name_without_ext = img_file_name.replace(out_ext, "")
+            (
+                band_name,
+                patch_name,
+                dataset_name,
+            ) = get_band_and_patch_names_from_keypoint_file_name(
+                img_file_name_without_ext
+            )
+            if dataset_name == COP_HUB_BASE_NAME:
+                patch_img_path = os.path.join(
+                    cop_hub_png_input_imgs_path, img_file_name
+                )
+
+                mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[patch_name]
+                # Crop a Copernicus Hub patch according to its shift compared to its corresponding MARIDA patch
+                # To do this:
+                # 1. get coordinates of the center of the MARIDA patch
+                # 2. shift them (horizontally and vertically) by the mean of differences previously computed
+                # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
+
+                # Read Copernicus Hub patch
+                cop_hub_img = cv.imread(patch_img_path, cv.IMREAD_GRAYSCALE)
+                # print(cop_hub_img.shape)
+                # 1. get coordinates of the center of the MARIDA patch
+                center_marida_x = HALF_MARIDA_SIZE_X
+                center_marida_y = HALF_MARIDA_SIZE_Y
+                # 2. shift them (horizontally and vertically) by the mean of differences previously computed
+                corresponding_center_cop_hub_x = center_marida_x - mean_diffs_x
+                corresponding_center_cop_hub_y = center_marida_y - mean_diffs_y
+                # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
+                cop_hub_2_marida_img = cop_hub_img[
+                    corresponding_center_cop_hub_y
+                    - HALF_MARIDA_SIZE_Y : corresponding_center_cop_hub_y
+                    + HALF_MARIDA_SIZE_Y,
+                    corresponding_center_cop_hub_x
+                    - HALF_MARIDA_SIZE_X : corresponding_center_cop_hub_x
+                    + HALF_MARIDA_SIZE_X,
+                ]
+
+                output_shifted_img_path = (
+                    COP_HUB_BASE_NAME
+                    + separator
+                    + patch_name
+                    + band_name
+                    + separator
+                    + "shifted"
+                    + out_ext
+                )
+                save_img(
+                    cop_hub_2_marida_img,
+                    os.path.join(cop_hub_png_output_imgs_path, output_shifted_img_path),
+                )
+
+                # TODO: collect each band of a patch (collect also band B09 and B10 that were
+                # escluded and apply shift on those), and save patch as a tif
 
 
 if __name__ == "__main__":
-    path_keypoints_folder = "./keypoints_pairs/"
-    cop_hub_png_imgs_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
-
-
-
-    patches_mean_diffs = get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
-        path_keypoints_folder,
-        keypoint_file_ext = ".npz",
-        separator = "_",
-        exclude_band_1 = True,
+    path_keypoints_folder = (
+        "/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs"
     )
-    
+    cop_hub_png_input_imgs_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
+    cop_hub_png_output_imgs_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching/"
+
+    patches_mean_diffs = (
+        get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
+            path_keypoints_folder,
+            keypoint_file_ext=".npz",
+            separator="_",
+            exclude_band_1=True,
+        )
+    )
+
     mean_diff_patch_dict = compute_and_update_mean_of_diffs(
         patches_mean_diffs,
-    )   
-    
-    apply_shift(mean_diff_patch_dict, cop_hub_png_imgs_path)
+    )
+
+    shift_and_crop_cophub_images(
+        mean_diff_patch_dict,
+        cop_hub_png_input_imgs_path,
+        cop_hub_png_output_imgs_path,
+        separator="_",
+        out_ext=".png",
+    )
