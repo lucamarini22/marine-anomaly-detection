@@ -1,5 +1,7 @@
 If you want to crop the L1C patches taken from Copernicus Hub into the ones of [Marida](https://marine-debris.github.io/index.html), you need to:
 
+* generate l1c images
+
 * run save_cophub_and_marida_patches_bands_2_png.py
 
 * clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder;
