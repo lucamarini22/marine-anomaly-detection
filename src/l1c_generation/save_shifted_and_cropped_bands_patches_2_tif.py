@@ -87,15 +87,15 @@ class PatchesBandsConcatenator:
                 self.init_patch(patch_name)
                 self.add_band_to_patch(patch_name, band_name, band_img)
 
-    def save_patches(self, out_folder_tif: str, marida_patch_folder: str):
+    def save_patches(self, out_folder_tif: str, marida_file_path: str):
         """Saves all patches saved in self.patches_dict as .tif
         files into out_folder_tif folder.
 
         Args:
             out_folder_tif (str): path of the folder that will contain .tif
               files of patches.
-            marida_patch_folder (str): path of the folder that contains marida
-              .tif patches. This is needed to read the metadata of a marida
+            marida_patch_folder (str): path to a marida .tif patch. This
+              parameter is needed to read the metadata of a marida
               patch and then update it.
         """
         with rasterio.open(marida_file_path) as src:
@@ -110,7 +110,6 @@ class PatchesBandsConcatenator:
                 "count": len(BAND_NAMES_IN_COPERNICUS_HUB),
             }
         )
-        # TODO: add band 9 and 10
         for patch_name in self.patches_dict:
             print(self.patches_dict[patch_name].shape)
             with rasterio.open(

@@ -2,6 +2,7 @@ import os
 
 from src.utils.constants import (
     BAND_NAMES_IN_MARIDA,
+    BAND_NAMES_IN_COPERNICUS_HUB,
     NOT_TO_CONSIDER_MARIDA,
     COP_HUB_BASE_NAME,
 )
@@ -64,35 +65,41 @@ def save_marida_and_cop_hub_2_png(
                         marida_patch_name + ext,
                     )
 
-                    for band_cop_hub in BAND_NAMES_IN_MARIDA:
+                    for (
+                        band_cop_hub
+                    ) in BAND_NAMES_IN_COPERNICUS_HUB:
 
-                        band_marida = get_marida_band_idx(band_cop_hub)
-                        # .tif marida patch
-                        img_marida, _ = acquire_data(marida_tif_path)
-                        # .tif copernicus hub patch
-                        img_cop_hub_tif_path = os.path.join(
-                            cop_hub_patches_path,
-                            marida_patch_folder_name,
-                            marida_patch_name,
-                            marida_patch_name + l1c + band_cop_hub + ext,
-                        )
+                        if band_cop_hub in BAND_NAMES_IN_MARIDA:
+                            band_marida = get_marida_band_idx(band_cop_hub)
+                            # .tif marida patch
+                            img_marida, _ = acquire_data(marida_tif_path)
+                            # .tif copernicus hub patch
+                            img_cop_hub_tif_path = os.path.join(
+                                cop_hub_patches_path,
+                                marida_patch_folder_name,
+                                marida_patch_name,
+                                marida_patch_name + l1c + band_cop_hub + ext,
+                            )
+                            img_marida = scale_img_to_0_255(
+                                img_marida[:, :, band_marida]
+                            )
+                            # Saves marida patch as .png
+                            name_marida_img = (
+                                base_name_marida_img
+                                + separator
+                                + marida_patch_name
+                                + separator
+                                + band_cop_hub
+                                + out_img_ext
+                            )
+                            save_img(
+                                img_marida,
+                                os.path.join(
+                                    output_folder_path, name_marida_img
+                                ),
+                            )
                         img_cop_hub, _ = acquire_data(img_cop_hub_tif_path)
-                        # Saves marida patch as .png
-                        name_marida_img = (
-                            base_name_marida_img
-                            + separator
-                            + marida_patch_name
-                            + separator
-                            + band_cop_hub
-                            + out_img_ext
-                        )
-                        img_marida = scale_img_to_0_255(
-                            img_marida[:, :, band_marida]
-                        )
-                        save_img(
-                            img_marida,
-                            os.path.join(output_folder_path, name_marida_img),
-                        )
+
                         # Saves copernicus hub patch as .png
                         name_cop_hub_img = (
                             base_name_cop_hub_img
@@ -107,12 +114,16 @@ def save_marida_and_cop_hub_2_png(
                             img_cop_hub,
                             os.path.join(output_folder_path, name_cop_hub_img),
                         )
-                        # Updates the file containing all the pairs of
-                        # corresponding copernicus hub and marida names
-                        with open(pairs_file_path, "a") as myfile:
-                            myfile.write(
-                                name_marida_img + " " + name_cop_hub_img + "\n"
-                            )
+                        if band_cop_hub in BAND_NAMES_IN_MARIDA:
+                            # Updates the file containing all the pairs of
+                            # corresponding copernicus hub and marida names
+                            with open(pairs_file_path, "a") as myfile:
+                                myfile.write(
+                                    name_marida_img
+                                    + " "
+                                    + name_cop_hub_img
+                                    + "\n"
+                                )
 
 
 if __name__ == "__main__":
