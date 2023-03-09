@@ -24,7 +24,11 @@ def save_marida_and_cop_hub_2_png(
     l1c: str = "_l1c_",
     separator: str = "_",
 ):
-    """_summary_
+    """Saves marida and corresponding larger copernicus hub bands of patches
+    from .tif files to .png files that will be then (outside from this script)
+    be passed to a keypoint matching algorithm to then be able to estimate the
+    shift between corresponding marida and copernicus hub bands to correct the
+    latter ones.
 
     Args:
         marida_patches_path (str): path to the folder containing all marida
@@ -65,9 +69,7 @@ def save_marida_and_cop_hub_2_png(
                         marida_patch_name + ext,
                     )
 
-                    for (
-                        band_cop_hub
-                    ) in BAND_NAMES_IN_COPERNICUS_HUB:
+                    for band_cop_hub in BAND_NAMES_IN_COPERNICUS_HUB:
 
                         if band_cop_hub in BAND_NAMES_IN_MARIDA:
                             band_marida = get_marida_band_idx(band_cop_hub)

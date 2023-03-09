@@ -14,6 +14,30 @@ from src.utils.constants import (
 
 
 class ShifterAndCropperCopHub:
+    """ShifterAndCropperCopHub shifts and crops copernicus hub patches to make
+    them correspond to marida patches.
+
+    The provided copernicus hub patches are
+    larger than the marida ones. Thus, the mean and standard deviation of the
+    horizontal and vertical shifts among matching keypoints of all bands of
+    cop hub and marida patches is computed. In particular, bands B09 and B10
+    are not considered since marida does not have them. There is also an
+    option to exclude band B01 too when computing the mean and standard
+    deviation since that band tends to have too many keypoints that do not
+    match perfectly.
+
+    Then, all horizontal and vertical differences whose value is not in the
+    interval [mean_diff - std_dev, mean_diff + std_dev] are discarded.
+
+    The mean of horizontal and verical shifts is therefore recomputed and
+    will be used as shift factors. The horizontal and vertical shift factors
+    are applied to the coordinates of the center of the marida patch, and
+    the copernicus hub patch will be cropped by setting the shifted marida
+    center coordinates as center and size equal to the marida patch size.
+
+    The copernicus hub patches are lastly saved as .png files.
+    """
+
     def __init__(
         self,
         path_keypoints_folder: str,
