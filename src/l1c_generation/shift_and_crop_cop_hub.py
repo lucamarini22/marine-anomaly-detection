@@ -50,17 +50,6 @@ class ShifterAndCropperCopHub:
     def is_first_band(self, band_name: str) -> bool:
         return band_name == "B01"
 
-    def get_band_and_patch_names_from_keypoint_file_name(
-        self, file_name: str, separator: str = "_"
-    ) -> tuple[str, str]:
-        # file_name has the form: dataset_S2_dd-mm-yy_id_num_bandname_...
-        tokens = file_name.split(separator)
-        patch_name = separator.join(tokens[1:5])
-        band_name = tokens[5]
-        dataset_name = tokens[0]
-
-        return band_name, patch_name, dataset_name
-
     def get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
         self,
         path_keypoints_folder: str,
@@ -96,11 +85,7 @@ class ShifterAndCropperCopHub:
             # Considers only keypoint files
             if keypoint_file_name.endswith(keypoint_file_ext):
 
-                (
-                    band_name,
-                    patch_name,
-                    _,
-                ) = self.get_band_and_patch_names_from_keypoint_file_name(
+                (band_name, patch_name, _, _) = get_band_and_patch_names_from_file_name(
                     keypoint_file_name, separator
                 )
 
@@ -274,9 +259,8 @@ class ShifterAndCropperCopHub:
                     band_name,
                     patch_name,
                     dataset_name,
-                ) = self.get_band_and_patch_names_from_keypoint_file_name(
-                    img_file_name_without_ext
-                )
+                    _
+                ) = get_band_and_patch_names_from_file_name(img_file_name_without_ext)
                 if dataset_name == COP_HUB_BASE_NAME:
                     patch_img_path = os.path.join(
                         cop_hub_png_input_imgs_path, img_file_name

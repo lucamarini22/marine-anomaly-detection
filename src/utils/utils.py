@@ -3,7 +3,7 @@ import cv2 as cv
 import rasterio
 import datetime
 
-from src.utils.constants import BAND_NAMES_IN_MARIDA
+from src.utils.constants import BAND_NAMES_IN_MARIDA, BAND_NAMES_IN_COPERNICUS_HUB
 
 
 def get_patch_name_from_prediction_name(pred_name: str) -> str:
@@ -23,6 +23,27 @@ def get_today_str() -> str:
         .replace("-", "_")
         .replace("T", "_H_")
     )
+
+
+def get_cop_hub_band_idx(band_name: str) -> int:
+    """Gets the index of the copernicus hub band given the name of the band.
+
+    Args:
+        band_name (str): name of the band.
+
+    Raises:
+        Exception: raises an exception if the band is unknown.
+
+    Returns:
+        int: the index of the corresponding marida band.
+    """
+    if band_name not in BAND_NAMES_IN_COPERNICUS_HUB:
+        raise Exception("Unknown band")
+    elif band_name == "B8A":
+        band_cop_hub_idx = 8
+    else:
+        band_cop_hub_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+    return band_cop_hub_idx
 
 
 def get_marida_band_idx(band_name: str) -> int:
@@ -122,3 +143,16 @@ def remove_extension_from_name(name: str, ext: str) -> str:
 
 def get_coords_of_keypoint(keypoint: np.ndarray) -> tuple[float, float]:
     return keypoint[0], keypoint[1]
+
+
+def get_band_and_patch_names_from_file_name(
+    file_name: str, separator: str = "_"
+) -> tuple[str, str]:
+    # file_name has the form: dataset_S2_dd-mm-yy_id_num_bandname_...
+    tokens = file_name.split(separator)
+    patch_name = separator.join(tokens[1:5])
+    band_name = tokens[5]
+    dataset_name = tokens[0]
+    number = tokens[4]
+
+    return band_name, patch_name, dataset_name, number
