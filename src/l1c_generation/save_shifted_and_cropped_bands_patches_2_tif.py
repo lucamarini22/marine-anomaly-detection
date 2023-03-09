@@ -3,7 +3,12 @@ import numpy as np
 import cv2 as cv
 import rasterio
 
-from src.utils.constants import COP_HUB_BANDS, MARIDA_SIZE_X, MARIDA_SIZE_Y, BAND_NAMES_IN_COPERNICUS_HUB
+from src.utils.constants import (
+    COP_HUB_BANDS,
+    MARIDA_SIZE_X,
+    MARIDA_SIZE_Y,
+    BAND_NAMES_IN_COPERNICUS_HUB,
+)
 from src.utils.utils import (
     get_cop_hub_band_idx,
     get_band_and_patch_names_from_file_name,
@@ -15,10 +20,11 @@ class PatchesBandsConcatenator:
       - key correspond to a patch name
       - value correspond to a matrix containing the 13 bands of the patch
     PatchesBandsConcatenator is used to:
-      - store the patches in this dictionary by reading each band 
+      - store the patches in this dictionary by reading each band
         separately from an image file
       - save all the stored patches as .tif files
     """
+
     def __init__(self, bands_images_folder_path: str, input_ext: str = ".png") -> None:
         self.patches_dict = {}
         self.bands_images_folder_path = bands_images_folder_path
@@ -74,19 +80,17 @@ class PatchesBandsConcatenator:
                 self.add_band_to_patch(patch_name, band_name, band_img)
 
     def save_patches(self, out_folder_tif: str, marida_patch_folder: str):
-        """Saves all patches saved in self.patches_dict as .tif 
-        files into out_folder_tif folder. 
+        """Saves all patches saved in self.patches_dict as .tif
+        files into out_folder_tif folder.
 
         Args:
-            out_folder_tif (str): path of the folder that will contain .tif 
+            out_folder_tif (str): path of the folder that will contain .tif
               files of patches.
             marida_patch_folder (str): path of the folder that contains marida
               .tif patches. This is needed to read the metadata of a marida patch
               and then update it.
         """
-        with rasterio.open(
-            marida_file_path 
-        ) as src:
+        with rasterio.open(marida_file_path) as src:
             meta = src.read()
             meta = src.profile
 
@@ -102,9 +106,7 @@ class PatchesBandsConcatenator:
         for patch_name in self.patches_dict:
             print(self.patches_dict[patch_name].shape)
             with rasterio.open(
-                os.path.join(out_folder_tif, patch_name + ".tif"),
-                "w",
-                **meta
+                os.path.join(out_folder_tif, patch_name + ".tif"), "w", **meta
             ) as dst:
                 dst.write(np.moveaxis(self.patches_dict[patch_name], -1, 0))
 
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     marida_file_path = "/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif"
     bands_images_folder_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching"
     out_folder_tif = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
-    
+
     patches_bands_concatenator = PatchesBandsConcatenator(bands_images_folder_path)
     patches_bands_concatenator.add_patches()
     patches_bands_concatenator.save_patches(out_folder_tif, marida_file_path)
