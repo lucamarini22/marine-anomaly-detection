@@ -39,6 +39,9 @@ def get_cop_hub_band_idx(band_name: str) -> int:
     """
     if band_name not in BAND_NAMES_IN_COPERNICUS_HUB:
         raise Exception("Unknown band")
+    if band_name == "B09" or band_name == "B10" \
+        or band_name == "B11" or band_name == "B12":
+        band_cop_hub_idx = int(number_starting_with_zero_2_number(band_name[-2:]))
     elif band_name == "B8A":
         band_cop_hub_idx = 8
     else:

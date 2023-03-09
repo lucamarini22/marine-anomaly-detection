@@ -9,3 +9,4 @@ If you want to crop the L1C patches taken from Copernicus Hub into the ones of [
   * add `--viz` to save the visualization of matched keypoints. A red line between two keypoints indicates more confidence.
 
 * run shift_and_crop_cop_hub_images.py
+* run save_shifted_and_cropped_bands_patches_2_tif.py

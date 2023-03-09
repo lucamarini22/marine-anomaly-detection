@@ -64,24 +64,44 @@ class PatchesBandsConcatenator:
 
                 self.init_patch(patch_name)
                 self.add_band_to_patch(patch_name, band_name, band_img)
-                
-    
-    def save_patches(self, out_folder_tif: str):
+
+    def save_patches(self, out_folder_tif: str, marida_patch_folder: str):
+        with rasterio.open(
+            marida_file_path 
+        ) as src:
+            meta = src.read()
+            meta = src.profile
+
+        meta.update(
+            {
+                "height": MARIDA_SIZE_Y,
+                "width": MARIDA_SIZE_Y,
+                "dtype": np.uint8,
+                "count": 13,
+            }
+        )
+        # TODO: add band 9 and 10
         for patch_name in self.patches_dict:
+            print(self.patches_dict[patch_name].shape)
             with rasterio.open(
-                out_folder_tif,
+                os.path.join(out_folder_tif, patch_name + ".tif"),
                 "w",
-                height=MARIDA_SIZE_Y,
-                width=MARIDA_SIZE_Y,
-                dtype=np.uint8,
+                **meta
+                # height=MARIDA_SIZE_Y,
+                # width=MARIDA_SIZE_Y,
+                # dtype=np.uint8,
+                # driver="GTiff",
+                # count=13,
             ) as dst:
-                dst.write(self.patches_dict[patch_name], 13)
-    
-            
+                dst.write(np.moveaxis(self.patches_dict[patch_name], -1, 0))
+
 
 if __name__ == "__main__":
+    # TODO: change this variable into the actual folder name path and add os.path.join inside function save_patches
+    marida_file_path = r"C:\Users\lucam\OneDrive\Documenti\KTH\2nd_year\ESA_Thesis\MARIDA\patches\S2_1-12-19_48MYU\S2_1-12-19_48MYU_0.tif"
     bands_images_folder_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching"
     out_folder_tif = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
+    
     patches_bands_concatenator = PatchesBandsConcatenator(bands_images_folder_path)
     patches_bands_concatenator.add_patches()
-    patches_bands_concatenator.save_patches(out_folder_tif)
+    patches_bands_concatenator.save_patches(out_folder_tif, marida_file_path)
