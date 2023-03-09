@@ -64,12 +64,15 @@ class ShifterAndCropperCopHub:
         keypoints of a patch.
 
         Args:
-            path_keypoints_folder (str): path to the folder containing all keypoint files.
-            keypoint_file_ext (str, optional): extension of a keypoint file. Defaults to ".npz".
-            separator (str, optional): separator of a patch name. Defaults to "_".
-            exclude_band_1 (bool, optional): True to not get the horizontal and vertical
-            differences of keypoints of band B01 because its keypoint matches are less
-            stable. Defaults to True.
+            path_keypoints_folder (str): path to the folder containing all
+              keypoint files.
+            keypoint_file_ext (str, optional): extension of a keypoint file.
+              Defaults to ".npz".
+            separator (str, optional): separator of a patch name. Defaults
+              to "_".
+            exclude_band_1 (bool, optional): True to not get the horizontal
+              and vertical differences of keypoints of band B01 because its
+              keypoint matches are less stable. Defaults to True.
             x_axis (str): x axis string id.
             y_axis (str): y axis string id.
 
@@ -85,7 +88,12 @@ class ShifterAndCropperCopHub:
             # Considers only keypoint files
             if keypoint_file_name.endswith(keypoint_file_ext):
 
-                (band_name, patch_name, _, _) = get_band_and_patch_names_from_file_name(
+                (
+                    band_name,
+                    patch_name,
+                    _,
+                    _,
+                ) = get_band_and_patch_names_from_file_name(
                     keypoint_file_name, separator
                 )
 
@@ -105,8 +113,9 @@ class ShifterAndCropperCopHub:
                     for idx_keypoint_0, idx_keypoint_1 in enumerate(
                         keypoints["matches"]
                     ):
-                        # For each keypoint in keypoints0, the matches array indicates the index of
-                        # the matching keypoint in keypoints1, or -1 if the keypoint is unmatched.
+                        # For each keypoint in keypoints0, the matches array
+                        # indicates the index of the matching keypoint in
+                        # keypoints1, or -1 if the keypoint is unmatched.
                         if idx_keypoint_1 != NOT_A_MATCH:
                             # Get coordinates of matched keypoints
                             keypont_0_x, keypont_0_y = get_coords_of_keypoint(
@@ -115,7 +124,8 @@ class ShifterAndCropperCopHub:
                             keypont_1_x, keypont_1_y = get_coords_of_keypoint(
                                 keypoints["keypoints1"][idx_keypoint_1]
                             )
-                            # Get signed horizontal and vertical differences of corrdinates of matched keypoints
+                            # Get signed horizontal and vertical differences
+                            # of corrdinates of matched keypoints
                             diff_x = keypont_0_x - keypont_1_x
                             diff_y = keypont_0_y - keypont_1_y
                             # Update lists of differences
@@ -150,25 +160,30 @@ class ShifterAndCropperCopHub:
         default_hor_diff_mean: float = 0.0,
         default_vert_diff_mean: float = 0.0,
     ):
-        """Updates the horizontal or the vertical mean contained in the value (tuple) of a dictionary
-        corresponding to key.
+        """Updates the horizontal or the vertical mean contained in the value
+        (tuple) of a dictionary corresponding to key.
 
         Args:
-            mean_diff_patch_dict (dict): dictionary with each key corresponding to a
-            tuple containing the mean horizontal and mean
-            verical difference between all matching keypoints of all bands of a patch.
+            mean_diff_patch_dict (dict): dictionary with each key
+              corresponding to a tuple containing the mean horizontal and mean
+              verical difference between all matching keypoints of all bands
+              of a patch.
             key (str): patch name.
-            new_mean_value (float): updated mean of horizontal or vertical differences.
+            new_mean_value (float): updated mean of horizontal or vertical
+              differences.
             axis_id (int): int id of axis. 0 for x axis, 1 for y axis.
-            default_hor_diff_mean (float, optional): default vale for horizontal mean of differences.
-            Defaults to 0.0.
-            default_vert_diff_mean (float, optional): default vale for vertical mean of differences.
+            default_hor_diff_mean (float, optional): default vale for
+              horizontal mean of differences. Defaults to 0.0.
+            default_vert_diff_mean (float, optional): default vale for
+              vertical mean of differences.
             Defaults to 0.0.
         """
         current_hor_and_vert_mean_values = mean_diff_patch_dict.setdefault(
             key, (default_hor_diff_mean, default_vert_diff_mean)
         )
-        current_hor_and_vert_mean_values = list(current_hor_and_vert_mean_values)
+        current_hor_and_vert_mean_values = list(
+            current_hor_and_vert_mean_values
+        )
         current_hor_and_vert_mean_values[axis_id] = new_mean_value
         mean_diff_patch_dict[key] = tuple(current_hor_and_vert_mean_values)
 
@@ -183,36 +198,41 @@ class ShifterAndCropperCopHub:
         """Computes the mean of the differences of matching keypoints of patches.
 
         Args:
-            patches_mean_diffs (dict): dictionary with each key corresponding to a
-            list of horizontal (or vertical) differences of matched
-            keypoints of a patch.
+            patches_mean_diffs (dict): dictionary with each key corresponding
+              to a list of horizontal (or vertical) differences of matched
+              keypoints of a patch.
             output_path_csv_dict (str): path where to store patches_mean_diffs
             dictionary as a csv file.
-            separator (str, optional): separator of a patch name. Defaults to "_".
+            separator (str, optional): separator of a patch name. Defaults to
+              "_".
             x_axis (str): x axis string id.
             y_axis (str): y axis string id.
 
         Returns:
             dict: dictionary with each key corresponding to a
             tuple containing the mean horizontal and mean
-            verical difference between all matching keypoints of all bands of a patch.
+            verical difference between all matching keypoints of all bands of
+            a patch.
         """
         mean_diff_patch_dict = {}
         for key in patches_mean_diffs:
             # Mean of horizontal or vertical differences of a patch
             mean_diffs = np.mean(patches_mean_diffs[key])
             # print(mean_diffs)
-            # Standard deviation of horizontal or vertical differences of a patch
+            # Standard deviation of horizontal or vertical differences of
+            # a patch
             std_dev_diffs = np.std(patches_mean_diffs[key])
             # print(std_dev_diffs)
-            # Discard differences whose value is not in the interval [mean_diff - std_dev, mean_diff + std_dev]
+            # Discard differences whose value is not in the interval
+            # [mean_diff - std_dev, mean_diff + std_dev]
             # and do this for both horizontal and vertical differences
             self.discard_means_out_of_std_dev(
                 patches_mean_diffs[key],
                 mean_diffs,
                 std_dev_diffs,
             )
-            # Recompute the mean of the horizontal and vertical differences and round it to the nearest integer
+            # Recompute the mean of the horizontal and vertical differences
+            # and round it to the nearest integer
             # (since we use pixels)
             updated_mean_diffs = round(np.mean(patches_mean_diffs[key]))
 
@@ -224,7 +244,9 @@ class ShifterAndCropperCopHub:
                 mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
             )
 
-        pd.DataFrame(mean_diff_patch_dict).to_csv(output_path_csv_dict, index=False)
+        pd.DataFrame(mean_diff_patch_dict).to_csv(
+            output_path_csv_dict, index=False
+        )
         return mean_diff_patch_dict
 
     def shift_and_crop_cophub_images(
@@ -235,16 +257,21 @@ class ShifterAndCropperCopHub:
         separator: str = "_",
         out_ext: str = ".png",
     ):
-        """Shifts and crops Copernicus Hub images to make them similar to MARIDA images.
+        """Shifts and crops Copernicus Hub images to make them similar to
+        MARIDA images.
 
         Args:
-            mean_diff_patch_dict (dict): dictionary with each key corresponding to a
-            tuple containing the mean horizontal and mean
-            verical difference between all matching keypoints of all bands of a patch.
-            cop_hub_png_input_imgs_path (str): path to images that are not yet shifted and cropped.
-            cop_hub_png_output_imgs_path (str): path to store shifted and cropped images.
+            mean_diff_patch_dict (dict): dictionary with each key
+              corresponding to a tuple containing the mean horizontal
+              and mean verical difference between all matching keypoints of
+              all bands of a patch.
+            cop_hub_png_input_imgs_path (str): path to images that are not yet
+              shifted and cropped.
+            cop_hub_png_output_imgs_path (str): path to store shifted and
+              cropped images.
             separator (str, optional): separator. Defaults to "_".
-            out_ext (str, optional): extension of output images. Defaults to ".png".
+            out_ext (str, optional): extension of output images. Defaults to
+              ".png".
         """
         # Creates folder where to store output images if it does not exist
         if not os.path.exists(cop_hub_png_output_imgs_path):
@@ -259,30 +286,45 @@ class ShifterAndCropperCopHub:
                     band_name,
                     patch_name,
                     dataset_name,
-                    _
-                ) = get_band_and_patch_names_from_file_name(img_file_name_without_ext)
+                    _,
+                ) = get_band_and_patch_names_from_file_name(
+                    img_file_name_without_ext
+                )
                 if dataset_name == COP_HUB_BASE_NAME:
                     patch_img_path = os.path.join(
                         cop_hub_png_input_imgs_path, img_file_name
                     )
 
-                    mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[patch_name]
-                    # Crop a Copernicus Hub patch according to its shift compared to its corresponding MARIDA patch
+                    mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[
+                        patch_name
+                    ]
+                    # Crop a Copernicus Hub patch according to its shift
+                    # compared to its corresponding MARIDA patch
                     # To do this:
                     # 1. get coordinates of the center of the MARIDA patch
-                    # 2. shift them (horizontally and vertically) by the mean of differences previously computed
-                    # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
+                    # 2. shift them (horizontally and vertically) by the mean
+                    #    of differences previously computed
+                    # 3. crop the Copernicus Hub patch by considering the
+                    #    shifted center coordinates and the size of the MARIDA patch
 
                     # Read Copernicus Hub patch
-                    cop_hub_img = cv.imread(patch_img_path, cv.IMREAD_GRAYSCALE)
+                    cop_hub_img = cv.imread(
+                        patch_img_path, cv.IMREAD_GRAYSCALE
+                    )
                     # print(cop_hub_img.shape)
                     # 1. get coordinates of the center of the MARIDA patch
                     center_marida_x = HALF_MARIDA_SIZE_X
                     center_marida_y = HALF_MARIDA_SIZE_Y
-                    # 2. shift them (horizontally and vertically) by the mean of differences previously computed
-                    corresponding_center_cop_hub_x = center_marida_x - mean_diffs_x
-                    corresponding_center_cop_hub_y = center_marida_y - mean_diffs_y
-                    # 3. crop the Copernicus Hub patch by considering the shifted center coordinates and the size of the MARIDA patch
+                    # 2. shift them (horizontally and vertically) by the mean
+                    #    of differences previously computed
+                    corresponding_center_cop_hub_x = (
+                        center_marida_x - mean_diffs_x
+                    )
+                    corresponding_center_cop_hub_y = (
+                        center_marida_y - mean_diffs_y
+                    )
+                    # 3. crop the Copernicus Hub patch by considering the
+                    #    shifted center coordinates and the size of the MARIDA patch
                     cop_hub_2_marida_img = cop_hub_img[
                         corresponding_center_cop_hub_y
                         - HALF_MARIDA_SIZE_Y : corresponding_center_cop_hub_y
@@ -305,7 +347,8 @@ class ShifterAndCropperCopHub:
                     save_img(
                         cop_hub_2_marida_img,
                         os.path.join(
-                            cop_hub_png_output_imgs_path, output_shifted_img_path
+                            cop_hub_png_output_imgs_path,
+                            output_shifted_img_path,
                         ),
                     )
 
@@ -324,7 +367,9 @@ if __name__ == "__main__":
     )
 
     shifter_and_cropper = ShifterAndCropperCopHub(
-        path_keypoints_folder, cop_hub_png_input_imgs_path, cop_hub_png_output_imgs_path
+        path_keypoints_folder,
+        cop_hub_png_input_imgs_path,
+        cop_hub_png_output_imgs_path,
     )
 
     patches_mean_diffs = shifter_and_cropper.get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
@@ -333,11 +378,15 @@ if __name__ == "__main__":
         separator="_",
         exclude_band_1=True,
     )
-    output_path_csv_dict = os.path.join(l1c_data_dir, "mean_diff_patches_dict.csv")
+    output_path_csv_dict = os.path.join(
+        l1c_data_dir, "mean_diff_patches_dict.csv"
+    )
 
-    mean_diff_patch_dict = shifter_and_cropper.compute_and_update_mean_of_diffs(
-        patches_mean_diffs,
-        output_path_csv_dict,
+    mean_diff_patch_dict = (
+        shifter_and_cropper.compute_and_update_mean_of_diffs(
+            patches_mean_diffs,
+            output_path_csv_dict,
+        )
     )
 
     shifter_and_cropper.shift_and_crop_cophub_images(

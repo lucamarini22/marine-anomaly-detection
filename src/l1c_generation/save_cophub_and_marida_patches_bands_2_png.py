@@ -26,16 +26,20 @@ def save_marida_and_cop_hub_2_png(
     """_summary_
 
     Args:
-        marida_patches_path (str): path to the folder containing all marida patches.
-        cop_hub_patches_path (str): path to the folder containing all copernicus hub patches.
-        pairs_file_path (str): txt file containing all the pairs of corresponding copernicus hub and marida names.
+        marida_patches_path (str): path to the folder containing all marida
+          patches.
+        cop_hub_patches_path (str): path to the folder containing all
+          copernicus hub patches.
+        pairs_file_path (str): txt file containing all the pairs of
+          corresponding copernicus hub and marida names.
         base_name_marida_img (str): base name for marida image.
         base_name_cop_hub_img (str): base name for copernicus hub image.
         output_folder_path (str): path where to store .png files.
         ext (str): extension of marida and copernicus hub files.
         l1c (str): string characterizzing l1c.
     """
-    # Erases the file containing all the pairs of corresponding copernicus hub and marida names.
+    # Erases the file containing all the pairs of corresponding copernicus hub
+    # and marida names.
     open(pairs_file_path, "w").close()
 
     # Cycle through all MARIDA patches
@@ -47,7 +51,9 @@ def save_marida_and_cop_hub_2_png(
             )
             # cycle through all the cropped patches of a patch
             for marida_patch_name in os.listdir(marida_patch_folder_path):
-                marida_patch_name = remove_extension_from_name(marida_patch_name, ext)
+                marida_patch_name = remove_extension_from_name(
+                    marida_patch_name, ext
+                )
                 # do not consider confidence segmentation maps
                 if not (marida_patch_name.endswith(NOT_TO_CONSIDER_MARIDA)):
                     number = marida_patch_name[-1]
@@ -80,7 +86,9 @@ def save_marida_and_cop_hub_2_png(
                             + band_cop_hub
                             + out_img_ext
                         )
-                        img_marida = scale_img_to_0_255(img_marida[:, :, band_marida])
+                        img_marida = scale_img_to_0_255(
+                            img_marida[:, :, band_marida]
+                        )
                         save_img(
                             img_marida,
                             os.path.join(output_folder_path, name_marida_img),
@@ -99,7 +107,8 @@ def save_marida_and_cop_hub_2_png(
                             img_cop_hub,
                             os.path.join(output_folder_path, name_cop_hub_img),
                         )
-                        # Updates the file containing all the pairs of corresponding copernicus hub and marida names
+                        # Updates the file containing all the pairs of
+                        # corresponding copernicus hub and marida names
                         with open(pairs_file_path, "a") as myfile:
                             myfile.write(
                                 name_marida_img + " " + name_cop_hub_img + "\n"

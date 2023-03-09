@@ -3,7 +3,10 @@ import cv2 as cv
 import rasterio
 import datetime
 
-from src.utils.constants import BAND_NAMES_IN_MARIDA, BAND_NAMES_IN_COPERNICUS_HUB
+from src.utils.constants import (
+    BAND_NAMES_IN_MARIDA,
+    BAND_NAMES_IN_COPERNICUS_HUB,
+)
 
 
 def get_patch_name_from_prediction_name(pred_name: str) -> str:
@@ -39,13 +42,21 @@ def get_cop_hub_band_idx(band_name: str) -> int:
     """
     if band_name not in BAND_NAMES_IN_COPERNICUS_HUB:
         raise Exception("Unknown band")
-    if band_name == "B09" or band_name == "B10" \
-        or band_name == "B11" or band_name == "B12":
-        band_cop_hub_idx = int(number_starting_with_zero_2_number(band_name[-2:]))
+    if (
+        band_name == "B09"
+        or band_name == "B10"
+        or band_name == "B11"
+        or band_name == "B12"
+    ):
+        band_cop_hub_idx = int(
+            number_starting_with_zero_2_number(band_name[-2:])
+        )
     elif band_name == "B8A":
         band_cop_hub_idx = 8
     else:
-        band_cop_hub_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+        band_cop_hub_idx = (
+            int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+        )
     return band_cop_hub_idx
 
 
@@ -67,12 +78,17 @@ def get_marida_band_idx(band_name: str) -> int:
     elif band_name == "B09" or band_name == "B10":
         raise Exception("MARIDA removed bands B09 and B10")
     elif band_name == "B11" or band_name == "B12":
-        # we subtract 2 if it is band B11 or B12 due to the removal of previous bands B09 and B10
-        band_marida_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 2
+        # we subtract 2 if it is band B11 or B12 due to the removal of 
+        # previous bands B09 and B10
+        band_marida_idx = (
+            int(number_starting_with_zero_2_number(band_name[-2:])) - 2
+        )
     elif band_name == "B8A":
         band_marida_idx = 8
     else:
-        band_marida_idx = int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+        band_marida_idx = (
+            int(number_starting_with_zero_2_number(band_name[-2:])) - 1
+        )
     return band_marida_idx
 
 
@@ -91,13 +107,15 @@ def number_starting_with_zero_2_number(number_str: str) -> str:
 
 
 def acquire_data(file_name):
-    """Read an L1C Sentinel-2 image from a cropped TIF. The image is represented as TOA reflectance.
+    """Read an L1C Sentinel-2 image from a cropped TIF. The image is 
+    represented as TOA reflectance.
     Args:
         file_name (str): event ID.
     Raises:
         ValueError: impossible to find information on the database.
     Returns:
-        np.array: array containing B8A, B11, B12 of a Seintel-2 L1C cropped tif.
+        np.array: array containing B8A, B11, B12 of a Seintel-2 L1C cropped 
+          tif.
         dictionary: dictionary containing lat and lon for every image point.
     """
 
@@ -120,7 +138,9 @@ def acquire_data(file_name):
 
 
 def scale_img_to_0_255(img: np.ndarray) -> np.ndarray:
-    return ((img - img.min()) * (1 / (img.max() - img.min()) * 255)).astype("uint8")
+    return ((img - img.min()) * (1 / (img.max() - img.min()) * 255)).astype(
+        "uint8"
+    )
 
 
 def save_img(img: np.ndarray, path: str):

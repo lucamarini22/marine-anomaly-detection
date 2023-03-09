@@ -25,7 +25,9 @@ class PatchesBandsConcatenator:
       - save all the stored patches as .tif files
     """
 
-    def __init__(self, bands_images_folder_path: str, input_ext: str = ".png") -> None:
+    def __init__(
+        self, bands_images_folder_path: str, input_ext: str = ".png"
+    ) -> None:
         self.patches_dict = {}
         self.bands_images_folder_path = bands_images_folder_path
         self.input_ext = input_ext
@@ -41,10 +43,14 @@ class PatchesBandsConcatenator:
         """
         self.patches_dict.setdefault(
             patch_name,
-            np.zeros((MARIDA_SIZE_X, MARIDA_SIZE_Y, COP_HUB_BANDS), dtype="uint8"),
+            np.zeros(
+                (MARIDA_SIZE_X, MARIDA_SIZE_Y, COP_HUB_BANDS), dtype="uint8"
+            ),
         )
 
-    def add_band_to_patch(self, patch_name: str, band_name: str, band_img: np.ndarray):
+    def add_band_to_patch(
+        self, patch_name: str, band_name: str, band_img: np.ndarray
+    ):
         """Adds the image of the passed band to the patch.
 
         Args:
@@ -60,8 +66,8 @@ class PatchesBandsConcatenator:
         self,
     ):
         """Adds all patches to the dictionary patches_dict.
-        Each entry of the dictionary represents a patch and is a np.array of shape
-        MARIDA_SIZE_X, MARIDA_SIZE_Y, COP_HUB_BANDS.
+        Each entry of the dictionary represents a patch and is a np.array of
+        shape MARIDA_SIZE_X, MARIDA_SIZE_Y, COP_HUB_BANDS.
         """
         for file_name in os.listdir(self.bands_images_folder_path):
             if file_name.endswith(self.input_ext):
@@ -73,7 +79,9 @@ class PatchesBandsConcatenator:
                 ) = get_band_and_patch_names_from_file_name(file_name)
 
                 # Read Copernicus Hub band of patch
-                band_img_path = os.path.join(self.bands_images_folder_path, file_name)
+                band_img_path = os.path.join(
+                    self.bands_images_folder_path, file_name
+                )
                 band_img = cv.imread(band_img_path, cv.IMREAD_GRAYSCALE)
 
                 self.init_patch(patch_name)
@@ -87,8 +95,8 @@ class PatchesBandsConcatenator:
             out_folder_tif (str): path of the folder that will contain .tif
               files of patches.
             marida_patch_folder (str): path of the folder that contains marida
-              .tif patches. This is needed to read the metadata of a marida patch
-              and then update it.
+              .tif patches. This is needed to read the metadata of a marida
+              patch and then update it.
         """
         with rasterio.open(marida_file_path) as src:
             meta = src.read()
@@ -115,8 +123,12 @@ if __name__ == "__main__":
     # TODO: change this variable into the actual folder name path and add os.path.join inside function save_patches
     marida_file_path = "/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif"
     bands_images_folder_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching"
-    out_folder_tif = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
+    out_folder_tif = (
+        "/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
+    )
 
-    patches_bands_concatenator = PatchesBandsConcatenator(bands_images_folder_path)
+    patches_bands_concatenator = PatchesBandsConcatenator(
+        bands_images_folder_path
+    )
     patches_bands_concatenator.add_patches()
     patches_bands_concatenator.save_patches(out_folder_tif, marida_file_path)
