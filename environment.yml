@@ -16,5 +16,7 @@ dependencies:
   - pandas
   - pytables
   - tqdm
-  - matplotlib
-  - jupyter
+  - pip:
+      - jupyter
+      - opencv-python
+      - matplotlib
