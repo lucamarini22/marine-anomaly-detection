@@ -5,16 +5,28 @@ The scope of this project is to simulate the behaviour of a semi-supervised deep
 
 If you want to crop the L1C patches taken from Copernicus Hub into the ones of [Marida](https://marine-debris.github.io/index.html), you need to:
 
-* generate l1c images
+1. generate l1c images (pr)
 
-* run save_cophub_and_marida_patches_bands_2_png.py
+2. Save Marida and corresponding but larger c Copernicus Hub patches as .png in the folder `output_folder_path`.
+    ```sh
+      python save_cophub_and_marida_patches_bands_2_png.py
+    ```
+3. Compute keypoints matching among corresponding Marida and larger L1C Copernicus Hub patches.
+    * clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder;
+    * ```sh
+      ./SuperGluePretrainedNetwork/match_pairs.py --input_pairs="./keypoints_pairs/cop_hub_marida_pairs.txt" --input_dir="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching" --output_dir="./keypoints_pairs" --resize=-1 --superglue="outdoor" --max_keypoints=1024 --keypoint_threshold=0.015 --nms_radius=4 --match_threshold=0.75
+      ```
+      * add `--viz` parameter to the above command to save the images of matched keypoints. A red line between two keypoints indicates a more confient match.
 
-* clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder;
-* execute `./SuperGluePretrainedNetwork/match_pairs.py --input_pairs="./keypoints_pairs/cop_hub_marida_pairs.txt" --input_dir="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching" --output_dir="./keypoints_pairs" --resize=-1 --superglue="outdoor" --max_keypoints=1024 --keypoint_threshold=0.015 --nms_radius=4 --match_threshold=0.75`.
-  * add `--viz` to save the visualization of matched keypoints. A red line between two keypoints indicates more confidence.
+4. Shift and crop L1C Copernicus Hub .png patches based on the relative positions of previously corresponding keypoints. In this way, Copernicus Hub patches will correspond to Marida patches.
+    ```sh
+      python shift_and_crop_cop_hub_images.py
+    ```
 
-* run shift_and_crop_cop_hub_images.py
-* run save_shifted_and_cropped_bands_patches_2_tif.py
+5. Save shifted and cropped L1C Copernicus Hub patches as .tif files.
+    ```sh
+      python save_shifted_and_cropped_bands_patches_2_tif.py
+    ```
 
 
 # Visualization notebooks
