@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 sys.path.append(up(os.path.abspath(__file__)))
-from unet import UNet
+from src.semantic_segmentation.supervised.models.unet import UNet
 from dataloader import GenDEBRIS, bands_mean, bands_std
 
 sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
@@ -54,7 +54,9 @@ def main(options):
         aggregate_classes=options["aggregate_classes"],
     )
 
-    test_loader = DataLoader(dataset_test, batch_size=options["batch"], shuffle=False)
+    test_loader = DataLoader(
+        dataset_test, batch_size=options["batch"], shuffle=False
+    )
 
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
@@ -67,7 +69,9 @@ def main(options):
         labels = labels_binary
         output_channels = len(labels_binary)
     else:
-        raise Exception("The aggregated_classes option should be 'binary or 'multi'")
+        raise Exception(
+            "The aggregated_classes option should be 'binary or 'multi'"
+        )
 
     # Use gpu or cpu
     if torch.cuda.is_available():
@@ -137,14 +141,17 @@ def main(options):
 
             path = os.path.join(root_path, "data", "patches")
             ROIs = np.genfromtxt(
-                os.path.join(root_path, "data", "splits", "test_X.txt"), dtype="str"
+                os.path.join(root_path, "data", "splits", "test_X.txt"),
+                dtype="str",
             )
 
             impute_nan = np.tile(bands_mean, (256, 256, 1))
 
             for roi in tqdm(ROIs):
 
-                roi_folder = "_".join(["S2"] + roi.split("_")[:-1])  # Get Folder Name
+                roi_folder = "_".join(
+                    ["S2"] + roi.split("_")[:-1]
+                )  # Get Folder Name
                 roi_name = "_".join(["S2"] + roi.split("_"))  # Get File Name
                 roi_file = os.path.join(
                     path, roi_folder, roi_name + ".tif"
@@ -216,7 +223,9 @@ if __name__ == "__main__":
                     no (keep the original 15 classes)",
     )
 
-    parser.add_argument("--batch", default=5, type=int, help="Number of epochs to run")
+    parser.add_argument(
+        "--batch", default=5, type=int, help="Number of epochs to run"
+    )
 
     # Unet parameters
     parser.add_argument(
@@ -224,7 +233,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--hidden_channels", default=16, type=int, help="Number of hidden features"
+        "--hidden_channels",
+        default=16,
+        type=int,
+        help="Number of hidden features",
     )
 
     # Unet model path
