@@ -10,7 +10,7 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [Marida](http
 
 2. Save Marida and corresponding but larger Copernicus Hub patches as .png in the folder `output_folder_path`.
     ```sh
-      python save_cophub_and_marida_patches_bands_2_png.py
+    python save_cophub_and_marida_patches_bands_2_png.py
     ```
 3. Compute keypoints matching among corresponding Marida and larger L1C Copernicus Hub patches.
     * clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder;
@@ -21,12 +21,12 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [Marida](http
 
 4. Crop L1C Copernicus Hub .png patches based on the relative positions of previously corresponding keypoints. In this way, Copernicus Hub patches will correspond to Marida patches.
     ```sh
-      python shift_and_crop_cop_hub_images.py
+    python shift_and_crop_cop_hub_images.py
     ```
 
 5. Save cropped L1C Copernicus Hub patches as .tif files.
     ```sh
-      python save_shifted_and_cropped_bands_patches_2_tif.py
+    python save_shifted_and_cropped_bands_patches_2_tif.py
     ```
 
 
