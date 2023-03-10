@@ -10,7 +10,7 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [Marida](http
 
 2. Save Marida and corresponding but larger Copernicus Hub patches as .png in the folder `output_folder_path`.
     ```sh
-    python save_cophub_and_marida_patches_bands_2_png.py
+    python save_cophub_and_marida_patches_bands_2_png.py --marida_patches_path="/data/anomaly-marine-detection/data/patches/" --cop_hub_patches_path="/data/pyraws_luca/pyraws/generate_l1c/l1c_images" --pairs_file_path="/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs/cop_hub_marida_pairs.txt" --output_folder_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
     ```
 3. Compute keypoints matching among corresponding Marida and larger L1C Copernicus Hub patches.
     * Clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder.
@@ -25,12 +25,12 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [Marida](http
 
 4. Crop L1C Copernicus Hub .png patches based on the relative positions of previously corresponding keypoints. In this way, Copernicus Hub patches will correspond to Marida patches.
     ```sh
-    python shift_and_crop_cop_hub_images.py
+    python shift_and_crop_cop_hub.py --path_keypoints_folder="/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs" --cop_hub_png_input_imgs_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/" --cop_hub_png_output_imgs_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching/"
     ```
 
 5. Save cropped L1C Copernicus Hub patches as .tif files.
     ```sh
-    python save_shifted_and_cropped_bands_patches_2_tif.py
+    python save_shifted_and_cropped_bands_patches_2_tif.py --marida_file_path="/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif" --bands_images_folder_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching" --out_folder_tif="/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
     ```
 
 
