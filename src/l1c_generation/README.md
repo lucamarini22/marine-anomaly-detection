@@ -13,8 +13,12 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [Marida](http
     python save_cophub_and_marida_patches_bands_2_png.py
     ```
 3. Compute keypoints matching among corresponding Marida and larger L1C Copernicus Hub patches.
-    * clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder;
-    * ```sh
+    * Clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder.
+      ```sh
+      git clone https://github.com/lucamarini22/anomaly-marine-detection.git
+      ```
+    * Compute keypoints.
+      ```sh
       ./SuperGluePretrainedNetwork/match_pairs.py --input_pairs="./keypoints_pairs/cop_hub_marida_pairs.txt" --input_dir="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching" --output_dir="./keypoints_pairs" --resize=-1 --superglue="outdoor" --max_keypoints=1024 --keypoint_threshold=0.015 --nms_radius=4 --match_threshold=0.75
       ```
       * add `--viz` parameter to the above command to save the images of matched keypoints. A red line between two keypoints indicates a more confient match.
