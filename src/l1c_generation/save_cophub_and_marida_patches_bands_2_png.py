@@ -1,4 +1,5 @@
 import os
+import argparse
 
 from src.utils.constants import (
     BAND_NAMES_IN_MARIDA,
@@ -129,28 +130,79 @@ def save_marida_and_cop_hub_2_png(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="""Saves marida and corresponding larger copernicus hub 
+        bands of patches from .tif files to .png files that will be then 
+        (outside from this script) be passed to a keypoint matching algorithm
+        to then be able to estimate the shift between corresponding marida and
+        copernicus hub bands to correct the latter ones."""
+    )
+    parser.add_argument(
+        "--marida_patches_path",
+        type=str,
+        help="path to the folder containing all marida patches.",
+        action="store",
+    )
+    parser.add_argument(
+        "--cop_hub_patches_path",
+        type=str,
+        help="path to the folder containing all copernicus hub patches.",
+        action="store",
+    )
+    parser.add_argument(
+        "--pairs_file_path",
+        type=str,
+        help=(
+            "txt file containing all the pairs of corresponding copernicus"
+            " hub and marida names."
+        ),
+        action="store",
+    )
+    parser.add_argument(
+        "--output_folder_path",
+        type=str,
+        help="path where to store .png files.",
+        action="store",
+    )
+    parser.add_argument(
+        "--base_name_marida_img",
+        type=str,
+        help="base name for marida image.",
+        action="store",
+        default="mar",
+    )
+    parser.add_argument(
+        "--base_name_cop_hub_img",
+        type=str,
+        help="base name for copernicus hub image.",
+        action="store",
+        default=COP_HUB_BASE_NAME,
+    )
+    parser.add_argument(
+        "--ext",
+        type=str,
+        help="extension of output marida and copernicus hub files.",
+        action="store",
+        default=".tif",
+    )
+    parser.add_argument(
+        "--l1c",
+        type=str,
+        help="string characterizzing l1c.",
+        action="store",
+        default="_l1c_",
+    )
 
-    marida_patches_path = "/data/anomaly-marine-detection/data/patches/"
-    cop_hub_patches_path = "/data/pyraws_luca/pyraws/generate_l1c/l1c_images"
-
-    pairs_file_path = "/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs/cop_hub_marida_pairs.txt"
-
-    ext = ".tif"
-    L1C = "_l1c_"
-
-    base_name_marida_img = "mar"
-    base_name_cop_hub_img = COP_HUB_BASE_NAME
-
-    output_folder_path = f"/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
+    args = parser.parse_args()
 
     save_marida_and_cop_hub_2_png(
-        marida_patches_path,
-        cop_hub_patches_path,
-        base_name_marida_img,
-        base_name_cop_hub_img,
-        output_folder_path,
-        pairs_file_path,
-        ext=ext,
-        l1c=L1C,
+        args.marida_patches_path,
+        args.cop_hub_patches_path,
+        args.base_name_marida_img,
+        args.base_name_cop_hub_img,
+        args.output_folder_path,
+        args.pairs_file_path,
+        ext=args.ext,
+        l1c=args.l1c,
         out_img_ext=".png",
     )

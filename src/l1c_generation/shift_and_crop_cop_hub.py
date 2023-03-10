@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2 as cv
@@ -214,7 +215,6 @@ class ShifterAndCropperCopHub:
     def compute_and_update_mean_of_diffs(
         self,
         patches_mean_diffs: dict,
-        output_path_csv_dict: str,
         separator: str = "_",
         x_axis: str = "x",
         y_axis: str = "y",
@@ -225,7 +225,6 @@ class ShifterAndCropperCopHub:
             patches_mean_diffs (dict): dictionary with each key corresponding
               to a list of horizontal (or vertical) differences of matched
               keypoints of a patch.
-            output_path_csv_dict (str): path where to store patches_mean_diffs
             dictionary as a csv file.
             separator (str, optional): separator of a patch name. Defaults to
               "_".
@@ -268,9 +267,6 @@ class ShifterAndCropperCopHub:
                 mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
             )
 
-        pd.DataFrame(mean_diff_patch_dict).to_csv(
-            output_path_csv_dict, index=False
-        )
         return mean_diff_patch_dict
 
     def shift_and_crop_cophub_images(
@@ -378,45 +374,54 @@ class ShifterAndCropperCopHub:
 
 
 if __name__ == "__main__":
-    path_keypoints_folder = (
-        "/data/anomaly-marine-detection/src/l1c_generation/keypoints_pairs"
+    parser = argparse.ArgumentParser(
+        description="""It shifts and crops copernicus hub patches to make
+        them correspond to marida patches and saves them as .png files."""
     )
-    l1c_data_dir = "/data/anomaly-marine-detection/data/l1c_copernicus_hub"
+    parser.add_argument(
+        "--path_keypoints_folder",
+        type=str,
+        help="path to the folder containing all keypoint files.",
+        action="store",
+    )
+    parser.add_argument(
+        "--cop_hub_png_input_imgs_path",
+        type=str,
+        help="path to images that are not yet shifted and cropped.",
+        action="store",
+    )
+    parser.add_argument(
+        "--cop_hub_png_output_imgs_path",
+        type=str,
+        help="path to store shifted and cropped images.",
+        action="store",
+    )
 
-    cop_hub_png_input_imgs_path = os.path.join(
-        l1c_data_dir, "images_before_keypoint_matching/"
-    )
-    cop_hub_png_output_imgs_path = os.path.join(
-        l1c_data_dir, "images_after_keypoint_matching/"
-    )
+    args = parser.parse_args()
 
     shifter_and_cropper = ShifterAndCropperCopHub(
-        path_keypoints_folder,
-        cop_hub_png_input_imgs_path,
-        cop_hub_png_output_imgs_path,
+        args.path_keypoints_folder,
+        args.cop_hub_png_input_imgs_path,
+        args.cop_hub_png_output_imgs_path,
     )
 
     patches_mean_diffs = shifter_and_cropper.get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
-        path_keypoints_folder,
+        args.path_keypoints_folder,
         keypoint_file_ext=".npz",
         separator="_",
         exclude_band_1=True,
-    )
-    output_path_csv_dict = os.path.join(
-        l1c_data_dir, "mean_diff_patches_dict.csv"
     )
 
     mean_diff_patch_dict = (
         shifter_and_cropper.compute_and_update_mean_of_diffs(
             patches_mean_diffs,
-            output_path_csv_dict,
         )
     )
 
     shifter_and_cropper.shift_and_crop_cophub_images(
         mean_diff_patch_dict,
-        cop_hub_png_input_imgs_path,
-        cop_hub_png_output_imgs_path,
+        args.cop_hub_png_input_imgs_path,
+        args.cop_hub_png_output_imgs_path,
         separator="_",
         out_ext=".png",
     )

@@ -1,3 +1,4 @@
+import argparse
 import os
 import numpy as np
 import cv2 as cv
@@ -94,7 +95,7 @@ class PatchesBandsConcatenator:
         Args:
             out_folder_tif (str): path of the folder that will contain .tif
               files of patches.
-            marida_patch_folder (str): path to a marida .tif patch. This
+            marida_file_path (str): path to a marida .tif patch. This
               parameter is needed to read the metadata of a marida
               patch and then update it.
         """
@@ -119,15 +120,38 @@ class PatchesBandsConcatenator:
 
 
 if __name__ == "__main__":
-    # TODO: change this variable into the actual folder name path and add os.path.join inside function save_patches
-    marida_file_path = "/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif"
-    bands_images_folder_path = "/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching"
-    out_folder_tif = (
-        "/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
+    parser = argparse.ArgumentParser(
+        description="""Saves cropped L1C Copernicus Hub patches as .tif files."""
+    )
+    parser.add_argument(
+        "--marida_file_path",
+        type=str,
+        help=(
+            "path to a marida .tif patch. This"
+            " parameter is needed to read the metadata of a marida"
+            " patch and then update it."
+        ),
+        action="store",
+    )
+    parser.add_argument(
+        "--bands_images_folder_path",
+        type=str,
+        help="path to images of bands of patches.",
+        action="store",
+    )
+    parser.add_argument(
+        "--out_folder_tif",
+        type=str,
+        help="path to folder that will store final .tif files.",
+        action="store",
     )
 
+    args = parser.parse_args()
+
     patches_bands_concatenator = PatchesBandsConcatenator(
-        bands_images_folder_path
+        args.bands_images_folder_path
     )
     patches_bands_concatenator.add_patches()
-    patches_bands_concatenator.save_patches(out_folder_tif, marida_file_path)
+    patches_bands_concatenator.save_patches(
+        args.out_folder_tif, args.marida_file_path
+    )
