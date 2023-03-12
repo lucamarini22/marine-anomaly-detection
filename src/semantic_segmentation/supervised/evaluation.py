@@ -16,13 +16,13 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-sys.path.append(up(os.path.abspath(__file__)))
+# sys.path.append(up(os.path.abspath(__file__)))
 from src.semantic_segmentation.supervised.models.unet import UNet
-from dataloader import GenDEBRIS, bands_mean, bands_std
+from dataloader import AnomalyMarineDataset, TrainMode, bands_mean, bands_std
 
-sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
-from metrics import Evaluation, confusion_matrix
-from assets import labels, labels_binary, labels_multi
+# sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
+from src.utils.metrics import Evaluation, confusion_matrix
+from src.utils.assets import labels, labels_binary, labels_multi
 
 random.seed(0)
 np.random.seed(0)
@@ -47,8 +47,8 @@ def main(options):
 
     # Construct Data loader
 
-    dataset_test = GenDEBRIS(
-        "test",
+    dataset_test = AnomalyMarineDataset(
+        TrainMode.TEST.value,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],

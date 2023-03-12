@@ -3,6 +3,7 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
+from enum import Enum
 import torch
 import random
 import numpy as np
@@ -102,57 +103,107 @@ bands_std = np.array(
 dataset_path = os.path.join((up(up(up(__file__)))), "data")
 
 
-class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
+class TrainMode(Enum):
+    TRAIN = "train"
+    TRAIN_SSL = "train_ssl"
+    VAL = "val"
+    TEST = "test"
+
+
+class CategoryAggregation(Enum):
+    BINARY = "binary"
+    MULTI = "multi"
+
+
+class AnomalyMarineDataset(Dataset):
     def __init__(
         self,
-        mode="train",
+        mode: TrainMode = TrainMode.TRAIN.value,
         transform=None,
         standardization=None,
         path=dataset_path,
-        aggregate_classes="multi",
+        aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI.value,
+        perc_unlabeled: float = 0.9,
     ):
+        """Initializes the anomaly marine detection dataset.
 
-        if mode == "train":
+        Args:
+            mode (TrainMode, optional): train mode.
+              Defaults to TrainMode.TRAIN.value.
+            transform (_type_, optional): transformation to apply to dataset.
+              Defaults to None.
+            standardization (_type_, optional): standardization.
+              Defaults to None.
+            path (str, optional): dataset path. Defaults to dataset_path.
+            aggregate_classes (CategoryAggregation, optional): type
+              of aggragation of categories.
+              Defaults to CategoryAggregation.MULTI.value.
+            perc_unlabeled (float, optional): percentage of unlabeled samples
+              taken from the training set. To use only when using
+              TrainMode.TRAIN_SSL.value as mode. Defaults to 0.9.
+
+        Raises:
+            Exception: raises an exception if the specified mode does not
+              exist.
+        """
+        if mode == TrainMode.TRAIN.value:
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "train_X.txt"), dtype="str"
             )
 
-        elif mode == "test":
+        elif mode == TrainMode.TRAIN_SSL.value:
+            # Semi-Supervised Learning (SSL)
+            self.ROIs = np.genfromtxt(
+                os.path.join(path, "splits", "train_X.txt"), dtype="str"
+            )
+            num_unlabeled_samples = round(len(self.ROIs) * perc_unlabeled)
+            # Unlabeled regions of interests
+            self.ROIs_u = np.random.choice(
+                self.ROIs, num_unlabeled_samples, replace=False
+            )
+            # Labeled regions of interests
+            self.ROIs = np.setdiff1d(self.ROIs, self.ROIs_u)
+
+            self.X_u = []
+            # TODO: call get_roi_tokens, open tif, and save them to X_u
+
+        elif mode == TrainMode.TEST.value:
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "test_X.txt"), dtype="str"
             )
 
-        elif mode == "val":
+        elif mode == TrainMode.VAL.value:
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "val_X.txt"), dtype="str"
             )
 
         else:
-            raise
+            raise Exception("Bad mode.")
 
         self.X = []  # Loaded Images
         self.y = []  # Loaded Output masks
 
         for roi in tqdm(self.ROIs, desc="Load " + mode + " set to memory"):
+            roi_file_path, roi_file_cl_path = self.get_roi_tokens(path, roi)
 
             # Construct file and folder name from roi
-            roi_folder = "_".join(
-                ["S2"] + roi.split("_")[:-1]
-            )  # Get Folder Name
-            roi_name = "_".join(["S2"] + roi.split("_"))  # Get File Name
-            roi_file = os.path.join(
-                path, "patches", roi_folder, roi_name + ".tif"
-            )  # Get File path
-            roi_file_cl = os.path.join(
-                path, "patches", roi_folder, roi_name + "_cl.tif"
-            )  # Get Class Mask
+            # roi_folder = "_".join(
+            #    ["S2"] + roi.split("_")[:-1]
+            # )  # Get Folder Name
+            # roi_name = "_".join(["S2"] + roi.split("_"))  # Get File Name
+            # roi_file = os.path.join(
+            #    path, "patches", roi_folder, roi_name + ".tif"
+            # )  # Get File path
+            # roi_file_cl = os.path.join(
+            #    path, "patches", roi_folder, roi_name + "_cl.tif"
+            # )  # Get Class Mask
 
             # Load Classsification Mask
-            ds = gdal.Open(roi_file_cl)
+            ds = gdal.Open(roi_file_cl_path)
             temp = np.copy(ds.ReadAsArray().astype(np.int64))
 
             # Aggregation
-            if aggregate_classes == "multi":
+            if aggregate_classes == CategoryAggregation.MULTI.value:
                 # Keep classes: Marine Water, Cloud, Ship, Marine Debris, Algae/Organic Material
                 # Note: make sure you aggregate classes according to the increasing order
                 # specified in assets.
@@ -210,7 +261,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
                     cat_mapping_multi,
                 )
 
-            elif aggregate_classes == "binary":
+            elif aggregate_classes == CategoryAggregation.BINARY.value:
                 # Keep classes: Marine Debris and Other
                 # Aggregate all classes (except Marine Debris) to Marine Water Class
                 other_classes_names = labels[labels_binary.index("Other") :]
@@ -230,7 +281,7 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             self.y.append(temp)
 
             # Load Patch
-            ds = gdal.Open(roi_file)
+            ds = gdal.Open(roi_file_path)
             temp = np.copy(ds.ReadAsArray())
             ds = None
             self.X.append(temp)
@@ -313,6 +364,34 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
                 super_class_name
             ]
         return temp
+
+    def get_roi_tokens(
+        self, path_of_dataset: str, roi: str, separator: str = "_"
+    ) -> tuple[str, str]:
+        """Constructs file and folder name from roi.
+
+        Args:
+            path (str): path of the dataset.
+            roi (str): name of the region of interest.
+            separator (str, optional): separator. Defaults to "_".
+
+        Returns:
+            (str, str): paths of the sample and its corresponding segmentation
+              map.
+        """
+        # Folder Name
+        roi_folder = separator.join(["S2"] + roi.split(separator)[:-1])
+        # File Name
+        roi_name = separator.join(["S2"] + roi.split(separator))
+        # Sample path
+        roi_file_path = os.path.join(
+            path_of_dataset, "patches", roi_folder, roi_name + ".tif"
+        )
+        # Segmentation map path
+        roi_file_cl_path = os.path.join(
+            path_of_dataset, "patches", roi_folder, roi_name + "_cl.tif"
+        )
+        return roi_file_path, roi_file_cl_path
 
 
 ###############################################################

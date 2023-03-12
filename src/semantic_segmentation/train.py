@@ -23,21 +23,20 @@ from src.utils.assets import labels, labels_binary, labels_multi
 from src.utils.utils import get_today_str
 from src.semantic_segmentation.supervised.focal_loss import FocalLoss
 
-# sys.path.append(up(os.path.abspath(__file__)))
 from src.semantic_segmentation.supervised.models.unet import UNet
 from src.semantic_segmentation.dataloader import (
-    GenDEBRIS,
+    AnomalyMarineDataset,
     bands_mean,
     bands_std,
     RandomRotationTransform,
     class_distr,
     gen_weights,
+    TrainMode,
 )
 
-# sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from src.utils.metrics import Evaluation
 
-root_path = up(up(up(up(os.path.abspath(__file__)))))
+root_path = up(up(up(os.path.abspath(__file__))))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "log_unet.log"),
@@ -101,16 +100,54 @@ def main(options):
 
     # Construct Data loader
 
-    if options["mode"] == "train":
+    if options["mode"] == TrainMode.TRAIN.value:
 
-        dataset_train = GenDEBRIS(
-            "train",
+        dataset_train = AnomalyMarineDataset(
+            TrainMode.TRAIN.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
         )
-        dataset_test = GenDEBRIS(
-            "val",
+        dataset_test = AnomalyMarineDataset(
+            TrainMode.VAL.value,
+            transform=transform_test,
+            standardization=standardization,
+            aggregate_classes=options["aggregate_classes"],
+        )
+
+        train_loader = DataLoader(
+            dataset_train,
+            batch_size=options["batch"],
+            shuffle=True,
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            worker_init_fn=seed_worker,
+            generator=g,
+        )
+
+        test_loader = DataLoader(
+            dataset_test,
+            batch_size=options["batch"],
+            shuffle=False,
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            worker_init_fn=seed_worker,
+            generator=g,
+        )
+    elif options["mode"] == TrainMode.TRAIN_SSL.value:
+        # TODO: update (e.g. transformations and other)
+        dataset_train = AnomalyMarineDataset(
+            TrainMode.TRAIN_SSL.value,
+            transform=transform_train,
+            standardization=standardization,
+            aggregate_classes=options["aggregate_classes"],
+        )
+        dataset_test = AnomalyMarineDataset(
+            TrainMode.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
@@ -140,10 +177,10 @@ def main(options):
             generator=g,
         )
 
-    elif options["mode"] == "test":
+    elif options["mode"] == TrainMode.TEST.value:
 
-        dataset_test = GenDEBRIS(
-            "test",
+        dataset_test = AnomalyMarineDataset(
+            TrainMode.TEST.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
@@ -161,7 +198,7 @@ def main(options):
             generator=g,
         )
     else:
-        raise Exception("The mode option should be 'train or 'test'")
+        raise Exception("The mode option should be train, train_ssl, or test")
 
     if options["aggregate_classes"] == "multi":
         output_channels = len(labels_multi)
@@ -239,7 +276,7 @@ def main(options):
         class_distr = class_distr[: len(labels_binary)]
 
     # Weighted Cross Entropy Loss & adam optimizer
-    weight = gen_weights(class_distr, c=options["weight_param"])
+    # weight = gen_weights(class_distr, c=options["weight_param"])
 
     # criterion = torch.nn.CrossEntropyLoss(
     #    ignore_index=-1, reduction="mean", weight=weight.to(device)
@@ -276,7 +313,7 @@ def main(options):
     eval_every = options["eval_every"]
 
     # Write model-graph to Tensorboard
-    if options["mode"] == "train":
+    if options["mode"] == TrainMode.TRAIN.value:
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
         writer.add_graph(model, image_temp.to(device))
@@ -442,8 +479,11 @@ def main(options):
 
                 model.train()
 
+    elif options["mode"] == TrainMode.TRAIN_SSL.value:
+        # TODO
+        pass
     # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == "test":
+    elif options["mode"] == TrainMode.TEST.value:
 
         model.eval()
 
@@ -513,7 +553,9 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--mode", default="train", help="select between train or test "
+        "--mode",
+        default=TrainMode.TRAIN_SSL.value,
+        help="select between train or test ",
     )
     parser.add_argument(
         "--epochs",
@@ -539,12 +581,12 @@ if __name__ == "__main__":
         type=int,
         help="Number of hidden features",
     )
-    parser.add_argument(
-        "--weight_param",
-        default=1.03,
-        type=float,
-        help="Weighting parameter for Loss Function",
-    )
+    # parser.add_argument(
+    #    "--weight_param",
+    #    default=1.03,
+    #    type=float,
+    #    help="Weighting parameter for Loss Function",
+    # )
 
     # Optimization
     parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
