@@ -11,7 +11,6 @@ from tqdm import tqdm
 from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
-import torchvision.transforms.functional as F
 from src.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
@@ -261,10 +260,10 @@ class AnomalyMarineDataset(Dataset):
     def __getitem__(self, index):
         # Unlabeled dataloader
         if self.mode == DataLoaderType.TRAIN_SSL.value:
+            # TODO
             pass
         # Labeled dataloader
         else:
-            # TODO: do also the ssl version
             img = self.X[index]
             target = self.y[index]
 
@@ -383,20 +382,6 @@ class AnomalyMarineDataset(Dataset):
         seg_map = np.copy(ds.ReadAsArray().astype(np.int64))
         ds = None
         return seg_map
-
-
-###############################################################
-# Transformations                                             #
-###############################################################
-class RandomRotationTransform:
-    """Rotate by one of the given angles."""
-
-    def __init__(self, angles):
-        self.angles = angles
-
-    def __call__(self, x):
-        angle = random.choice(self.angles)
-        return F.rotate(x, angle)
 
 
 ###############################################################

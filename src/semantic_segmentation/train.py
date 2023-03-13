@@ -5,7 +5,6 @@ This modified implementation: Luca Marini
 import os
 from enum import Enum
 import ast
-import sys
 import json
 import random
 import logging
@@ -13,7 +12,6 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
-import datetime
 
 import torch
 import torchvision.transforms as transforms
@@ -23,17 +21,15 @@ from torch.utils.data import DataLoader
 from src.utils.assets import labels, labels_binary, labels_multi
 from src.utils.utils import get_today_str
 from src.semantic_segmentation.supervised.focal_loss import FocalLoss
-
 from src.semantic_segmentation.supervised.models.unet import UNet
 from src.semantic_segmentation.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
-    RandomRotationTransform,
     gen_weights,
     CategoryAggregation,
     get_labeled_and_unlabeled_rois,
 )
-
+from src.semantic_segmentation.transforms import RandomRotationTransform
 from src.utils.metrics import Evaluation
 from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD
 
@@ -80,8 +76,6 @@ def seed_worker(worker_id):
 
 
 def main(options):
-    dataset_path = os.path.join((up(up(up(__file__)))), "data")
-
     # Reproducibility
     # Limit the number of sources of nondeterministic behavior
     seed_all(0)
