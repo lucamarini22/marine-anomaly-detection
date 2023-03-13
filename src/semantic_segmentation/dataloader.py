@@ -20,82 +20,12 @@ from src.utils.assets import (
     labels_binary,
     labels_multi,
 )
+from src.utils.constants import BANDS_MEAN
+
 
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
-
-# Pixel-Level class distribution (total sum equals 1.0)
-class_distr = torch.Tensor(
-    [
-        0.00406,
-        0.00334,
-        0.00282,
-        0.00103,
-        0.00693,
-        0.14020,
-        0.15424,
-        0.44536,
-        0.00146,
-        0.18822,
-        0.02074,
-        0.00696,
-        0.01401,
-        0.01014,
-        0.00049,
-    ]
-)
-"""
-[
-    0.00452,
-    0.00203,
-    0.00254,
-    0.00168,
-    0.00766,
-    0.15206,
-    0.20232,
-    0.35941,
-    0.00109,
-    0.20218,
-    0.03226,
-    0.00693,
-    0.01322,
-    0.01158,
-    0.00052,
-]
-"""
-
-bands_mean = np.array(
-    [
-        0.05197577,
-        0.04783991,
-        0.04056812,
-        0.03163572,
-        0.02972606,
-        0.03457443,
-        0.03875053,
-        0.03436435,
-        0.0392113,
-        0.02358126,
-        0.01588816,
-    ]
-).astype("float32")
-
-bands_std = np.array(
-    [
-        0.04725893,
-        0.04743808,
-        0.04699043,
-        0.04967381,
-        0.04946782,
-        0.06458357,
-        0.07594915,
-        0.07120246,
-        0.08251058,
-        0.05111466,
-        0.03524419,
-    ]
-).astype("float32")
 
 ###############################################################
 # Pixel-level Semantic Segmentation Data Loader               #
@@ -287,7 +217,7 @@ class AnomalyMarineDataset(Dataset):
             self.X.append(temp)
 
         self.impute_nan = np.tile(
-            bands_mean, (temp.shape[1], temp.shape[2], 1)
+            BANDS_MEAN, (temp.shape[1], temp.shape[2], 1)
         )
         self.mode = mode
         self.transform = transform

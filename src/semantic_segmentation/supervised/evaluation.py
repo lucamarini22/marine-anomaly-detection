@@ -60,17 +60,17 @@ def main(options):
 
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["aggregate_classes"] == "multi":
+    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # Keep Marine Debris, Algae/Natural Organic Material, Ship, Clouds, Marine Water classes
         labels = labels_multi
         output_channels = len(labels_multi)
-    elif options["aggregate_classes"] == "binary":
+    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
         # Keep only Marine Debris and Others classes
         labels = labels_binary
         output_channels = len(labels_binary)
     else:
         raise Exception(
-            "The aggregated_classes option should be 'binary or 'multi'"
+            "The aggregated_classes option should be binary or multi"
         )
 
     # Use gpu or cpu
@@ -214,8 +214,12 @@ if __name__ == "__main__":
     # Options
     parser.add_argument(
         "--aggregate_classes",
-        choices=["multi", "binary", "no"],
-        default="binary",
+        choices=[
+            CategoryAggregation.MULTI.value,
+            CategoryAggregation.BINARY.value,
+            "no",
+        ],
+        default=CategoryAggregation.BINARY.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\

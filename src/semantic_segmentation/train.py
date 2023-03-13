@@ -26,15 +26,14 @@ from src.semantic_segmentation.supervised.focal_loss import FocalLoss
 from src.semantic_segmentation.supervised.models.unet import UNet
 from src.semantic_segmentation.dataloader import (
     AnomalyMarineDataset,
-    bands_mean,
-    bands_std,
     RandomRotationTransform,
-    class_distr,
     gen_weights,
     TrainMode,
+    CategoryAggregation,
 )
 
 from src.utils.metrics import Evaluation
+from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD
 
 root_path = up(up(up(os.path.abspath(__file__))))
 
@@ -95,8 +94,8 @@ def main(options):
     )
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-
-    standardization = transforms.Normalize(bands_mean, bands_std)
+    class_distr = CLASS_DISTR
+    standardization = transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
 
@@ -200,13 +199,13 @@ def main(options):
     else:
         raise Exception("The mode option should be train, train_ssl, or test")
 
-    if options["aggregate_classes"] == "multi":
+    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         output_channels = len(labels_multi)
-    elif options["aggregate_classes"] == "binary":
+    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
         output_channels = len(labels_binary)
     else:
         raise Exception(
-            "The aggregated_classes option should be 'binary or 'multi'"
+            "The aggregated_classes option should be binary or multi"
         )
 
     # Use gpu or cpu
@@ -240,8 +239,7 @@ def main(options):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    global class_distr
-    if options["aggregate_classes"] == "multi":
+    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()
         # Aggregate Distributions:
@@ -267,7 +265,7 @@ def main(options):
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[: len(labels_multi)]
 
-    elif options["aggregate_classes"] == "binary":
+    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
         # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
         agg_distr = sum(class_distr[1:])
         # Move the class distrib of Other to the 2nd position
@@ -281,6 +279,10 @@ def main(options):
     # criterion = torch.nn.CrossEntropyLoss(
     #    ignore_index=-1, reduction="mean", weight=weight.to(device)
     # )
+
+    # TODO: modify class_distr when using ssl
+    # (because you take a percentage of labels so the class distr of pixels
+    # will change)
     alphas = 1 - class_distr
     # alphas = torch.Tensor(
     #    [0.25, 1]
@@ -543,14 +545,18 @@ if __name__ == "__main__":
     # Options
     parser.add_argument(
         "--aggregate_classes",
-        choices=["multi", "binary", "no"],
-        default="binary",
+        choices=[
+            CategoryAggregation.MULTI.value,
+            CategoryAggregation.BINARY.value,
+            "no",
+        ],
+        default=CategoryAggregation.BINARY.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
                 binary (Marine Debris and Other); \
                     no (keep the original 15 classes)",
-    )
+    )  # TODO: re-implement the option to keep the 15 original classes
 
     parser.add_argument(
         "--mode",
