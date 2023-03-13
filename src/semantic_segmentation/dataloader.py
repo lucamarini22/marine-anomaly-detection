@@ -22,7 +22,6 @@ from src.utils.assets import (
 )
 from src.utils.constants import BANDS_MEAN
 
-
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
@@ -107,32 +106,26 @@ class AnomalyMarineDataset(Dataset):
         else:
             raise Exception("Bad mode.")
 
+        # Store unlabeled data (only when using semi-supervised learning mode)
         if mode == TrainMode.TRAIN_SSL.value:
-            # Store unlabeled data
             self.X_u = []
 
-            # Store unlabeled data
             for roi in tqdm(
                 self.ROIs_u, desc="Load unlabeled " + mode + " set to memory"
             ):
                 roi_file_path, _ = self.get_roi_tokens(path, roi)
-                ds = None
-                # Load Unlabeled Patch
-                ds = gdal.Open(roi_file_path)
-                temp = np.copy(ds.ReadAsArray())
-                ds = None
-                self.X_u.append(temp)
+                patch = self.load_patch(roi_file_path)
+                self.X_u.append(patch)
 
         # Store labeled data
         self.X = []  # Loaded Images
         self.y = []  # Loaded Output masks
 
         for roi in tqdm(self.ROIs, desc="Load " + mode + " set to memory"):
+            # Gets patch path and its semantic segmentation map path
             roi_file_path, roi_file_cl_path = self.get_roi_tokens(path, roi)
-
-            # Load Classsification Mask
-            ds = gdal.Open(roi_file_cl_path)
-            temp = np.copy(ds.ReadAsArray().astype(np.int64))
+            # Loads semantic segmentation map
+            seg_map = self.load_segmentation_map(roi_file_cl_path)
 
             # Aggregation
             if aggregate_classes == CategoryAggregation.MULTI.value:
@@ -149,8 +142,8 @@ class AnomalyMarineDataset(Dataset):
                     + 1
                 ]
                 super_organic_material_class_name = labels_multi[1]
-                temp = self.aggregate_classes_to_super_class(
-                    temp,
+                seg_map = self.aggregate_classes_to_super_class(
+                    seg_map,
                     algae_classes_names,
                     super_organic_material_class_name,
                     cat_mapping,
@@ -160,8 +153,8 @@ class AnomalyMarineDataset(Dataset):
                 # Aggregate Ship to new position
                 ship_class_name = [labels[4]]
                 super_ship_class_name = labels[4]
-                temp = self.aggregate_classes_to_super_class(
-                    temp,
+                seg_map = self.aggregate_classes_to_super_class(
+                    seg_map,
                     ship_class_name,
                     super_ship_class_name,
                     cat_mapping,
@@ -171,8 +164,8 @@ class AnomalyMarineDataset(Dataset):
                 # Aggregate Clouds to new position
                 clouds_class_name = [labels[5]]
                 super_clouds_class_name = labels[5]
-                temp = self.aggregate_classes_to_super_class(
-                    temp,
+                seg_map = self.aggregate_classes_to_super_class(
+                    seg_map,
                     clouds_class_name,
                     super_clouds_class_name,
                     cat_mapping,
@@ -185,8 +178,8 @@ class AnomalyMarineDataset(Dataset):
                 water_classes_names = labels[-9:]
                 super_water_class_name = labels[6]
 
-                temp = self.aggregate_classes_to_super_class(
-                    temp,
+                seg_map = self.aggregate_classes_to_super_class(
+                    seg_map,
                     water_classes_names,
                     super_water_class_name,
                     cat_mapping,
@@ -198,8 +191,8 @@ class AnomalyMarineDataset(Dataset):
                 # Aggregate all classes (except Marine Debris) to Marine Water Class
                 other_classes_names = labels[labels_binary.index("Other") :]
                 super_class_name = labels_binary[labels_binary.index("Other")]
-                temp = self.aggregate_classes_to_super_class(
-                    temp,
+                seg_map = self.aggregate_classes_to_super_class(
+                    seg_map,
                     other_classes_names,
                     super_class_name,
                     cat_mapping,
@@ -207,19 +200,14 @@ class AnomalyMarineDataset(Dataset):
                 )
 
             # Categories from 1 to 0
-            temp = np.copy(temp - 1)
-            ds = None  # Close file
-
-            self.y.append(temp)
-
+            seg_map = np.copy(seg_map - 1)
+            self.y.append(seg_map)
             # Load Patch
-            ds = gdal.Open(roi_file_path)
-            temp = np.copy(ds.ReadAsArray())
-            ds = None
-            self.X.append(temp)
+            patch = self.load_patch(roi_file_path)
+            self.X.append(patch)
 
         self.impute_nan = np.tile(
-            BANDS_MEAN, (temp.shape[1], temp.shape[2], 1)
+            BANDS_MEAN, (patch.shape[1], patch.shape[2], 1)
         )
         self.mode = mode
         self.transform = transform
@@ -266,7 +254,7 @@ class AnomalyMarineDataset(Dataset):
 
     def aggregate_classes_to_super_class(
         self,
-        temp: np.ndarray,
+        seg_map: np.ndarray,
         classes_names_to_aggregate: list[str],
         super_class_name: str,
         cat_mapping_old: dict[str, int],
@@ -277,7 +265,7 @@ class AnomalyMarineDataset(Dataset):
         super_class_name.
 
         Args:
-            temp (np.ndarray): image.
+            seg_map (np.ndarray): segmentation map.
             classes_names_to_aggregate (list[str]): list of names of the
               classes to aggregate.
             super_class_name (str): name of the class that aggregates other
@@ -291,10 +279,10 @@ class AnomalyMarineDataset(Dataset):
             np.ndarray: updated image.
         """
         for class_name in classes_names_to_aggregate:
-            temp[temp == cat_mapping_old[class_name]] = cat_mapping_new[
+            seg_map[seg_map == cat_mapping_old[class_name]] = cat_mapping_new[
                 super_class_name
             ]
-        return temp
+        return seg_map
 
     def get_roi_tokens(
         self, path_of_dataset: str, roi: str, separator: str = "_"
@@ -323,6 +311,37 @@ class AnomalyMarineDataset(Dataset):
             path_of_dataset, "patches", roi_folder, roi_name + "_cl.tif"
         )
         return roi_file_path, roi_file_cl_path
+
+    def load_patch(self, patch_path: str) -> np.ndarray:
+        """Loads a patch from its .tif file.
+
+        Args:
+            patch_path (str): path of the .tif file of the patch.
+
+        Returns:
+            np.ndarray: the patch stored in a numpy array.
+        """
+        ds = None
+        ds = gdal.Open(patch_path)
+        patch = np.copy(ds.ReadAsArray())
+        ds = None
+        return patch
+
+    def load_segmentation_map(self, seg_map_path: str) -> np.ndarray:
+        """Loads a patch from its .tif file.
+
+        Args:
+            seg_map_path (str): path of the .tif file of the segmentation
+              map of the  patch.
+
+        Returns:
+            np.ndarray: segmentation map of the patch stored in a numpy array.
+        """
+        ds = None
+        ds = gdal.Open(seg_map_path)
+        seg_map = np.copy(ds.ReadAsArray().astype(np.int64))
+        ds = None
+        return seg_map
 
 
 ###############################################################
