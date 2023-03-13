@@ -29,7 +29,10 @@ from src.semantic_segmentation.dataloader import (
     CategoryAggregation,
     get_labeled_and_unlabeled_rois,
 )
-from src.semantic_segmentation.transforms import RandomRotationTransform
+from src.semantic_segmentation.transformations import (
+    RandomRotationTransform,
+    TransformFixMatch,
+)
 from src.utils.metrics import Evaluation
 from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD
 
@@ -159,7 +162,7 @@ def main(options):
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SSL.value,
-            transform=transform_train,
+            transform=TransformFixMatch(mean=BANDS_MEAN, std=BANDS_STD),
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs_u,

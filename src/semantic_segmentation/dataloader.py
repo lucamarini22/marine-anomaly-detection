@@ -260,21 +260,43 @@ class AnomalyMarineDataset(Dataset):
     def __getitem__(self, index):
         # Unlabeled dataloader
         if self.mode == DataLoaderType.TRAIN_SSL.value:
-            # TODO
-            pass
+            # TODO: check it works
+            img = self.X_u[index]
+            # CxWxH to WxHxC
+            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
+            nan_mask = np.isnan(img)
+            img[nan_mask] = self.impute_nan[nan_mask]
+            if self.transform is not None:
+                # (256, 256) -> (256, 256, 1)
+                # target = target[:, :, np.newaxis]
+                # stack = np.concatenate([img, target], axis=-1).astype(
+                #    "float32"
+                # )  # In order to rotate-transform both mask and image
+
+                img = self.transform(img)
+
+                # img = stack[:-1, :, :]
+                # target = stack[
+                #    -1, :, :
+                # ].long()  # Recast target values back to int64 or torch long dtype
+
+            if self.standardization is not None:
+                img = self.standardization(img)
+            # img = unlabeled_weak_aug, unlabeled_strong_aug
+            return img, None
+
         # Labeled dataloader
         else:
             img = self.X[index]
             target = self.y[index]
 
-            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype(
-                "float32"
-            )  # CxWxH to WxHxC
-
+            # CxWxH to WxHxC
+            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
 
             if self.transform is not None:
+                # (256, 256) -> (256, 256, 1)
                 target = target[:, :, np.newaxis]
                 stack = np.concatenate([img, target], axis=-1).astype(
                     "float32"
