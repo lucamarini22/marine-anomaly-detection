@@ -53,7 +53,7 @@ class AnomalyMarineDataset(Dataset):
         standardization=None,
         path=dataset_path,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI.value,
-        perc_unlabeled: float = 0.9,
+        perc_labeled: float = 0.1,
     ):
         """Initializes the anomaly marine detection dataset.
 
@@ -68,9 +68,9 @@ class AnomalyMarineDataset(Dataset):
             aggregate_classes (CategoryAggregation, optional): type
               of aggragation of categories.
               Defaults to CategoryAggregation.MULTI.value.
-            perc_unlabeled (float, optional): percentage of unlabeled samples
+            perc_labeled (float, optional): percentage of labeled samples
               taken from the training set. To use only when using
-              TrainMode.TRAIN_SSL.value as mode. Defaults to 0.9.
+              TrainMode.TRAIN_SSL.value as mode. Defaults to 0.1.
 
         Raises:
             Exception: raises an exception if the specified mode does not
@@ -86,16 +86,13 @@ class AnomalyMarineDataset(Dataset):
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "train_X.txt"), dtype="str"
             )
-            num_unlabeled_samples = round(len(self.ROIs) * perc_unlabeled)
+            num_unlabeled_samples = round(len(self.ROIs) * (1 - perc_labeled))
             # Unlabeled regions of interests
             self.ROIs_u = np.random.choice(
                 self.ROIs, num_unlabeled_samples, replace=False
             )
             # Labeled regions of interests
             self.ROIs = np.setdiff1d(self.ROIs, self.ROIs_u)
-
-            self.X_u = []
-            # TODO: call get_roi_tokens, open tif, and save them to X_u
 
         elif mode == TrainMode.TEST.value:
             self.ROIs = np.genfromtxt(
@@ -110,23 +107,28 @@ class AnomalyMarineDataset(Dataset):
         else:
             raise Exception("Bad mode.")
 
+        if mode == TrainMode.TRAIN_SSL.value:
+            # Store unlabeled data
+            self.X_u = []
+
+            # Store unlabeled data
+            for roi in tqdm(
+                self.ROIs_u, desc="Load unlabeled " + mode + " set to memory"
+            ):
+                roi_file_path, _ = self.get_roi_tokens(path, roi)
+                ds = None
+                # Load Unlabeled Patch
+                ds = gdal.Open(roi_file_path)
+                temp = np.copy(ds.ReadAsArray())
+                ds = None
+                self.X_u.append(temp)
+
+        # Store labeled data
         self.X = []  # Loaded Images
         self.y = []  # Loaded Output masks
 
         for roi in tqdm(self.ROIs, desc="Load " + mode + " set to memory"):
             roi_file_path, roi_file_cl_path = self.get_roi_tokens(path, roi)
-
-            # Construct file and folder name from roi
-            # roi_folder = "_".join(
-            #    ["S2"] + roi.split("_")[:-1]
-            # )  # Get Folder Name
-            # roi_name = "_".join(["S2"] + roi.split("_"))  # Get File Name
-            # roi_file = os.path.join(
-            #    path, "patches", roi_folder, roi_name + ".tif"
-            # )  # Get File path
-            # roi_file_cl = os.path.join(
-            #    path, "patches", roi_folder, roi_name + "_cl.tif"
-            # )  # Get Class Mask
 
             # Load Classsification Mask
             ds = gdal.Open(roi_file_cl_path)
@@ -227,14 +229,13 @@ class AnomalyMarineDataset(Dataset):
         self.aggregate_classes = aggregate_classes
 
     def __len__(self):
-
         return self.length
 
     def getnames(self):
         return self.ROIs
 
     def __getitem__(self, index):
-
+        # TODO: do also the ssl version
         img = self.X[index]
         target = self.y[index]
 

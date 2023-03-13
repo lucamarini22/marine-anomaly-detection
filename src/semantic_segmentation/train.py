@@ -144,6 +144,7 @@ def main(options):
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
+            perc_labeled=options["perc_labeled"],
         )
         dataset_test = AnomalyMarineDataset(
             TrainMode.VAL.value,
@@ -545,11 +546,7 @@ if __name__ == "__main__":
     # Options
     parser.add_argument(
         "--aggregate_classes",
-        choices=[
-            CategoryAggregation.MULTI.value,
-            CategoryAggregation.BINARY.value,
-            "no",
-        ],
+        choices=list(CategoryAggregation),
         default=CategoryAggregation.BINARY.value,
         type=str,
         help="Aggregate classes into:\
@@ -557,11 +554,22 @@ if __name__ == "__main__":
                 binary (Marine Debris and Other); \
                     no (keep the original 15 classes)",
     )  # TODO: re-implement the option to keep the 15 original classes
-
     parser.add_argument(
         "--mode",
+        choices=list(TrainMode),
         default=TrainMode.TRAIN_SSL.value,
-        help="select between train or test ",
+        help="Mode",
+    )
+    parser.add_argument(
+        "--perc_labeled",
+        default=0.1,
+        help=(
+            "Percentage of labeled training set. This argument has "
+            "effect only when --mode=TrainMode.TRAIN_SSL.value. "
+            " The percentage of the unlabeled training set will be "
+            " 1 - perc_labeled."
+        ),
+        type=float,
     )
     parser.add_argument(
         "--epochs",
@@ -574,7 +582,7 @@ if __name__ == "__main__":
         "--resume_from_epoch",
         default=0,
         type=int,
-        help="load model from previous epoch",
+        help="Load model from previous epoch",
     )
 
     parser.add_argument(
@@ -597,13 +605,13 @@ if __name__ == "__main__":
     # Optimization
     parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
     parser.add_argument(
-        "--decay", default=0, type=float, help="learning rate decay"
+        "--decay", default=0, type=float, help="Learning rate decay"
     )
     parser.add_argument(
         "--reduce_lr_on_plateau",
         default=0,
         type=int,
-        help="reduce learning rate when no increase (0 or 1)",
+        help="Reduce learning rate when no increase (0 or 1)",
     )
     parser.add_argument(
         "--lr_steps",
@@ -620,7 +628,7 @@ if __name__ == "__main__":
             "trained_models",
             today_str,
         ),
-        help="folder to save checkpoints into (empty = this folder)",
+        help="Folder to save checkpoints into (empty = this folder)",
     )
     parser.add_argument(
         "--eval_every",
