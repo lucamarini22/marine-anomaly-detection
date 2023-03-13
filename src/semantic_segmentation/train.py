@@ -3,6 +3,7 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
+from enum import Enum
 import ast
 import sys
 import json
@@ -26,16 +27,25 @@ from src.semantic_segmentation.supervised.focal_loss import FocalLoss
 from src.semantic_segmentation.supervised.models.unet import UNet
 from src.semantic_segmentation.dataloader import (
     AnomalyMarineDataset,
+    DataLoaderMode,
     RandomRotationTransform,
     gen_weights,
-    TrainMode,
     CategoryAggregation,
+    get_labeled_and_unlabeled_rois,
 )
 
 from src.utils.metrics import Evaluation
 from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD
 
 root_path = up(up(up(os.path.abspath(__file__))))
+
+
+class TrainMode(Enum):
+    TRAIN = "train"
+    TRAIN_SSL = "train_ssl"
+    VAL = "val"
+    TEST = "test"
+
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "log_unet.log"),
@@ -70,6 +80,8 @@ def seed_worker(worker_id):
 
 
 def main(options):
+    dataset_path = os.path.join((up(up(up(__file__)))), "data")
+
     # Reproducibility
     # Limit the number of sources of nondeterministic behavior
     seed_all(0)
@@ -102,13 +114,13 @@ def main(options):
     if options["mode"] == TrainMode.TRAIN.value:
 
         dataset_train = AnomalyMarineDataset(
-            TrainMode.TRAIN.value,
+            DataLoaderMode.TRAIN_SUP.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
         )
         dataset_test = AnomalyMarineDataset(
-            TrainMode.VAL.value,
+            DataLoaderMode.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
@@ -138,23 +150,46 @@ def main(options):
             generator=g,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
+        # Split training data into labeled and unlabeled sets
+        ROIs, ROIs_u = get_labeled_and_unlabeled_rois(
+            perc_labeled=options["perc_labeled"]
+        )
+
         # TODO: update (e.g. transformations and other)
-        dataset_train = AnomalyMarineDataset(
-            TrainMode.TRAIN_SSL.value,
+        labeled_dataset_train = AnomalyMarineDataset(
+            DataLoaderMode.TRAIN_SUP.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
-            perc_labeled=options["perc_labeled"],
+            rois=ROIs,
+        )
+        unlabeled_dataset_train = AnomalyMarineDataset(
+            DataLoaderMode.TRAIN_SSL.value,
+            transform=transform_train,
+            standardization=standardization,
+            aggregate_classes=options["aggregate_classes"],
+            rois=ROIs_u,
         )
         dataset_test = AnomalyMarineDataset(
-            TrainMode.VAL.value,
+            DataLoaderMode.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
         )
-
-        train_loader = DataLoader(
-            dataset_train,
+        # TODO: fix batch size for labeled and unlabeled data loaders
+        labeled_train_loader = DataLoader(
+            labeled_dataset_train,
+            batch_size=options["batch"],
+            shuffle=True,
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            worker_init_fn=seed_worker,
+            generator=g,
+        )
+        unlabeled_train_loader = DataLoader(
+            unlabeled_dataset_train,
             batch_size=options["batch"],
             shuffle=True,
             num_workers=options["num_workers"],
@@ -180,7 +215,7 @@ def main(options):
     elif options["mode"] == TrainMode.TEST.value:
 
         dataset_test = AnomalyMarineDataset(
-            TrainMode.TEST.value,
+            DataLoaderMode.TEST.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
