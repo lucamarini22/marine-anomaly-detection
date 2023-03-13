@@ -27,7 +27,7 @@ from src.semantic_segmentation.supervised.focal_loss import FocalLoss
 from src.semantic_segmentation.supervised.models.unet import UNet
 from src.semantic_segmentation.dataloader import (
     AnomalyMarineDataset,
-    DataLoaderMode,
+    DataLoaderType,
     RandomRotationTransform,
     gen_weights,
     CategoryAggregation,
@@ -114,13 +114,13 @@ def main(options):
     if options["mode"] == TrainMode.TRAIN.value:
 
         dataset_train = AnomalyMarineDataset(
-            DataLoaderMode.TRAIN_SUP.value,
+            DataLoaderType.TRAIN_SUP.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
         )
         dataset_test = AnomalyMarineDataset(
-            DataLoaderMode.VAL.value,
+            DataLoaderType.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
@@ -157,21 +157,21 @@ def main(options):
 
         # TODO: update (e.g. transformations and other)
         labeled_dataset_train = AnomalyMarineDataset(
-            DataLoaderMode.TRAIN_SUP.value,
+            DataLoaderType.TRAIN_SUP.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs,
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
-            DataLoaderMode.TRAIN_SSL.value,
+            DataLoaderType.TRAIN_SSL.value,
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs_u,
         )
         dataset_test = AnomalyMarineDataset(
-            DataLoaderMode.VAL.value,
+            DataLoaderType.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
@@ -215,7 +215,7 @@ def main(options):
     elif options["mode"] == TrainMode.TEST.value:
 
         dataset_test = AnomalyMarineDataset(
-            DataLoaderMode.TEST.value,
+            DataLoaderType.TEST.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],

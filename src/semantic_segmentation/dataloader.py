@@ -32,7 +32,7 @@ torch.manual_seed(0)
 dataset_path = os.path.join((up(up(up(__file__)))), "data")
 
 
-class DataLoaderMode(Enum):
+class DataLoaderType(Enum):
     TRAIN_SUP = "train_sup"
     TRAIN_SSL = "train_ssl"
     VAL = "val"
@@ -74,7 +74,7 @@ def get_labeled_and_unlabeled_rois(
 class AnomalyMarineDataset(Dataset):
     def __init__(
         self,
-        mode: DataLoaderMode = DataLoaderMode.TRAIN_SUP.value,
+        mode: DataLoaderType = DataLoaderType.TRAIN_SUP.value,
         transform=None,
         standardization=None,
         path: str = dataset_path,
@@ -84,8 +84,8 @@ class AnomalyMarineDataset(Dataset):
         """Initializes the anomaly marine detection dataset.
 
         Args:
-            mode (DataLoaderMode, optional): data loader mode.
-              Defaults to DataLoaderMode.TRAIN_SUP.value.
+            mode (DataLoaderType, optional): data loader mode.
+              Defaults to DataLoaderType.TRAIN_SUP.value.
             transform (_type_, optional): transformation to apply to dataset.
               Defaults to None.
             standardization (_type_, optional): standardization.
@@ -101,7 +101,7 @@ class AnomalyMarineDataset(Dataset):
             Exception: raises an exception if the specified mode does not
               exist.
         """
-        if mode == DataLoaderMode.TRAIN_SUP.value:
+        if mode == DataLoaderType.TRAIN_SUP.value:
             if rois is None:
                 # Supervised learning case - training labeled data
                 self.ROIs = np.genfromtxt(
@@ -111,16 +111,16 @@ class AnomalyMarineDataset(Dataset):
                 # Semi-supervised learning case - training labeled data
                 self.ROIs = rois
 
-        elif mode == DataLoaderMode.TRAIN_SSL.value:
+        elif mode == DataLoaderType.TRAIN_SSL.value:
             # Semi-supervised learning case - training unlabeled data
             self.ROIs = rois
 
-        elif mode == DataLoaderMode.TEST.value:
+        elif mode == DataLoaderType.TEST.value:
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "test_X.txt"), dtype="str"
             )
 
-        elif mode == DataLoaderMode.VAL.value:
+        elif mode == DataLoaderType.VAL.value:
             self.ROIs = np.genfromtxt(
                 os.path.join(path, "splits", "val_X.txt"), dtype="str"
             )
@@ -129,7 +129,7 @@ class AnomalyMarineDataset(Dataset):
             raise Exception("Bad mode.")
 
         # Unlabeled dataloader (only when using semi-supervised learning mode)
-        if mode == DataLoaderMode.TRAIN_SSL.value:
+        if mode == DataLoaderType.TRAIN_SSL.value:
             self.X_u = []
 
             for roi in tqdm(
@@ -245,7 +245,7 @@ class AnomalyMarineDataset(Dataset):
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
-        if mode == DataLoaderMode.TRAIN_SSL.value:
+        if mode == DataLoaderType.TRAIN_SSL.value:
             self.length = len(self.X_u)
         else:
             self.length = len(self.y)
@@ -260,7 +260,7 @@ class AnomalyMarineDataset(Dataset):
 
     def __getitem__(self, index):
         # Unlabeled dataloader
-        if self.mode == DataLoaderMode.TRAIN_SSL.value:
+        if self.mode == DataLoaderType.TRAIN_SSL.value:
             pass
         # Labeled dataloader
         else:

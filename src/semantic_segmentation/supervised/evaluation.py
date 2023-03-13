@@ -18,7 +18,13 @@ import torchvision.transforms as transforms
 
 # sys.path.append(up(os.path.abspath(__file__)))
 from src.semantic_segmentation.supervised.models.unet import UNet
-from dataloader import AnomalyMarineDataset, TrainMode, bands_mean, bands_std
+from dataloader import (
+    AnomalyMarineDataset,
+    DataLoaderType,
+    CategoryAggregation,
+)
+from src.utils.constants import BANDS_MEAN, BANDS_STD
+
 
 # sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from src.utils.metrics import Evaluation, confusion_matrix
@@ -43,12 +49,12 @@ def main(options):
     # Transformations
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    standardization = transforms.Normalize(bands_mean, bands_std)
+    standardization = transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
 
     dataset_test = AnomalyMarineDataset(
-        TrainMode.TEST.value,
+        DataLoaderType.TEST.value,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
@@ -145,7 +151,7 @@ def main(options):
                 dtype="str",
             )
 
-            impute_nan = np.tile(bands_mean, (256, 256, 1))
+            impute_nan = np.tile(BANDS_MEAN, (256, 256, 1))
 
             for roi in tqdm(ROIs):
 
