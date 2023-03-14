@@ -11,6 +11,7 @@ from tqdm import tqdm
 from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
+
 from src.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
@@ -266,13 +267,15 @@ class AnomalyMarineDataset(Dataset):
             img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
+
+            # img = Image.fromarray(img)
+
             if self.transform is not None:
                 # (256, 256) -> (256, 256, 1)
                 # target = target[:, :, np.newaxis]
                 # stack = np.concatenate([img, target], axis=-1).astype(
                 #    "float32"
                 # )  # In order to rotate-transform both mask and image
-
                 img = self.transform(img)
 
                 # img = stack[:-1, :, :]

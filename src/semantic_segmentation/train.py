@@ -187,7 +187,7 @@ def main(options):
         )
         unlabeled_train_loader = DataLoader(
             unlabeled_dataset_train,
-            batch_size=options["batch"],
+            batch_size=options["batch"] * options["mu"],
             shuffle=True,
             num_workers=options["num_workers"],
             pin_memory=options["pin_memory"],
@@ -326,6 +326,12 @@ def main(options):
         gamma=2.0,
         reduction="mean",
         ignore_index=-1,
+    )
+
+    criterion_unsup = FocalLoss(
+        alpha=alphas.to(device),
+        gamma=2.0,
+        reduction="none",
     )
 
     optimizer = torch.optim.Adam(
@@ -516,7 +522,196 @@ def main(options):
 
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
         # TODO
-        pass
+        labeled_iter = iter(labeled_train_loader)
+        unlabeled_iter = iter(unlabeled_train_loader)
+
+        # dataiter = iter(train_loader)
+        # image_temp, _ = next(dataiter)
+        # writer.add_graph(model, image_temp.to(device))
+
+        ###############################################################
+        # Start Training SEMI-SUPERVISED LEARINING                    #
+        ###############################################################
+        model.train()
+
+        for epoch in range(start, epochs + 1):
+            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            training_loss = []
+            training_batches = 0
+
+            i_board = 0
+            for _ in tqdm(range(len(labeled_iter)), desc="training"):
+
+                img_x, seg_map = next(labeled_iter)
+                (img_u_w, img_u_s), _ = next(unlabeled_iter)
+                # TODO: when deploying code to satellite hw, see if it's
+                # faster to put everything to device and make one single
+                # inference or to put one thing to device at a time and
+                # make inference singularly
+                # img = img.to(device)
+                # seg_map = seg_map.to(device)
+
+                # img_u_w = img_u_w.to(device)
+                # img_u_s = img_u_s.to(device)
+
+                inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
+
+                optimizer.zero_grad()
+
+                logits = model(inputs)
+                logits_x = logits[: options["batch"]]
+                logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
+                del logits
+                # Supervised loss
+                Lx = criterion(logits_x, seg_map)
+
+                pseudo_label = torch.softmax(
+                    logits_u_w.detach(), dim=-1
+                )  # / args.T, dim=-1) -> to add temperature
+                max_probs, targets_u = torch.max(pseudo_label, dim=-1)
+                mask = max_probs.ge(options["threshold"]).float()
+                # Unsupervised loss
+                Lu = (criterion_unsup(logits_u_s, targets_u) * mask).mean()
+                # Final loss
+                loss = Lx + options["lambda"] * Lu
+                loss.backward()
+
+                training_batches += logits_x.shape[0]  # TODO check
+
+                training_loss.append((loss.data * target.shape[0]).tolist())
+
+                optimizer.step()
+
+                # Write running loss
+                writer.add_scalar(
+                    "training loss",
+                    loss,
+                    (epoch - 1) * len(labeled_train_loader) + i_board,
+                )
+                i_board += 1
+
+            logging.info(
+                "Training loss was: "
+                + str(sum(training_loss) / training_batches)
+            )
+
+            ###############################################################
+            # Start Evaluation                                            #
+            ###############################################################
+
+            if epoch % eval_every == 0 or epoch == 1:
+                model.eval()
+
+                test_loss = []
+                test_batches = 0
+                y_true = []
+                y_predicted = []
+
+                with torch.no_grad():
+                    for (image, target) in tqdm(test_loader, desc="testing"):
+
+                        image = image.to(device)
+                        target = target.to(device)
+
+                        logits = model(image)
+
+                        loss = criterion(logits, target)
+
+                        # Accuracy metrics only on annotated pixels
+                        logits = torch.movedim(
+                            logits, (0, 1, 2, 3), (0, 3, 1, 2)
+                        )
+                        logits = logits.reshape((-1, output_channels))
+                        target = target.reshape(-1)
+                        mask = target != -1
+                        logits = logits[mask]
+                        target = target[mask]
+
+                        probs = (
+                            torch.nn.functional.softmax(logits, dim=1)
+                            .cpu()
+                            .numpy()
+                        )
+                        target = target.cpu().numpy()
+
+                        test_batches += target.shape[0]
+                        test_loss.append(
+                            (loss.data * target.shape[0]).tolist()
+                        )
+                        y_predicted += probs.argmax(1).tolist()
+                        y_true += target.tolist()
+
+                    y_predicted = np.asarray(y_predicted)
+                    y_true = np.asarray(y_true)
+
+                    ####################################################################
+                    # Save Scores to the .log file and visualize also with tensorboard #
+                    ####################################################################
+
+                    acc = Evaluation(y_predicted, y_true)
+                    logging.info("\n")
+                    logging.info(
+                        "Val loss was: " + str(sum(test_loss) / test_batches)
+                    )
+                    logging.info(
+                        "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
+                    )
+                    logging.info("Evaluation: " + str(acc))
+
+                    logging.info("Saving models")
+                    model_dir = os.path.join(
+                        options["checkpoint_path"], str(epoch)
+                    )
+                    os.makedirs(model_dir, exist_ok=True)
+                    torch.save(
+                        model.state_dict(),
+                        os.path.join(model_dir, "model.pth"),
+                    )
+
+                    writer.add_scalars(
+                        "Loss per epoch",
+                        {
+                            "Val loss": sum(test_loss) / test_batches,
+                            "Train loss": sum(training_loss)
+                            / training_batches,
+                        },
+                        epoch,
+                    )
+
+                    writer.add_scalar(
+                        "Precision/val macroPrec", acc["macroPrec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Precision/val microPrec", acc["microPrec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Precision/val weightPrec", acc["weightPrec"], epoch
+                    )
+
+                    writer.add_scalar(
+                        "Recall/val macroRec", acc["macroRec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Recall/val microRec", acc["microRec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Recall/val weightRec", acc["weightRec"], epoch
+                    )
+
+                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
+                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
+                    writer.add_scalar(
+                        "F1/val weightF1", acc["weightF1"], epoch
+                    )
+
+                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
+
+                if options["reduce_lr_on_plateau"] == 1:
+                    scheduler.step(sum(test_loss) / test_batches)
+                else:
+                    scheduler.step()
+
+                model.train()
     # CODE ONLY FOR EVALUATION - TESTING MODE !
     elif options["mode"] == TrainMode.TEST.value:
 
@@ -592,6 +787,7 @@ if __name__ == "__main__":
         default=TrainMode.TRAIN_SSL.value,
         help="Mode",
     )
+    ###### SSL hyperparameters ######
     parser.add_argument(
         "--perc_labeled",
         default=0.1,
@@ -603,6 +799,25 @@ if __name__ == "__main__":
         ),
         type=float,
     )
+    parser.add_argument(
+        "--mu",
+        default=9,
+        help=("Unlabeled data ratio."),
+        type=float,
+    )
+    parser.add_argument(
+        "--threshold",
+        default=0.9,
+        help=("Confidence threshold for pseudo-labels."),
+        type=float,
+    )
+    parser.add_argument(
+        "--lambda",
+        default=1,
+        type=float,
+        help="Coefficient of unlabeled loss.",
+    )
+    ####################################
     parser.add_argument(
         "--epochs",
         default=20000,
