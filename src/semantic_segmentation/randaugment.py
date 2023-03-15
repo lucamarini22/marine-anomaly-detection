@@ -6,6 +6,10 @@ import logging
 import random
 
 import numpy as np
+import torch
+from torchvision.utils import draw_bounding_boxes
+
+from src.utils.constants import MARIDA_SIZE_X
 import PIL
 import PIL.ImageOps
 import PIL.ImageEnhance
@@ -45,18 +49,20 @@ def Cutout(img, v, max_v, bias=0):
 
 
 def CutoutAbs(img, v, **kwarg):
-    w, h = img.size
+    w, h = img.shape[1], img.shape[2]
     x0 = np.random.uniform(0, w)
     y0 = np.random.uniform(0, h)
     x0 = int(max(0, x0 - v / 2.0))
     y0 = int(max(0, y0 - v / 2.0))
     x1 = int(min(w, x0 + v))
     y1 = int(min(h, y0 + v))
-    xy = (x0, y0, x1, y1)
-    # gray
-    color = (127, 127, 127)
-    img = img.copy()
-    PIL.ImageDraw.Draw(img).rectangle(xy, color)
+    bbox = [x0, y0, x1, y1]
+    bbox = torch.tensor(bbox, dtype=torch.int)
+
+    black_color = 0
+    img = img.clone()
+    img[:, y0:y1, x0:x1] = black_color
+
     return img
 
 
@@ -202,7 +208,7 @@ class RandAugmentPC(object):
             prob = np.random.uniform(0.2, 0.8)
             if random.random() + prob >= 1:
                 img = op(img, v=self.m, max_v=max_v, bias=bias)
-        img = CutoutAbs(img, int(32 * 0.5))
+        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.5))
         return img
 
 
@@ -220,5 +226,5 @@ class RandAugmentMC(object):
             v = np.random.randint(1, self.m)
             if random.random() < 0.5:
                 img = op(img, v=v, max_v=max_v, bias=bias)
-        img = CutoutAbs(img, int(32 * 0.5))
+        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.5))
         return img

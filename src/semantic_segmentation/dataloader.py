@@ -284,9 +284,12 @@ class AnomalyMarineDataset(Dataset):
                 # ].long()  # Recast target values back to int64 or torch long dtype
 
             if self.standardization is not None:
-                img = self.standardization(img)
+                weak, strong = img
+                weak = self.standardization(weak)
+                strong = self.standardization(strong)
             # img = unlabeled_weak_aug, unlabeled_strong_aug
-            return img, None
+
+            return (weak, strong), None  # this works
 
         # Labeled dataloader
         else:

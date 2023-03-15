@@ -1,6 +1,7 @@
 import random
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
+import numpy as np
 
 from src.semantic_segmentation.randaugment import RandAugmentMC
 from src.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
@@ -56,7 +57,9 @@ class TransformFixMatch(object):
 
     def __call__(self, x):
         weak = self.weak(x)  # this works
-        a = weak[10, :, :]
-        b = x[:, :, 10]
         strong = self.strong(x)
+        weak = weak.cpu().detach().numpy()
+        weak = np.moveaxis(weak, 0, -1)
+        strong = strong.cpu().detach().numpy()
+        strong = np.moveaxis(strong, 0, -1)
         return self.normalize(weak), self.normalize(strong)
