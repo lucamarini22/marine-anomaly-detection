@@ -19,6 +19,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 PARAMETER_MAX = 10
+NUM_TIMES_CUTOUT = 3
 
 
 def AutoContrast(img, **kwarg):
@@ -153,20 +154,20 @@ def _int_parameter(v, max_v):
 def fixmatch_augment_pool():
     # FixMatch paper
     augs = [
-        (AutoContrast, None, None),
-        (Brightness, 0.9, 0.05),
-        (Color, 0.9, 0.05),
-        (Contrast, 0.9, 0.05),
-        (Equalize, None, None),
+        # (AutoContrast, None, None),
+        # (Brightness, 0.9, 0.05),
+        # (Color, 0.9, 0.05),
+        # (Contrast, 0.9, 0.05),
+        # (Equalize, None, None),
         (Identity, None, None),
-        (Posterize, 4, 4),
-        (Rotate, 30, 0),
-        (Sharpness, 0.9, 0.05),
-        (ShearX, 0.3, 0),
-        (ShearY, 0.3, 0),
-        (Solarize, 256, 0),
-        (TranslateX, 0.3, 0),
-        (TranslateY, 0.3, 0),
+        # (Posterize, 4, 4),
+        # (Rotate, 30, 0),
+        # (Sharpness, 0.9, 0.05),
+        # (ShearX, 0.3, 0),
+        # (ShearY, 0.3, 0),
+        # (Solarize, 256, 0),
+        # (TranslateX, 0.3, 0),
+        # (TranslateY, 0.3, 0),
     ]
     return augs
 
@@ -194,6 +195,7 @@ def my_augment_pool():
     return augs
 
 
+"""
 class RandAugmentPC(object):
     def __init__(self, n, m):
         assert n >= 1
@@ -208,8 +210,9 @@ class RandAugmentPC(object):
             prob = np.random.uniform(0.2, 0.8)
             if random.random() + prob >= 1:
                 img = op(img, v=self.m, max_v=max_v, bias=bias)
-        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.5))
+        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
         return img
+"""
 
 
 class RandAugmentMC(object):
@@ -226,5 +229,8 @@ class RandAugmentMC(object):
             v = np.random.randint(1, self.m)
             if random.random() < 0.5:
                 img = op(img, v=v, max_v=max_v, bias=bias)
-        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.5))
+        for _ in range(NUM_TIMES_CUTOUT):
+            # Applies CutOut NUM_TIMES_CUTOUT times
+            img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
+
         return img
