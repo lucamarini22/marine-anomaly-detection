@@ -35,7 +35,9 @@ class FocalLoss(nn.Module):
                 Defaults to -100.
         """
         if reduction not in ("mean", "sum", "none"):
-            raise ValueError('Reduction must be one of: "mean", "sum", "none".')
+            raise ValueError(
+                'Reduction must be one of: "mean", "sum", "none".'
+            )
 
         super().__init__()
         self.alpha = alpha
@@ -61,12 +63,13 @@ class FocalLoss(nn.Module):
             x = x.permute(0, *range(2, x.ndim), 1).reshape(-1, c)
             # (N, d1, d2, ..., dK) --> (N * d1 * ... * dK,)
             y = y.view(-1)
-
-        unignored_mask = y != self.ignore_index
-        y = y[unignored_mask]
-        if len(y) == 0:
-            return torch.tensor(0.0)
-        x = x[unignored_mask]
+        if self.ignore_index != -100:
+            # consider the parameter ignore_index only when it is different from default
+            unignored_mask = y != self.ignore_index
+            y = y[unignored_mask]
+            if len(y) == 0:
+                return torch.tensor(0.0)
+            x = x[unignored_mask]
 
         # compute weighted cross entropy term: -alpha * log(pt)
         # (alpha is already part of self.nll_loss)
@@ -122,6 +125,9 @@ def focal_loss(
         alpha = alpha.to(device=device, dtype=dtype)
 
     fl = FocalLoss(
-        alpha=alpha, gamma=gamma, reduction=reduction, ignore_index=ignore_index
+        alpha=alpha,
+        gamma=gamma,
+        reduction=reduction,
+        ignore_index=ignore_index,
     )
     return fl

@@ -289,7 +289,7 @@ class AnomalyMarineDataset(Dataset):
                 strong = self.standardization(strong)
             # img = unlabeled_weak_aug, unlabeled_strong_aug
 
-            return (weak, strong), None  # this works
+            return weak, strong  # (weak, strong), None  # this works
 
         # Labeled dataloader
         else:

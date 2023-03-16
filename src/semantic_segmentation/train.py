@@ -184,6 +184,7 @@ def main(options):
             persistent_workers=options["persistent_workers"],
             worker_init_fn=seed_worker,
             generator=g,
+            drop_last=True,
         )
         unlabeled_train_loader = DataLoader(
             unlabeled_dataset_train,
@@ -195,6 +196,7 @@ def main(options):
             persistent_workers=options["persistent_workers"],
             worker_init_fn=seed_worker,
             generator=g,
+            drop_last=True,
         )
 
         test_loader = DataLoader(
@@ -522,6 +524,8 @@ def main(options):
 
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
         # TODO
+        classes_channel_idx = 1
+
         labeled_iter = iter(labeled_train_loader)
         unlabeled_iter = iter(unlabeled_train_loader)
 
@@ -540,10 +544,23 @@ def main(options):
             training_batches = 0
 
             i_board = 0
-            for _ in tqdm(range(len(labeled_iter)), desc="training"):
+            for batch_idx in tqdm(range(len(labeled_iter)), desc="training"):
+                try:
+                    img_x, seg_map = next(labeled_iter)
+                except:
+                    labeled_iter = iter(labeled_train_loader)
+                    img_x, seg_map = next(labeled_iter)
 
-                img_x, seg_map = next(labeled_iter)
-                (img_u_w, img_u_s), _ = next(unlabeled_iter)
+                try:
+                    img_u_w, img_u_s = next(
+                        unlabeled_iter
+                    )  # (img_u_w, img_u_s), _ = next(unlabeled_iter)
+                except:
+                    unlabeled_iter = iter(unlabeled_train_loader)
+                    img_u_w, img_u_s = next(unlabeled_iter)
+
+                seg_map = seg_map.to(device)
+
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
                 # inference or to put one thing to device at a time and
@@ -568,17 +585,24 @@ def main(options):
                 pseudo_label = torch.softmax(
                     logits_u_w.detach(), dim=-1
                 )  # / args.T, dim=-1) -> to add temperature
-                max_probs, targets_u = torch.max(pseudo_label, dim=-1)
+                # target_u contains the idx of the class having the highest
+                # probability (for all pixels and for all images in the batch)
+                max_probs, targets_u = torch.max(
+                    pseudo_label, dim=classes_channel_idx
+                )  # dim=-1)
                 mask = max_probs.ge(options["threshold"]).float()
                 # Unsupervised loss
-                Lu = (criterion_unsup(logits_u_s, targets_u) * mask).mean()
+                Lu = (
+                    criterion_unsup(logits_u_s, targets_u)
+                    * torch.flatten(mask)
+                ).mean()
                 # Final loss
                 loss = Lx + options["lambda"] * Lu
                 loss.backward()
 
-                training_batches += logits_x.shape[0]  # TODO check
+                # training_batches += logits_x.shape[0]  # TODO check
 
-                training_loss.append((loss.data * target.shape[0]).tolist())
+                # training_loss.append((loss.data * target.shape[0]).tolist()) # TODO
 
                 optimizer.step()
 
@@ -590,10 +614,10 @@ def main(options):
                 )
                 i_board += 1
 
-            logging.info(
-                "Training loss was: "
-                + str(sum(training_loss) / training_batches)
-            )
+            # logging.info(
+            #    "Training loss was: "
+            #    + str(sum(training_loss) / training_batches)
+            # )
 
             ###############################################################
             # Start Evaluation                                            #
@@ -668,15 +692,15 @@ def main(options):
                         os.path.join(model_dir, "model.pth"),
                     )
 
-                    writer.add_scalars(
-                        "Loss per epoch",
-                        {
-                            "Val loss": sum(test_loss) / test_batches,
-                            "Train loss": sum(training_loss)
-                            / training_batches,
-                        },
-                        epoch,
-                    )
+                    # writer.add_scalars(
+                    #    "Loss per epoch",
+                    #    {
+                    #        "Val loss": sum(test_loss) / test_batches,
+                    #        "Train loss": sum(training_loss)
+                    #        / training_batches,
+                    #    },
+                    #    epoch,
+                    # )
 
                     writer.add_scalar(
                         "Precision/val macroPrec", acc["macroPrec"], epoch
@@ -774,7 +798,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
-        default=CategoryAggregation.BINARY.value,
+        default=CategoryAggregation.MULTI.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
