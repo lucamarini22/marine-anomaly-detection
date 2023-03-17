@@ -33,6 +33,8 @@ BAND_NAMES_IN_COPERNICUS_HUB = [
     "B12",
 ]
 
+SEPARATOR = "_"
+
 COP_HUB_BANDS = 13
 
 NOT_TO_CONSIDER_MARIDA = ("cl", "conf")
