@@ -34,14 +34,14 @@ from src.semantic_segmentation.transformations import (
     TransformFixMatch,
 )
 from src.utils.metrics import Evaluation
-from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD
+from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD, SEPARATOR
 
 root_path = up(up(up(os.path.abspath(__file__))))
 
 
 class TrainMode(Enum):
-    TRAIN = "train"
-    TRAIN_SSL = "train_ssl"
+    TRAIN = "SUP"
+    TRAIN_SSL = "SSL"
     VAL = "val"
     TEST = "test"
 
@@ -85,10 +85,21 @@ def main(options):
     g = torch.Generator()
     g.manual_seed(0)
 
+    model_name = (
+        options["today_str"]
+        + SEPARATOR
+        + options["mode"]
+        + SEPARATOR
+        + options["aggregate_classes"]
+    )
+
     # Tensorboard
     writer = SummaryWriter(
         os.path.join(
-            root_path, "logs", options["tensorboard"], options["today_str"]
+            root_path,
+            "logs",
+            options["tensorboard"],
+            model_name,
         )
     )
 
@@ -469,7 +480,10 @@ def main(options):
 
                     logging.info("Saving models")
                     model_dir = os.path.join(
-                        options["checkpoint_path"], str(epoch)
+                        options["checkpoint_path"],
+                        "supervised",
+                        model_name,
+                        str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
                     torch.save(
@@ -602,7 +616,7 @@ def main(options):
 
                 # training_batches += logits_x.shape[0]  # TODO check
 
-                # training_loss.append((loss.data * target.shape[0]).tolist()) # TODO
+                training_loss.append((loss.data).tolist())  # TODO
 
                 optimizer.step()
 
@@ -684,7 +698,10 @@ def main(options):
 
                     logging.info("Saving models")
                     model_dir = os.path.join(
-                        options["checkpoint_path"], str(epoch)
+                        options["checkpoint_path"],
+                        "semi-supervised",
+                        model_name,
+                        str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
                     torch.save(
@@ -692,15 +709,17 @@ def main(options):
                         os.path.join(model_dir, "model.pth"),
                     )
 
-                    # writer.add_scalars(
-                    #    "Loss per epoch",
-                    #    {
-                    #        "Val loss": sum(test_loss) / test_batches,
-                    #        "Train loss": sum(training_loss)
-                    #        / training_batches,
-                    #    },
-                    #    epoch,
-                    # )
+                    writer.add_scalars(
+                        "Loss per epoch",
+                        {
+                            "Val loss": sum(test_loss) / test_batches,
+                            "Train loss": np.mean(
+                                training_loss
+                            ),  # sum(training_loss)
+                            #        / training_batches,
+                        },
+                        epoch,
+                    )
 
                     writer.add_scalar(
                         "Precision/val macroPrec", acc["macroPrec"], epoch
@@ -897,7 +916,6 @@ if __name__ == "__main__":
         default=os.path.join(
             up(os.path.abspath(__file__)),
             "trained_models",
-            today_str,
         ),
         help="Folder to save checkpoints into (empty = this folder)",
     )
