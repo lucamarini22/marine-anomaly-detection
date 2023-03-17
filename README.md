@@ -19,4 +19,8 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
    ```sh
    conda activate anomaly-marine-detection
    ```
+4. Install the local package.
+   ```
+   pip install -e .
+   ```
 
