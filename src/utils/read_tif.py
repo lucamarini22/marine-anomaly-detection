@@ -1,6 +1,7 @@
 import rasterio
 import numpy as np
-from src.semantic_segmentation.random_forest.engineering_patches import fdi, ndvi
+
+# from src.semantic_segmentation.random_forest.engineering_patches import fdi, ndvi
 
 
 def acquire_data(file_name):
@@ -15,6 +16,7 @@ def acquire_data(file_name):
     """
 
     with rasterio.open(file_name) as raster:
+        print(raster.crs)
         img_np = raster.read()
         sentinel_img = img_np.astype(np.float32)
         height = sentinel_img.shape[1]
@@ -32,7 +34,22 @@ def acquire_data(file_name):
     return sentinel_img, coords_dict
 
 
-def tif_2_rgb(file_path: str) -> np.ndarray:
+def tif_2_rgb(tif_path: str) -> np.ndarray:
+    # Read ground truth
+    all_bands = rasterio.open(tif_path)
+    all_bands_img = all_bands.read()
+    all_bands_img.shape
+
+    b = all_bands_img[1]
+    g = all_bands_img[2]
+    r = all_bands_img[3]
+    rgb_img = np.stack((r, g, b), axis=2)
+
+    # plt.imshow(rgb_img / rgb_img.max())
+    return rgb_img
+
+
+def tif_2_rgb_old(file_path: str) -> np.ndarray:
     img, coords = acquire_data(file_path)
 
     img_b = img[:, :, 1].reshape(img.shape[0], img.shape[1], 1)
