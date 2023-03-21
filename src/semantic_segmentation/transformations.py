@@ -1,4 +1,5 @@
 import random
+import torch
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 import numpy as np
@@ -32,7 +33,7 @@ class TransformFixMatch(object):
                         MARIDA_SIZE_Y,
                     ),
                     padding=int(MARIDA_SIZE_X * 0.125),
-                    padding_mode="reflect",  # size=32, padding=int(32 * 0.125), padding_mode="reflect"
+                    padding_mode="reflect",
                 ),
             ]
         )
@@ -46,7 +47,7 @@ class TransformFixMatch(object):
                         MARIDA_SIZE_Y,
                     ),
                     padding=int(MARIDA_SIZE_X * 0.125),
-                    padding_mode="reflect",  # size=32, padding=int(32 * 0.125), padding_mode="reflect"
+                    padding_mode="reflect",
                 ),
                 RandAugmentMC(n=2, m=10),
             ]

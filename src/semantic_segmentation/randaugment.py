@@ -8,20 +8,17 @@ import random
 import numpy as np
 import torch
 from torchvision.utils import draw_bounding_boxes
+import albumentations as A
+from imgaug import augmenters as iaaa
 
 from src.utils.constants import MARIDA_SIZE_X
-import PIL
-import PIL.ImageOps
-import PIL.ImageEnhance
-import PIL.ImageDraw
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 
 PARAMETER_MAX = 10
 NUM_TIMES_CUTOUT = 3
 
-
+"""
 def AutoContrast(img, **kwarg):
     return PIL.ImageOps.autocontrast(img)
 
@@ -39,6 +36,23 @@ def Color(img, v, max_v, bias=0):
 def Contrast(img, v, max_v, bias=0):
     v = _float_parameter(v, max_v) + bias
     return PIL.ImageEnhance.Contrast(img).enhance(v)
+"""
+
+
+def AutoContrast(img, v):
+    return iaaa.pillike.Autocontrast(cutoff=0)(image=img)["image"]
+
+
+def Brightness(img, v):
+    return iaaa.pillike.EnhanceBrightness(factor=v)(image=img)["image"]
+
+
+def Color(img, v):
+    return iaaa.pillike.EnhanceColor(factor=v)(image=img)["image"]
+
+
+def Contrast(img, v):
+    return iaaa.pillike.EnhanceContrast(factor=v)(image=img)["image"]
 
 
 def Cutout(img, v, max_v, bias=0):
@@ -50,6 +64,8 @@ def Cutout(img, v, max_v, bias=0):
 
 
 def CutoutAbs(img, v, **kwarg):
+    if img.shape[1] != img.shape[2]:
+        raise Exception("Bad shape!")
     w, h = img.shape[1], img.shape[2]
     x0 = np.random.uniform(0, w)
     y0 = np.random.uniform(0, h)
@@ -57,8 +73,6 @@ def CutoutAbs(img, v, **kwarg):
     y0 = int(max(0, y0 - v / 2.0))
     x1 = int(min(w, x0 + v))
     y1 = int(min(h, y0 + v))
-    bbox = [x0, y0, x1, y1]
-    bbox = torch.tensor(bbox, dtype=torch.int)
 
     black_color = 0
     img = img.clone()
@@ -68,13 +82,121 @@ def CutoutAbs(img, v, **kwarg):
 
 
 def Equalize(img, **kwarg):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    aug = A.equalize(img)
+    return np.reshape(aug, prev_shape)
+
+
+"""
+def Equalize(img, **kwarg):
     return PIL.ImageOps.equalize(img)
+"""
 
 
 def Identity(img, **kwarg):
-    return img
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    aug = img
+    return np.reshape(aug, prev_shape)
 
 
+def Posterize(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _int_parameter(v, max_v) + bias
+    aug = A.posterize(img, v)
+    return np.reshape(aug, prev_shape)
+
+
+def Rotate(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _int_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    aug = A.rotate(img, v)
+    return np.reshape(aug, prev_shape)
+
+
+def Sharpness(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _float_parameter(v, max_v) + bias
+    v = v / 2  # In PIL code 0.1 to 1.9
+    aug = A.IAASharpen(alpha=v, always_apply=True)(image=img)["image"]
+    return np.reshape(aug, prev_shape)
+
+
+def ShearX(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
+
+    return np.reshape(aug, prev_shape)
+
+
+def ShearY(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
+    return np.reshape(aug, prev_shape)
+
+
+def Solarize(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _int_parameter(v, max_v) + bias
+    aug = A.solarize(img, v)
+
+    return np.reshape(aug, prev_shape)
+
+
+def TranslateX(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    v = int(v * img.shape[1])
+    aug = A.IAAAffine(translate_percent=(v, 0), always_apply=True)(image=img)[
+        "image"
+    ]
+
+    return np.reshape(aug, prev_shape)
+
+
+def TranslateY(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    v = _float_parameter(v, max_v) + bias
+    if random.random() < 0.5:
+        v = -v
+    v = int(v * img.shape[1])
+    aug = A.IAAAffine(translate_percent=(0, v), always_apply=True)(image=img)[
+        "image"
+    ]
+
+    return np.reshape(aug, prev_shape)
+
+
+"""
 def Invert(img, **kwarg):
     return PIL.ImageOps.invert(img)
 
@@ -141,6 +263,7 @@ def TranslateY(img, v, max_v, bias=0):
         v = -v
     v = int(v * img.size[1])
     return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
+"""
 
 
 def _float_parameter(v, max_v):
@@ -154,6 +277,7 @@ def _int_parameter(v, max_v):
 def fixmatch_augment_pool():
     # FixMatch paper
     augs = [
+        # The below four don't work with multispectral images
         # (AutoContrast, None, None),
         # (Brightness, 0.9, 0.05),
         # (Color, 0.9, 0.05),
@@ -161,17 +285,18 @@ def fixmatch_augment_pool():
         # (Equalize, None, None),
         (Identity, None, None),
         # (Posterize, 4, 4),
-        # (Rotate, 30, 0),
-        # (Sharpness, 0.9, 0.05),
-        # (ShearX, 0.3, 0),
-        # (ShearY, 0.3, 0),
-        # (Solarize, 256, 0),
+        (Rotate, 30, 0),
+        (Sharpness, 0.9, 0.05),
+        (ShearX, 0.3, 0),
+        (ShearY, 0.3, 0),
+        (Solarize, 256, 0),
         # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]
     return augs
 
 
+"""
 def my_augment_pool():
     # Test
     augs = [
@@ -195,7 +320,6 @@ def my_augment_pool():
     return augs
 
 
-"""
 class RandAugmentPC(object):
     def __init__(self, n, m):
         assert n >= 1
@@ -228,7 +352,10 @@ class RandAugmentMC(object):
         for op, max_v, bias in ops:
             v = np.random.randint(1, self.m)
             if random.random() < 0.5:
-                img = op(img, v=v, max_v=max_v, bias=bias)
+                # img = torch.moveaxis(img, 0, -1)
+                img_np = img.cpu().detach().numpy()
+                img_np = op(img_np, v=v, max_v=max_v, bias=bias)
+                img = torch.from_numpy(img_np)
         for _ in range(NUM_TIMES_CUTOUT):
             # Applies CutOut NUM_TIMES_CUTOUT times
             img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
