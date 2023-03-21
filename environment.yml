@@ -21,3 +21,5 @@ dependencies:
     - jupyter
     - opencv-python
     - matplotlib
+    - imgaug
+    - albumentations
