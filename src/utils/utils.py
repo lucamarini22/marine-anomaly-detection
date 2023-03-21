@@ -78,7 +78,7 @@ def get_marida_band_idx(band_name: str) -> int:
     elif band_name == "B09" or band_name == "B10":
         raise Exception("MARIDA removed bands B09 and B10")
     elif band_name == "B11" or band_name == "B12":
-        # we subtract 2 if it is band B11 or B12 due to the removal of 
+        # we subtract 2 if it is band B11 or B12 due to the removal of
         # previous bands B09 and B10
         band_marida_idx = (
             int(number_starting_with_zero_2_number(band_name[-2:])) - 2
@@ -107,14 +107,14 @@ def number_starting_with_zero_2_number(number_str: str) -> str:
 
 
 def acquire_data(file_name):
-    """Read an L1C Sentinel-2 image from a cropped TIF. The image is 
+    """Read an L1C Sentinel-2 image from a cropped TIF. The image is
     represented as TOA reflectance.
     Args:
         file_name (str): event ID.
     Raises:
         ValueError: impossible to find information on the database.
     Returns:
-        np.array: array containing B8A, B11, B12 of a Seintel-2 L1C cropped 
+        np.array: array containing B8A, B11, B12 of a Seintel-2 L1C cropped
           tif.
         dictionary: dictionary containing lat and lon for every image point.
     """
