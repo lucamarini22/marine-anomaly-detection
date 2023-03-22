@@ -277,7 +277,6 @@ class AnomalyMarineDataset(Dataset):
                 #    "float32"
                 # )  # In order to rotate-transform both mask and image
                 img = self.transform(img)
-
                 # img = stack[:-1, :, :]
                 # target = stack[
                 #    -1, :, :
@@ -288,7 +287,6 @@ class AnomalyMarineDataset(Dataset):
                 weak = self.standardization(weak)
                 strong = self.standardization(strong)
             # img = unlabeled_weak_aug, unlabeled_strong_aug
-
             return weak, strong  # (weak, strong), None  # this works
 
         # Labeled dataloader

@@ -96,11 +96,11 @@ def Equalize(img, **kwarg):
 
 
 def Identity(img, **kwarg):
-    prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    # prev_shape = img.shape
+    # if img.shape[0] != img.shape[1]:
+    #    img = np.moveaxis(img, 0, -1)
     aug = img
-    return np.reshape(aug, prev_shape)
+    return aug  # np.reshape(aug, prev_shape)
 
 
 def Posterize(img, v, max_v, bias=0):
@@ -120,7 +120,10 @@ def Rotate(img, v, max_v, bias=0):
     if random.random() < 0.5:
         v = -v
     aug = A.rotate(img, v)
-    return np.reshape(aug, prev_shape)
+    # np.reshape(aug, prev_shape)[8, :, :] # TODO returning np.reshape was the problem!!! Modify also other augmentations
+    if img.shape != prev_shape:
+        aug = np.moveaxis(aug, -1, 0)
+    return aug
 
 
 def Sharpness(img, v, max_v, bias=0):
@@ -283,13 +286,13 @@ def fixmatch_augment_pool():
         # (Color, 0.9, 0.05),
         # (Contrast, 0.9, 0.05),
         # (Equalize, None, None),
-        (Identity, None, None),
+        # (Identity, None, None),
         # (Posterize, 4, 4),
         (Rotate, 30, 0),
-        (Sharpness, 0.9, 0.05),
-        (ShearX, 0.3, 0),
-        (ShearY, 0.3, 0),
-        (Solarize, 256, 0),
+        # (Sharpness, 0.9, 0.05),
+        # (ShearX, 0.3, 0),
+        # (ShearY, 0.3, 0),
+        # (Solarize, 256, 0),
         # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]

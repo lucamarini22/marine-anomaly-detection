@@ -329,10 +329,10 @@ def main(options):
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
-    alphas = 1 - class_distr
-    # alphas = torch.Tensor(
-    #    [0.25, 1]
-    # )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
+    # alphas = 1 - class_distr
+    alphas = torch.Tensor(
+        [1, 0.25]
+    )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
     criterion = FocalLoss(
         alpha=alphas.to(device),
@@ -566,14 +566,20 @@ def main(options):
                     img_x, seg_map = next(labeled_iter)
 
                 try:
-                    img_u_w, img_u_s = next(
-                        unlabeled_iter
-                    )  # (img_u_w, img_u_s), _ = next(unlabeled_iter)
+                    img_u_w, img_u_s = next(unlabeled_iter)
                 except:
                     unlabeled_iter = iter(unlabeled_train_loader)
                     img_u_w, img_u_s = next(unlabeled_iter)
 
                 seg_map = seg_map.to(device)
+
+                for i in range(img_x.shape[0]):
+                    a = img_x[i, 8, :, :]
+                    b = seg_map[i, :, :].float()
+
+                    c = img_u_w[i, 8, :, :]
+                    d = img_u_s[i, 8, :, :]
+                    print()
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -817,7 +823,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
-        default=CategoryAggregation.MULTI.value,
+        default=CategoryAggregation.BINARY.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
