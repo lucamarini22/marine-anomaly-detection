@@ -83,10 +83,10 @@ def CutoutAbs(img, v, **kwarg):
 
 def Equalize(img, **kwarg):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
     aug = A.equalize(img)
-    return np.reshape(aug, prev_shape)
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
 
 
 """
@@ -99,103 +99,116 @@ def Identity(img, **kwarg):
     # prev_shape = img.shape
     # if img.shape[0] != img.shape[1]:
     #    img = np.moveaxis(img, 0, -1)
+    prev_shape = img.shape
+    img = change_shape_for_augmentation(img)
     aug = img
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug  # np.reshape(aug, prev_shape)
 
 
-def Posterize(img, v, max_v, bias=0):
-    prev_shape = img.shape
+# def Posterize(img, v, max_v, bias=0):
+#    prev_shape = img.shape
+#    img = change_shape_for_augmentation(img)
+#    v = _int_parameter(v, max_v) + bias
+#    aug = A.posterize(img, v)
+#    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+#    return np.reshape(aug, prev_shape)
+
+
+def change_shape_for_augmentation(img):
     if img.shape[0] != img.shape[1]:
         img = np.moveaxis(img, 0, -1)
-    v = _int_parameter(v, max_v) + bias
-    aug = A.posterize(img, v)
-    return np.reshape(aug, prev_shape)
+    return img
+
+
+def change_shape_for_dataloader(prev_shape, new_shape, aug):
+    if prev_shape != new_shape:
+        aug = np.moveaxis(aug, -1, 0)
+    return aug
 
 
 def Rotate(img, v, max_v, bias=0):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
+    # if img.shape[0] != img.shape[1]:
+    #    img = np.moveaxis(img, 0, -1)
     v = _int_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
     aug = A.rotate(img, v)
     # np.reshape(aug, prev_shape)[8, :, :] # TODO returning np.reshape was the problem!!! Modify also other augmentations
-    if img.shape != prev_shape:
-        aug = np.moveaxis(aug, -1, 0)
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    # if img.shape != prev_shape:
+    #    aug = np.moveaxis(aug, -1, 0)
     return aug
 
 
 def Sharpness(img, v, max_v, bias=0):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
     v = v / 2  # In PIL code 0.1 to 1.9
     aug = A.IAASharpen(alpha=v, always_apply=True)(image=img)["image"]
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
 def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
+    img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
     aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
-
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
 def ShearY(img, v, max_v, bias=0):
     prev_shape = img.shape
+    img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
     aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
 def Solarize(img, v, max_v, bias=0):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
     aug = A.solarize(img, v)
-
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
 def TranslateX(img, v, max_v, bias=0):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    v = int(v * img.shape[1])
-    aug = A.IAAAffine(translate_percent=(v, 0), always_apply=True)(image=img)[
+    #v = int(v * img.shape[1])
+    aug = A.Affine(translate_percent=(v, 0), always_apply=True)(image=img)[
         "image"
     ]
-
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
 def TranslateY(img, v, max_v, bias=0):
     prev_shape = img.shape
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
+    img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    v = int(v * img.shape[1])
-    aug = A.IAAAffine(translate_percent=(0, v), always_apply=True)(image=img)[
+    #v = int(v * img.shape[1])
+    aug = A.Affine(translate_percent=(0, v), always_apply=True)(image=img)[
         "image"
     ]
-
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
 
@@ -288,13 +301,13 @@ def fixmatch_augment_pool():
         # (Equalize, None, None),
         # (Identity, None, None),
         # (Posterize, 4, 4),
-        (Rotate, 30, 0),
+        # (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
-        # (TranslateX, 0.3, 0),
-        # (TranslateY, 0.3, 0),
+        (TranslateX, 0.3, 0),
+        (TranslateY, 0.3, 0),
     ]
     return augs
 
