@@ -96,14 +96,11 @@ def Equalize(img, **kwarg):
 
 
 def Identity(img, **kwarg):
-    # prev_shape = img.shape
-    # if img.shape[0] != img.shape[1]:
-    #    img = np.moveaxis(img, 0, -1)
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     aug = img
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return aug  # np.reshape(aug, prev_shape)
+    return aug
 
 
 # def Posterize(img, v, max_v, bias=0):
@@ -150,7 +147,7 @@ def Sharpness(img, v, max_v, bias=0):
     v = v / 2  # In PIL code 0.1 to 1.9
     aug = A.IAASharpen(alpha=v, always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 def ShearX(img, v, max_v, bias=0):
@@ -161,7 +158,7 @@ def ShearX(img, v, max_v, bias=0):
         v = -v
     aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 def ShearY(img, v, max_v, bias=0):
@@ -172,7 +169,7 @@ def ShearY(img, v, max_v, bias=0):
         v = -v
     aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 def Solarize(img, v, max_v, bias=0):
@@ -181,7 +178,7 @@ def Solarize(img, v, max_v, bias=0):
     v = _int_parameter(v, max_v) + bias
     aug = A.solarize(img, v)
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 def TranslateX(img, v, max_v, bias=0):
@@ -190,12 +187,12 @@ def TranslateX(img, v, max_v, bias=0):
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    #v = int(v * img.shape[1])
+    # v = int(v * img.shape[1])
     aug = A.Affine(translate_percent=(v, 0), always_apply=True)(image=img)[
         "image"
     ]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 def TranslateY(img, v, max_v, bias=0):
@@ -204,12 +201,12 @@ def TranslateY(img, v, max_v, bias=0):
     v = _float_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    #v = int(v * img.shape[1])
+    # v = int(v * img.shape[1])
     aug = A.Affine(translate_percent=(0, v), always_apply=True)(image=img)[
         "image"
     ]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return np.reshape(aug, prev_shape)
+    return aug
 
 
 """
@@ -299,15 +296,15 @@ def fixmatch_augment_pool():
         # (Color, 0.9, 0.05),
         # (Contrast, 0.9, 0.05),
         # (Equalize, None, None),
-        # (Identity, None, None),
+        (Identity, None, None),
         # (Posterize, 4, 4),
         # (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
-        (TranslateX, 0.3, 0),
-        (TranslateY, 0.3, 0),
+        # (TranslateX, 0.3, 0),
+        # (TranslateY, 0.3, 0),
     ]
     return augs
 
