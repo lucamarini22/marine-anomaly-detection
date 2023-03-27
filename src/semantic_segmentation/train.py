@@ -32,9 +32,11 @@ from src.semantic_segmentation.dataloader import (
 from src.semantic_segmentation.transformations import (
     RandomRotationTransform,
     TransformFixMatch,
+    StrongAugmentation,
 )
 from src.utils.metrics import Evaluation
 from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD, SEPARATOR
+from src.semantic_segmentation.randaugment import RandAugmentMC
 
 root_path = up(up(up(os.path.abspath(__file__))))
 
@@ -566,20 +568,48 @@ def main(options):
                     img_x, seg_map = next(labeled_iter)
 
                 try:
+                    # TODO: modify dataloader to get only weakly augm image
                     img_u_w, img_u_s = next(unlabeled_iter)
                 except:
                     unlabeled_iter = iter(unlabeled_train_loader)
                     img_u_w, img_u_s = next(unlabeled_iter)
 
-                seg_map = seg_map.to(device)
+                # Initialize RandAugment with n random augmentations.
+                # So, every batch will have different random augmentations.
+                randaugment = RandAugmentMC(n=2, m=10)
+                # Get strong transform to apply to both pseudo-label map and
+                # weakly augmented image
+                strong_transform = StrongAugmentation(
+                    mean=BANDS_MEAN, std=BANDS_STD, randaugment=randaugment
+                )
+                # Applies strong augmentation on weakly augmented images
+                img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
+                for i in range(img_u_w.shape[0]):
+                    img_u_w_i = img_u_w[i, :, :, :]
+                    img_u_w_i = img_u_w_i.cpu().detach().numpy()
+                    img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
+                    # a = img_u_w_i[:, :, 10]
+                    # b = img_u_w_i[:, :, 9]
+                    img_u_s_i = strong_transform(img_u_w_i)
+                    # c = img_u_s_i[10, :, :]
+                    # d = img_u_s_i[9, :, :]
+                    img_u_s[i, :, :, :] = img_u_s_i
+                img_u_s = torch.from_numpy(img_u_s)
+                # img_u_s = img_u_s.to(device)
+                x = img_u_w[2, 10, :, :]
 
+                z = img_u_s[2, 10, :, :]
+
+                seg_map = seg_map.to(device)
+                """ # DEBUGGING
                 for i in range(img_x.shape[0]):
-                    a = img_x[i, 8, :, :]
+                    a = img_x[i, 7, :, :]
                     b = seg_map[i, :, :].float()
 
-                    c = img_u_w[i, 8, :, :]
-                    d = img_u_s[i, 8, :, :]
+                    c = img_u_w[i, 7, :, :]
+                    d = img_u_s[i, 7, :, :]
                     print()
+                """
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -602,6 +632,23 @@ def main(options):
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
 
+                # logits_u_s = model(img_u_s)
+
+                # Applies strong augmentation to pseudo label map
+                tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
+                for i in range(logits_u_w.shape[0]):
+                    logits_u_w_i = logits_u_w[i, :, :, :]
+                    logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
+                    logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
+                    a = logits_u_w_i[:, :, 0]
+                    b = logits_u_w_i[:, :, 1]
+                    logits_u_w_i = strong_transform(logits_u_w_i)
+                    c = logits_u_w_i[0, :, :]
+                    d = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    tmp[i, :, :, :] = logits_u_w_i
+                logits_u_w = torch.from_numpy(tmp)
+                logits_u_w = logits_u_w.to(device)
+                # logits_u_w = strong_transform(logits_u_w)
                 pseudo_label = torch.softmax(
                     logits_u_w.detach(), dim=-1
                 )  # / args.T, dim=-1) -> to add temperature

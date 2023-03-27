@@ -18,26 +18,6 @@ logger = logging.getLogger(__name__)
 PARAMETER_MAX = 10
 NUM_TIMES_CUTOUT = 3
 
-"""
-def AutoContrast(img, **kwarg):
-    return PIL.ImageOps.autocontrast(img)
-
-
-def Brightness(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    return PIL.ImageEnhance.Brightness(img).enhance(v)
-
-
-def Color(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    return PIL.ImageEnhance.Color(img).enhance(v)
-
-
-def Contrast(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    return PIL.ImageEnhance.Contrast(img).enhance(v)
-"""
-
 
 def AutoContrast(img, v):
     return iaaa.pillike.Autocontrast(cutoff=0)(image=img)["image"]
@@ -55,17 +35,17 @@ def Contrast(img, v):
     return iaaa.pillike.EnhanceContrast(factor=v)(image=img)["image"]
 
 
+"""
 def Cutout(img, v, max_v, bias=0):
     if v == 0:
         return img
     v = _float_parameter(v, max_v) + bias
     v = int(v * min(img.size))
     return CutoutAbs(img, v)
+"""
 
 
 def CutoutAbs(img, v, **kwarg):
-    if img.shape[1] != img.shape[2]:
-        raise Exception("Bad shape!")
     w, h = img.shape[1], img.shape[2]
     x0 = np.random.uniform(0, w)
     y0 = np.random.uniform(0, h)
@@ -209,76 +189,6 @@ def TranslateY(img, v, max_v, bias=0):
     return aug
 
 
-"""
-def Invert(img, **kwarg):
-    return PIL.ImageOps.invert(img)
-
-
-def Posterize(img, v, max_v, bias=0):
-    v = _int_parameter(v, max_v) + bias
-    return PIL.ImageOps.posterize(img, v)
-
-
-def Rotate(img, v, max_v, bias=0):
-    v = _int_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    return img.rotate(v)
-
-
-def Sharpness(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    return PIL.ImageEnhance.Sharpness(img).enhance(v)
-
-
-def ShearX(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0))
-
-
-def ShearY(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0))
-
-
-def Solarize(img, v, max_v, bias=0):
-    v = _int_parameter(v, max_v) + bias
-    return PIL.ImageOps.solarize(img, 256 - v)
-
-
-def SolarizeAdd(img, v, max_v, bias=0, threshold=128):
-    v = _int_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    img_np = np.array(img).astype(np.int)
-    img_np = img_np + v
-    img_np = np.clip(img_np, 0, 255)
-    img_np = img_np.astype(np.uint8)
-    img = Image.fromarray(img_np)
-    return PIL.ImageOps.solarize(img, threshold)
-
-
-def TranslateX(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    v = int(v * img.size[0])
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
-
-
-def TranslateY(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
-    v = int(v * img.size[1])
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
-"""
-
-
 def _float_parameter(v, max_v):
     return float(v) * max_v / PARAMETER_MAX
 
@@ -298,12 +208,12 @@ def fixmatch_augment_pool():
         # (Equalize, None, None),
         (Identity, None, None),
         # (Posterize, 4, 4),
-        # (Rotate, 30, 0),
+        (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
-        # (TranslateX, 0.3, 0),
+        (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]
     return augs
@@ -359,18 +269,25 @@ class RandAugmentMC(object):
         self.n = n
         self.m = m
         self.augment_pool = fixmatch_augment_pool()
+        self.ops = random.choices(self.augment_pool, k=self.n)
+        self.probs = [random.uniform(0, 1) for _ in range(len(self.ops))]
+        self.values_op = [
+            np.random.randint(1, self.m) for _ in range(len(self.ops))
+        ]
 
     def __call__(self, img):
-        ops = random.choices(self.augment_pool, k=self.n)
-        for op, max_v, bias in ops:
-            v = np.random.randint(1, self.m)
-            if random.random() < 0.5:
+        idx_op = 0
+
+        for op, max_v, bias in self.ops:
+            # v = np.random.randint(1, self.m)
+            if self.probs[idx_op] < 0.5:  # random.random() < 0.5:
                 # img = torch.moveaxis(img, 0, -1)
+                v = self.values_op[idx_op]
                 img_np = img.cpu().detach().numpy()
                 img_np = op(img_np, v=v, max_v=max_v, bias=bias)
                 img = torch.from_numpy(img_np)
+            idx_op += 1
         for _ in range(NUM_TIMES_CUTOUT):
             # Applies CutOut NUM_TIMES_CUTOUT times
             img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
-
         return img

@@ -26,29 +26,29 @@ class TransformFixMatch(object):
         self.weak = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(
-                    size=(
-                        MARIDA_SIZE_X,
-                        MARIDA_SIZE_Y,
-                    ),
-                    padding=int(MARIDA_SIZE_X * 0.125),
-                    padding_mode="reflect",
-                ),
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomCrop(
+                #    size=(
+                #        MARIDA_SIZE_X,
+                #        MARIDA_SIZE_Y,
+                #    ),
+                #    padding=int(MARIDA_SIZE_X * 0.125),
+                #    padding_mode="reflect",
+                # ),
             ]
         )
         self.strong = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(
-                    size=(
-                        MARIDA_SIZE_X,
-                        MARIDA_SIZE_Y,
-                    ),
-                    padding=int(MARIDA_SIZE_X * 0.125),
-                    padding_mode="reflect",
-                ),
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomCrop(
+                #    size=(
+                #        MARIDA_SIZE_X,
+                #        MARIDA_SIZE_Y,
+                #    ),
+                #    padding=int(MARIDA_SIZE_X * 0.125),
+                #    padding_mode="reflect",
+                # ),
                 RandAugmentMC(n=2, m=10),
             ]
         )
@@ -57,10 +57,40 @@ class TransformFixMatch(object):
         )
 
     def __call__(self, x):
-        weak = self.weak(x)  # this works
+        weak = self.weak(x)
         strong = self.strong(x)
         weak = weak.cpu().detach().numpy()
         weak = np.moveaxis(weak, 0, -1)
         strong = strong.cpu().detach().numpy()
         strong = np.moveaxis(strong, 0, -1)
         return self.normalize(weak), self.normalize(strong)
+
+
+class StrongAugmentation(object):
+    def __init__(self, mean, std, randaugment: RandAugmentMC):
+        self.strong = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomCrop(
+                #    size=(
+                #        MARIDA_SIZE_X,
+                #        MARIDA_SIZE_Y,
+                #    ),
+                #    padding=int(MARIDA_SIZE_X * 0.125),
+                #    padding_mode="reflect",
+                # ),
+                randaugment,
+            ]
+        )
+        self.normalize = transforms.Compose(
+            [
+                transforms.ToTensor()
+            ]  # , transforms.Normalize(mean=mean, std=std)] # TODO: re-add this only for images but not for pseudo-labels?
+        )
+
+    def __call__(self, x):
+        strong = self.strong(x)
+        strong = strong.cpu().detach().numpy()
+        strong = np.moveaxis(strong, 0, -1)
+        return self.normalize(strong)
