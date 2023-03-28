@@ -50,9 +50,13 @@ def save_marida_and_cop_hub_2_png(
         ext (str): extension of marida and copernicus hub files.
         l1c (str): string characterizzing l1c.
     """
-    # Erases the file containing all the pairs of corresponding copernicus hub
-    # and marida names.
-    open(pairs_file_path, "w").close()
+    # Asserts the file containing all the pairs of corresponding copernicus
+    # hub does not already exist and that is empty if it exists
+    if (
+        os.path.exists(pairs_file_path)
+        and os.path.getsize(pairs_file_path) > 0
+    ):
+        raise Exception(f"The file at {pairs_file_path} should be empty.")
 
     # Cycle through all MARIDA patches
     for marida_patch_folder_name in os.listdir(marida_patches_path):
