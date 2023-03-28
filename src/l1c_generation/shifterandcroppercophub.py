@@ -296,6 +296,7 @@ class ShifterAndCropperCopHub:
         return mean_diff_patch_dict
 
     def shift_and_crop_cophub_images(
+        self,
         mean_diff_patch_dict: dict,
         cop_hub_png_input_imgs_path: str,
         cop_hub_png_output_imgs_path: str,
