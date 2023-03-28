@@ -7,7 +7,13 @@ from src.utils.constants import (
     NOT_TO_CONSIDER_MARIDA,
     COP_HUB_BASE_NAME,
 )
-from src.utils.utils import *
+from src.utils.utils import (
+    remove_extension_from_name,
+    get_marida_band_idx,
+    acquire_data,
+    scale_img_to_0_255,
+    save_img,
+)
 
 # TODO: Remove this
 TEMP = ["S2_24-3-20_18QYF", "S2_29-8-17_51RVQ"]
