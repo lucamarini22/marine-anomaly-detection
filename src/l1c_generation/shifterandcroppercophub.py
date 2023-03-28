@@ -182,11 +182,14 @@ class ShifterAndCropperCopHub:
             # Discard differences whose value is not in the interval
             # [mean_diff - std_dev, mean_diff + std_dev]
             # and do this for both horizontal and vertical differences
-            ShifterAndCropperCopHub._discard_means_out_of_std_dev(
+            patches_mean_diffs[
+                key
+            ] = ShifterAndCropperCopHub._discard_means_out_of_std_dev(
                 patches_mean_diffs[key],
                 mean_diffs,
                 std_dev_diffs,
             )
+
             # Recompute the mean of the horizontal and vertical differences
             # and round it to the nearest integer
             # (since we use pixels)
@@ -202,7 +205,6 @@ class ShifterAndCropperCopHub:
             ShifterAndCropperCopHub._update_single_mean(
                 mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
             )
-
         return mean_diff_patch_dict
 
     def shift_and_crop_cophub_images(
@@ -313,7 +315,7 @@ class ShifterAndCropperCopHub:
         diffs: list[float],
         mean_diffs: float,
         std_dev_diffs: float,
-    ):
+    ) -> np.ndarray:
         """Discards differences whose value is not in
         the interval [mean_diff - std_dev, mean_diff + std_dev].
 
@@ -321,15 +323,16 @@ class ShifterAndCropperCopHub:
             diffs_x (list[float]): list of differences.
             mean_diffs_x (float): mean of differences.
             std_dev_diffs_x (float): standard deviation of differences.
+
+        Returns:
+            np.ndarray: array of differences whose value is in
+        the interval [mean_diff - std_dev, mean_diff + std_dev].
         """
-        i = 0
-        while i < len(diffs):
-            if (
-                diffs[i] < mean_diffs - std_dev_diffs
-                or diffs[i] > mean_diffs + std_dev_diffs
-            ):
-                del diffs[i]
-            i += 1
+        differences = np.array(diffs)
+        less_than_std_away = np.abs(differences - mean_diffs) < std_dev_diffs
+        differences = differences[less_than_std_away]
+
+        return differences
 
     @staticmethod
     def _get_patch_name_and_axis_id_from_key(
