@@ -55,29 +55,6 @@ class ShifterAndCropperCopHub:
         self.cop_hub_png_input_imgs_path = cop_hub_png_input_imgs_path
         self.cop_hub_png_output_imgs_path = cop_hub_png_output_imgs_path
 
-    def discard_means_out_of_std_dev(
-        self,
-        diffs: list[float],
-        mean_diffs: float,
-        std_dev_diffs: float,
-    ):
-        """Discards differences whose value is not in
-        the interval [mean_diff - std_dev, mean_diff + std_dev].
-
-        Args:
-            diffs_x (list[float]): list of differences.
-            mean_diffs_x (float): mean of differences.
-            std_dev_diffs_x (float): standard deviation of differences.
-        """
-        i = 0
-        while i < len(diffs):
-            if (
-                diffs[i] < mean_diffs - std_dev_diffs
-                or diffs[i] > mean_diffs + std_dev_diffs
-            ):
-                del diffs[i]
-            i += 1
-
     def get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
         self,
         path_keypoints_folder: str,
@@ -166,75 +143,6 @@ class ShifterAndCropperCopHub:
 
         return patches_mean_diffs
 
-    @staticmethod
-    def get_patch_name_and_axis_id_from_key(
-        key: str,
-        separator: str = "_",
-        x_axis: str = "x",
-        y_axis: str = "y",
-    ) -> tuple[str, int]:
-        """Gets the name of the patch and the id corresponding to a cartesian
-        axis from a string containing information of a patch.
-
-        Args:
-            key (str): string containing information of a patch.
-            separator (str, optional): separates information contained in key.
-              Defaults to "_".
-            x_axis (str, optional): string corresponding to the x axis.
-              Defaults to "x".
-            y_axis (str, optional): string corresponding to the y axis.
-              Defaults to "y".
-
-        Returns:
-            tuple[str, int]: name of the patch, string id corresponding to a
-              cartesian axis.
-        """
-        # key has the form: S2_dd-mm-yy_id_num_axis-str-id
-        patch_name = separator.join(key.split(separator)[:-1])
-        axis_str_id = key.split(separator)[-1]
-        if axis_str_id == x_axis:
-            axis_id = 0
-        elif axis_str_id == y_axis:
-            axis_id = 1
-
-        return patch_name, axis_id
-
-    @staticmethod
-    def update_single_mean(
-        mean_diff_patch_dict: dict,
-        key: str,
-        new_mean_value: float,
-        axis_id: int,
-        default_hor_diff_mean: float = 0.0,
-        default_vert_diff_mean: float = 0.0,
-    ):
-        """Updates the horizontal or the vertical mean contained in the value
-        (tuple) of a dictionary corresponding to key.
-
-        Args:
-            mean_diff_patch_dict (dict): dictionary with each key
-              corresponding to a tuple containing the mean horizontal and mean
-              verical difference between all matching keypoints of all bands
-              of a patch.
-            key (str): patch name.
-            new_mean_value (float): updated mean of horizontal or vertical
-              differences.
-            axis_id (int): int id of axis. 0 for x axis, 1 for y axis.
-            default_hor_diff_mean (float, optional): default vale for
-              horizontal mean of differences. Defaults to 0.0.
-            default_vert_diff_mean (float, optional): default vale for
-              vertical mean of differences.
-            Defaults to 0.0.
-        """
-        current_hor_and_vert_mean_values = mean_diff_patch_dict.setdefault(
-            key, (default_hor_diff_mean, default_vert_diff_mean)
-        )
-        current_hor_and_vert_mean_values = list(
-            current_hor_and_vert_mean_values
-        )
-        current_hor_and_vert_mean_values[axis_id] = new_mean_value
-        mean_diff_patch_dict[key] = tuple(current_hor_and_vert_mean_values)
-
     def compute_and_update_mean_of_diffs(
         self,
         patches_mean_diffs: dict,
@@ -272,7 +180,7 @@ class ShifterAndCropperCopHub:
             # Discard differences whose value is not in the interval
             # [mean_diff - std_dev, mean_diff + std_dev]
             # and do this for both horizontal and vertical differences
-            self.discard_means_out_of_std_dev(
+            ShifterAndCropperCopHub._discard_means_out_of_std_dev(
                 patches_mean_diffs[key],
                 mean_diffs,
                 std_dev_diffs,
@@ -285,11 +193,11 @@ class ShifterAndCropperCopHub:
             (
                 patch_name,
                 axis_id,
-            ) = ShifterAndCropperCopHub.get_patch_name_and_axis_id_from_key(
+            ) = ShifterAndCropperCopHub._get_patch_name_and_axis_id_from_key(
                 key, separator, x_axis, y_axis
             )
 
-            ShifterAndCropperCopHub.update_single_mean(
+            ShifterAndCropperCopHub._update_single_mean(
                 mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
             )
 
@@ -397,3 +305,95 @@ class ShifterAndCropperCopHub:
                             output_shifted_img_path,
                         ),
                     )
+
+    @staticmethod
+    def _discard_means_out_of_std_dev(
+        diffs: list[float],
+        mean_diffs: float,
+        std_dev_diffs: float,
+    ):
+        """Discards differences whose value is not in
+        the interval [mean_diff - std_dev, mean_diff + std_dev].
+
+        Args:
+            diffs_x (list[float]): list of differences.
+            mean_diffs_x (float): mean of differences.
+            std_dev_diffs_x (float): standard deviation of differences.
+        """
+        i = 0
+        while i < len(diffs):
+            if (
+                diffs[i] < mean_diffs - std_dev_diffs
+                or diffs[i] > mean_diffs + std_dev_diffs
+            ):
+                del diffs[i]
+            i += 1
+
+    @staticmethod
+    def _get_patch_name_and_axis_id_from_key(
+        key: str,
+        separator: str = "_",
+        x_axis: str = "x",
+        y_axis: str = "y",
+    ) -> tuple[str, int]:
+        """Gets the name of the patch and the id corresponding to a cartesian
+        axis from a string containing information of a patch.
+
+        Args:
+            key (str): string containing information of a patch.
+            separator (str, optional): separates information contained in key.
+              Defaults to "_".
+            x_axis (str, optional): string corresponding to the x axis.
+              Defaults to "x".
+            y_axis (str, optional): string corresponding to the y axis.
+              Defaults to "y".
+
+        Returns:
+            tuple[str, int]: name of the patch, string id corresponding to a
+              cartesian axis.
+        """
+        # key has the form: S2_dd-mm-yy_id_num_axis-str-id
+        patch_name = separator.join(key.split(separator)[:-1])
+        axis_str_id = key.split(separator)[-1]
+        if axis_str_id == x_axis:
+            axis_id = 0
+        elif axis_str_id == y_axis:
+            axis_id = 1
+
+        return patch_name, axis_id
+
+    @staticmethod
+    def _update_single_mean(
+        mean_diff_patch_dict: dict,
+        key: str,
+        new_mean_value: float,
+        axis_id: int,
+        default_hor_diff_mean: float = 0.0,
+        default_vert_diff_mean: float = 0.0,
+    ):
+        """Updates the horizontal or the vertical mean contained in the value
+        (tuple) of a dictionary corresponding to key.
+
+        Args:
+            mean_diff_patch_dict (dict): dictionary with each key
+              corresponding to a tuple containing the mean horizontal and mean
+              verical difference between all matching keypoints of all bands
+              of a patch.
+            key (str): patch name.
+            new_mean_value (float): updated mean of horizontal or vertical
+              differences.
+            axis_id (int): int id of axis. 0 for x axis, 1 for y axis.
+            default_hor_diff_mean (float, optional): default vale for
+              horizontal mean of differences. Defaults to 0.0.
+            default_vert_diff_mean (float, optional): default vale for
+              vertical mean of differences.
+            Defaults to 0.0.
+        """
+        current_hor_and_vert_mean_values = mean_diff_patch_dict.setdefault(
+            key, (default_hor_diff_mean, default_vert_diff_mean)
+        )
+        current_hor_and_vert_mean_values = list(
+            current_hor_and_vert_mean_values
+        )
+        current_hor_and_vert_mean_values[axis_id] = new_mean_value
+        mean_diff_patch_dict[key] = tuple(current_hor_and_vert_mean_values)

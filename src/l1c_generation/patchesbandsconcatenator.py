@@ -81,7 +81,6 @@ class PatchesBandsConcatenator:
             }
         )
         for patch_name in self.patches_dict:
-            print(self.patches_dict[patch_name].shape)
             with rasterio.open(
                 os.path.join(out_folder_tif, patch_name + ".tif"), "w", **meta
             ) as dst:
