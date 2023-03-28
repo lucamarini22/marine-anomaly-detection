@@ -333,7 +333,7 @@ def main(options):
     # will change)
     # alphas = 1 - class_distr
     alphas = torch.Tensor(
-        [1, 0.25]
+        [0.75, 0.0625, 0.0625, 0.0625, 0.0625]
     )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
     criterion = FocalLoss(
@@ -870,7 +870,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
-        default=CategoryAggregation.BINARY.value,
+        default=CategoryAggregation.MULTI.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\

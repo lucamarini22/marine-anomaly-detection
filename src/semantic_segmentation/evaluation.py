@@ -225,7 +225,7 @@ if __name__ == "__main__":
             CategoryAggregation.BINARY.value,
             "no",
         ],
-        default=CategoryAggregation.MULTI.value,
+        default=CategoryAggregation.BINARY.value,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -256,8 +256,8 @@ if __name__ == "__main__":
             up(os.path.abspath(__file__)),
             "trained_models",
             "semi-supervised",
-            "2023_03_17_H_15_09_11_SSL_multi",
-            "500",
+            "2023_03_27_H_16_11_40_SSL_binary",
+            "1323",
             "model.pth",
         ),
         help="Path to Unet pytorch model",
