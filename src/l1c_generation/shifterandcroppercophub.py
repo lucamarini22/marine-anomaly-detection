@@ -113,6 +113,8 @@ class ShifterAndCropperCopHub:
                     patches_mean_diffs.setdefault(x_diff_key, [])
                     patches_mean_diffs.setdefault(y_diff_key, [])
 
+                    # Asserts that keypoints["matches"] is an array.
+                    assert len(keypoints["matches"].shape) == 1
                     for idx_keypoint_0, idx_keypoint_1 in enumerate(
                         keypoints["matches"]
                     ):
