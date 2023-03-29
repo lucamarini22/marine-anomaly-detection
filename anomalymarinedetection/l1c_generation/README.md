@@ -18,7 +18,7 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [MARIDA](http
 
 2. Save MARIDA and corresponding but larger Copernicus Hub patches as .png in the folder `output_folder_path`.
     ```sh
-    python save_cophub_and_marida_patches_bands_2_png.py --marida_patches_path="/data/anomaly-marine-detection/data/patches/" --cop_hub_patches_path="/data/pyraws_luca/pyraws/generate_l1c/l1c_images" --pairs_file_path="/data/anomaly-marine-detection/anomalymarinedetection/l1c_generation/keypoints_pairs/cop_hub_marida_pairs.txt" --output_folder_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/"
+    python save_cophub_and_marida_patches_bands_2_png.py --marida_patches_path="/data/anomaly-marine-detection/data/patches/" --cop_hub_patches_path="/data/pyraws_luca/pyraws/generate_l1c/l1c_images" --pairs_file_path="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs/cop_hub_marida_pairs.txt" --output_folder_path="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching/"
     ```
 3. Compute keypoints matching among corresponding MARIDA and larger L1C Copernicus Hub patches.
     * Clone the repository [SuperGluePretrainedNetwork](https://github.com/magicleap/SuperGluePretrainedNetwork) in this folder.
@@ -27,18 +27,18 @@ To crop the L1C patches taken from Copernicus Hub into the ones of [MARIDA](http
       ```
     * Compute keypoints.
       ```sh
-      ./SuperGluePretrainedNetwork/match_pairs.py --input_pairs="./keypoints_pairs/cop_hub_marida_pairs.txt" --input_dir="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching" --output_dir="./keypoints_pairs" --resize=-1 --superglue="outdoor" --max_keypoints=1024 --keypoint_threshold=0.015 --nms_radius=4 --match_threshold=0.75
+      ./SuperGluePretrainedNetwork/match_pairs.py --input_pairs="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs/cop_hub_marida_pairs.txt" --input_dir="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching" --output_dir="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs" --resize=-1 --superglue="outdoor" --max_keypoints=1024 --keypoint_threshold=0.015 --nms_radius=4 --match_threshold=0.75
       ```
       * add `--viz` parameter to the above command to save the images of matched keypoints. A red line between two keypoints indicates a more confient match.
 
 4. Crop L1C Copernicus Hub .png patches based on the relative positions of previously corresponding keypoints. In this way, Copernicus Hub patches will correspond to MARIDA patches.
     ```sh
-    python shift_and_crop_cop_hub.py --path_keypoints_folder="/data/anomaly-marine-detection/anomalymarinedetection/l1c_generation/keypoints_pairs" --cop_hub_png_input_imgs_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_before_keypoint_matching/" --cop_hub_png_output_imgs_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching/"
+    python shift_and_crop_cop_hub.py --path_keypoints_folder="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs" --cop_hub_png_input_imgs_path="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching/" --cop_hub_png_output_imgs_path="/data/anomaly-marine-detection/data/l1c_data/images_after_keypoint_matching/"
     ```
 
 5. Save cropped L1C Copernicus Hub patches as .tif files.
     ```sh
-    python save_shifted_and_cropped_bands_patches_2_tif.py --marida_file_path="/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif" --bands_images_folder_path="/data/anomaly-marine-detection/data/l1c_copernicus_hub/images_after_keypoint_matching" --out_folder_tif="/data/anomaly-marine-detection/data/l1c_copernicus_hub/tif_final"
+    python save_shifted_and_cropped_bands_patches_2_tif.py --marida_file_path="/data/anomaly-marine-detection/data/patches/S2_1-12-19_48MYU/S2_1-12-19_48MYU_0.tif" --bands_images_folder_path="/data/anomaly-marine-detection/data/l1c_data/images_after_keypoint_matching" --out_folder_tif="/data/anomaly-marine-detection/data/l1c_data/tif_final"
     ```
 
 
