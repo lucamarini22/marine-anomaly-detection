@@ -333,7 +333,7 @@ def main(options):
     # will change)
     # alphas = 1 - class_distr
     alphas = torch.Tensor(
-        [0.75, 0.0625, 0.0625, 0.0625, 0.0625]
+        [0.50, 0.125, 0.125, 0.125, 0.125]
     )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
     criterion = FocalLoss(
