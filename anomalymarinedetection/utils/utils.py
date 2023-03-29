@@ -2,8 +2,9 @@ import numpy as np
 import cv2 as cv
 import rasterio
 import datetime
+from skimage.util import img_as_ubyte
 
-from src.utils.constants import (
+from anomalymarinedetection.utils.constants import (
     BAND_NAMES_IN_MARIDA,
     BAND_NAMES_IN_COPERNICUS_HUB,
 )
@@ -132,14 +133,17 @@ def acquire_data(file_name):
         lats = np.array(xs)
         coords_dict = {"lat": lats, "lon": lons}
 
-    sentinel_img = sentinel_img.transpose(
-        1, 2, 0
-    )  # / 10000 + 1e-13  # Diving for the default quantification value
+    sentinel_img = (
+        sentinel_img.transpose(1, 2, 0) 
+    )  # / 10000 + 1e-13 # Diving for the default quantification value
 
     return sentinel_img, coords_dict
 
 
 def scale_img_to_0_255(img: np.ndarray) -> np.ndarray:
+    #print(img.min())
+    #print(img.max())
+    #return img_as_ubyte(img)
     return ((img - img.min()) * (1 / (img.max() - img.min()) * 255)).astype(
         "uint8"
     )

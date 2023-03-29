@@ -19,9 +19,15 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
-from src.utils.assets import labels, labels_binary, labels_multi
-from src.utils.utils import get_today_str
-from src.semantic_segmentation.unet.focal_loss import FocalLoss
+from anomalymarinedetection.utils.assets import (
+    labels,
+    labels_binary,
+    labels_multi,
+)
+from anomalymarinedetection.utils.utils import get_today_str
+from anomalymarinedetection.semantic_segmentation.unet.focal_loss import (
+    FocalLoss,
+)
 
 sys.path.append(up(os.path.abspath(__file__)))
 from unet import UNet
@@ -80,7 +86,9 @@ def main(options):
 
     # Tensorboard
     writer = SummaryWriter(
-        os.path.join(root_path, "logs", options["tensorboard"], options["today_str"])
+        os.path.join(
+            root_path, "logs", options["tensorboard"], options["today_str"]
+        )
     )
 
     # Transformations
@@ -166,7 +174,9 @@ def main(options):
     elif options["aggregate_classes"] == "binary":
         output_channels = len(labels_binary)
     else:
-        raise Exception("The aggregated_classes option should be 'binary or 'multi'")
+        raise Exception(
+            "The aggregated_classes option should be 'binary or 'multi'"
+        )
 
     # Use gpu or cpu
 
@@ -309,12 +319,15 @@ def main(options):
 
                 # Write running loss
                 writer.add_scalar(
-                    "training loss", loss, (epoch - 1) * len(train_loader) + i_board
+                    "training loss",
+                    loss,
+                    (epoch - 1) * len(train_loader) + i_board,
                 )
                 i_board += 1
 
             logging.info(
-                "Training loss was: " + str(sum(training_loss) / training_batches)
+                "Training loss was: "
+                + str(sum(training_loss) / training_batches)
             )
 
             ###############################################################
@@ -340,18 +353,26 @@ def main(options):
                         loss = criterion(logits, target)
 
                         # Accuracy metrics only on annotated pixels
-                        logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
+                        logits = torch.movedim(
+                            logits, (0, 1, 2, 3), (0, 3, 1, 2)
+                        )
                         logits = logits.reshape((-1, output_channels))
                         target = target.reshape(-1)
                         mask = target != -1
                         logits = logits[mask]
                         target = target[mask]
 
-                        probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
+                        probs = (
+                            torch.nn.functional.softmax(logits, dim=1)
+                            .cpu()
+                            .numpy()
+                        )
                         target = target.cpu().numpy()
 
                         test_batches += target.shape[0]
-                        test_loss.append((loss.data * target.shape[0]).tolist())
+                        test_loss.append(
+                            (loss.data * target.shape[0]).tolist()
+                        )
                         y_predicted += probs.argmax(1).tolist()
                         y_true += target.tolist()
 
@@ -364,20 +385,30 @@ def main(options):
 
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
-                    logging.info("Val loss was: " + str(sum(test_loss) / test_batches))
-                    logging.info("STATISTICS AFTER EPOCH " + str(epoch) + ": \n")
+                    logging.info(
+                        "Val loss was: " + str(sum(test_loss) / test_batches)
+                    )
+                    logging.info(
+                        "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
+                    )
                     logging.info("Evaluation: " + str(acc))
 
                     logging.info("Saving models")
-                    model_dir = os.path.join(options["checkpoint_path"], str(epoch))
+                    model_dir = os.path.join(
+                        options["checkpoint_path"], str(epoch)
+                    )
                     os.makedirs(model_dir, exist_ok=True)
-                    torch.save(model.state_dict(), os.path.join(model_dir, "model.pth"))
+                    torch.save(
+                        model.state_dict(),
+                        os.path.join(model_dir, "model.pth"),
+                    )
 
                     writer.add_scalars(
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
-                            "Train loss": sum(training_loss) / training_batches,
+                            "Train loss": sum(training_loss)
+                            / training_batches,
                         },
                         epoch,
                     )
@@ -392,13 +423,21 @@ def main(options):
                         "Precision/val weightPrec", acc["weightPrec"], epoch
                     )
 
-                    writer.add_scalar("Recall/val macroRec", acc["macroRec"], epoch)
-                    writer.add_scalar("Recall/val microRec", acc["microRec"], epoch)
-                    writer.add_scalar("Recall/val weightRec", acc["weightRec"], epoch)
+                    writer.add_scalar(
+                        "Recall/val macroRec", acc["macroRec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Recall/val microRec", acc["microRec"], epoch
+                    )
+                    writer.add_scalar(
+                        "Recall/val weightRec", acc["weightRec"], epoch
+                    )
 
                     writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
                     writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
+                    writer.add_scalar(
+                        "F1/val weightF1", acc["weightF1"], epoch
+                    )
 
                     writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
 
@@ -437,7 +476,9 @@ def main(options):
                 logits = logits[mask]
                 target = target[mask]
 
-                probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
+                probs = (
+                    torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
+                )
                 target = target.cpu().numpy()
 
                 test_batches += target.shape[0]
@@ -453,7 +494,9 @@ def main(options):
             ####################################################################
             acc = Evaluation(y_predicted, y_true)
             logging.info("\n")
-            logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
+            logging.info(
+                "Test loss was: " + str(sum(test_loss) / test_batches)
+            )
             logging.info("STATISTICS: \n")
             logging.info("Evaluation: " + str(acc))
 
@@ -475,9 +518,14 @@ if __name__ == "__main__":
                     no (keep the original 15 classes)",
     )
 
-    parser.add_argument("--mode", default="train", help="select between train or test ")
     parser.add_argument(
-        "--epochs", default=20000, type=int, help="Number of epochs to run"  # 45
+        "--mode", default="train", help="select between train or test "
+    )
+    parser.add_argument(
+        "--epochs",
+        default=20000,
+        type=int,
+        help="Number of epochs to run",  # 45
     )
     parser.add_argument("--batch", default=5, type=int, help="Batch size")
     parser.add_argument(
@@ -492,7 +540,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--hidden_channels", default=16, type=int, help="Number of hidden features"
+        "--hidden_channels",
+        default=16,
+        type=int,
+        help="Number of hidden features",
     )
     parser.add_argument(
         "--weight_param",
@@ -503,7 +554,9 @@ if __name__ == "__main__":
 
     # Optimization
     parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
-    parser.add_argument("--decay", default=0, type=float, help="learning rate decay")
+    parser.add_argument(
+        "--decay", default=0, type=float, help="learning rate decay"
+    )
     parser.add_argument(
         "--reduce_lr_on_plateau",
         default=0,
@@ -542,7 +595,10 @@ if __name__ == "__main__":
         help="How many cpus for loading data (0 is the main process)",
     )
     parser.add_argument(
-        "--pin_memory", default=False, type=bool, help="Use pinned memory or not"
+        "--pin_memory",
+        default=False,
+        type=bool,
+        help="Use pinned memory or not",
     )
     parser.add_argument(
         "--prefetch_factor",

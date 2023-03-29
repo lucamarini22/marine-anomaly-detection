@@ -4,13 +4,13 @@ import numpy as np
 import cv2 as cv
 import os
 
-from src.utils.utils import (
+from anomalymarinedetection.utils.utils import (
     get_band_and_patch_names_from_file_name,
     get_coords_of_keypoint,
     save_img,
     is_first_band,
 )
-from src.utils.constants import (
+from anomalymarinedetection.utils.constants import (
     NOT_A_MATCH,
     COP_HUB_BASE_NAME,
     HALF_MARIDA_SIZE_X,

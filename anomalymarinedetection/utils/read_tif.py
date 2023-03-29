@@ -1,6 +1,9 @@
 import rasterio
 import numpy as np
-from src.semantic_segmentation.random_forest.engineering_patches import fdi, ndvi
+from anomalymarinedetection.semantic_segmentation.random_forest.engineering_patches import (
+    fdi,
+    ndvi,
+)
 
 
 def acquire_data(file_name):

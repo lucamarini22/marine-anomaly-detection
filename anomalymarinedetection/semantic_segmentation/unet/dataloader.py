@@ -11,7 +11,7 @@ from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
-from src.utils.assets import (
+from anomalymarinedetection.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
     cat_mapping_multi,
@@ -136,7 +136,9 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         for roi in tqdm(self.ROIs, desc="Load " + mode + " set to memory"):
 
             # Construct file and folder name from roi
-            roi_folder = "_".join(["S2"] + roi.split("_")[:-1])  # Get Folder Name
+            roi_folder = "_".join(
+                ["S2"] + roi.split("_")[:-1]
+            )  # Get Folder Name
             roi_name = "_".join(["S2"] + roi.split("_"))  # Get File Name
             roi_file = os.path.join(
                 path, "patches", roi_folder, roi_name + ".tif"
@@ -233,7 +235,9 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             ds = None
             self.X.append(temp)
 
-        self.impute_nan = np.tile(bands_mean, (temp.shape[1], temp.shape[2], 1))
+        self.impute_nan = np.tile(
+            bands_mean, (temp.shape[1], temp.shape[2], 1)
+        )
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
@@ -253,7 +257,9 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
         img = self.X[index]
         target = self.y[index]
 
-        img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")  # CxWxH to WxHxC
+        img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype(
+            "float32"
+        )  # CxWxH to WxHxC
 
         nan_mask = np.isnan(img)
         img[nan_mask] = self.impute_nan[nan_mask]
@@ -292,11 +298,11 @@ class GenDEBRIS(Dataset):  # Extend PyTorch's Dataset class
             temp (np.ndarray): image.
             classes_names_to_aggregate (list[str]): list of names of the
               classes to aggregate.
-            super_class_name (str): name of the class that aggregates other 
+            super_class_name (str): name of the class that aggregates other
               classes.
-            cat_mapping_old (dict[str, int]): dictionary that maps old class 
+            cat_mapping_old (dict[str, int]): dictionary that maps old class
               names to their class ids.
-            cat_mapping_new (dict[str, int]): dictionary that maps updated 
+            cat_mapping_new (dict[str, int]): dictionary that maps updated
               class names to their updated class ids.
 
         Returns:

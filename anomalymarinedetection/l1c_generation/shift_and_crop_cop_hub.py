@@ -1,6 +1,6 @@
 import argparse
 
-from src.l1c_generation.shifterandcroppercophub import ShifterAndCropperCopHub
+from anomalymarinedetection.l1c_generation.shifterandcroppercophub import ShifterAndCropperCopHub
 
 
 if __name__ == "__main__":

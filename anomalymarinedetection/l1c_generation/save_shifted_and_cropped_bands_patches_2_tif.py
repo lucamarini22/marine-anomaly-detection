@@ -1,6 +1,6 @@
 import argparse
 
-from src.l1c_generation.patchesbandsconcatenator import (
+from anomalymarinedetection.l1c_generation.patchesbandsconcatenator import (
     PatchesBandsConcatenator,
 )
 

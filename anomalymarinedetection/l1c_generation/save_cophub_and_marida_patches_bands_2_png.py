@@ -3,13 +3,13 @@ import glob
 import argparse
 from pathlib import PurePath
 
-from src.utils.constants import (
+from anomalymarinedetection.utils.constants import (
     BAND_NAMES_IN_MARIDA,
     BAND_NAMES_IN_COPERNICUS_HUB,
     NOT_TO_CONSIDER_MARIDA,
     COP_HUB_BASE_NAME,
 )
-from src.utils.utils import (
+from anomalymarinedetection.utils.utils import (
     remove_extension_from_name,
     get_marida_band_idx,
     acquire_data,
