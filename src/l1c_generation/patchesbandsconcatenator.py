@@ -1,4 +1,6 @@
 import os
+import glob
+from pathlib import PurePath
 import numpy as np
 import cv2 as cv
 import rasterio
@@ -39,23 +41,28 @@ class PatchesBandsConcatenator:
         Each entry of the dictionary represents a patch and is a np.array of
         shape MARIDA_SIZE_X, MARIDA_SIZE_Y, COP_HUB_BANDS.
         """
-        for file_name in os.listdir(self.bands_images_folder_path):
-            if file_name.endswith(self.input_ext):
-                (
-                    band_name,
-                    patch_name,
-                    _,
-                    _,
-                ) = get_band_and_patch_names_from_file_name(file_name)
+        file_paths = glob.glob(
+            os.path.join(self.bands_images_folder_path, "*" + self.input_ext)
+        )
 
-                # Read Copernicus Hub band of patch
-                band_img_path = os.path.join(
-                    self.bands_images_folder_path, file_name
-                )
-                band_img = cv.imread(band_img_path, cv.IMREAD_GRAYSCALE)
+        for file_path in file_paths:
+            tokens = PurePath(file_path).parts
+            file_name = tokens[-1]
+            (
+                band_name,
+                patch_name,
+                _,
+                _,
+            ) = get_band_and_patch_names_from_file_name(file_name)
 
-                self._init_patch(patch_name)
-                self._add_band_to_patch(patch_name, band_name, band_img)
+            # Read Copernicus Hub band of patch
+            band_img_path = os.path.join(
+                self.bands_images_folder_path, file_name
+            )
+            band_img = cv.imread(band_img_path, cv.IMREAD_GRAYSCALE)
+
+            self._init_patch(patch_name)
+            self._add_band_to_patch(patch_name, band_name, band_img)
 
     def save_patches(self, out_folder_tif: str, marida_file_path: str):
         """Saves all patches saved in self.patches_dict as .tif
