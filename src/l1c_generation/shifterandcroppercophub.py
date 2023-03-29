@@ -1,3 +1,5 @@
+import glob
+from pathlib import PurePath
 import numpy as np
 import cv2 as cv
 import os
@@ -234,81 +236,79 @@ class ShifterAndCropperCopHub:
         # Creates folder where to store output images if it does not exist
         if not os.path.exists(cop_hub_png_output_imgs_path):
             os.makedirs(cop_hub_png_output_imgs_path)
+
+        # Considers only images with out_ext extension
+        img_file_paths = glob.glob(
+            os.path.join(cop_hub_png_input_imgs_path, "*" + out_ext)
+        )
         # Cycles through all input images
-        for img_file_name in os.listdir(cop_hub_png_input_imgs_path):
-            # Considers only images with out_ext extension
-            if img_file_name.endswith(out_ext):
-                # Removes extension from name
-                img_file_name_without_ext = img_file_name.replace(out_ext, "")
-                (
-                    band_name,
-                    patch_name,
-                    dataset_name,
-                    _,
-                ) = get_band_and_patch_names_from_file_name(
-                    img_file_name_without_ext
+        for img_file_path in img_file_paths:
+            tokens = PurePath(img_file_path).parts
+            img_file_name = tokens[-1]
+
+            # Removes extension from name
+            img_file_name_without_ext = img_file_name.replace(out_ext, "")
+            (
+                band_name,
+                patch_name,
+                dataset_name,
+                _,
+            ) = get_band_and_patch_names_from_file_name(
+                img_file_name_without_ext
+            )
+            if dataset_name == COP_HUB_BASE_NAME:
+                patch_img_path = os.path.join(
+                    cop_hub_png_input_imgs_path, img_file_name
                 )
-                if dataset_name == COP_HUB_BASE_NAME:
-                    patch_img_path = os.path.join(
-                        cop_hub_png_input_imgs_path, img_file_name
-                    )
 
-                    mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[
-                        patch_name
-                    ]
-                    # Crop a Copernicus Hub patch according to its shift
-                    # compared to its corresponding MARIDA patch
-                    # To do this:
-                    # 1. get coordinates of the center of the MARIDA patch
-                    # 2. shift them (horizontally and vertically) by the mean
-                    #    of differences previously computed
-                    # 3. crop the Copernicus Hub patch by considering the
-                    #    shifted center coordinates and the size of the MARIDA patch
+                mean_diffs_x, mean_diffs_y = mean_diff_patch_dict[patch_name]
+                # Crop a Copernicus Hub patch according to its shift
+                # compared to its corresponding MARIDA patch
+                # To do this:
+                # 1. get coordinates of the center of the MARIDA patch
+                # 2. shift them (horizontally and vertically) by the mean
+                #    of differences previously computed
+                # 3. crop the Copernicus Hub patch by considering the
+                #    shifted center coordinates and the size of the MARIDA patch
 
-                    # Read Copernicus Hub patch
-                    cop_hub_img = cv.imread(
-                        patch_img_path, cv.IMREAD_GRAYSCALE
-                    )
-                    # print(cop_hub_img.shape)
-                    # 1. get coordinates of the center of the MARIDA patch
-                    center_marida_x = HALF_MARIDA_SIZE_X
-                    center_marida_y = HALF_MARIDA_SIZE_Y
-                    # 2. shift them (horizontally and vertically) by the mean
-                    #    of differences previously computed
-                    corresponding_center_cop_hub_x = (
-                        center_marida_x - mean_diffs_x
-                    )
-                    corresponding_center_cop_hub_y = (
-                        center_marida_y - mean_diffs_y
-                    )
-                    # 3. crop the Copernicus Hub patch by considering the
-                    #    shifted center coordinates and the size of the MARIDA patch
-                    cop_hub_2_marida_img = cop_hub_img[
-                        corresponding_center_cop_hub_y
-                        - HALF_MARIDA_SIZE_Y : corresponding_center_cop_hub_y
-                        + HALF_MARIDA_SIZE_Y,
-                        corresponding_center_cop_hub_x
-                        - HALF_MARIDA_SIZE_X : corresponding_center_cop_hub_x
-                        + HALF_MARIDA_SIZE_X,
-                    ]
+                # Read Copernicus Hub patch
+                cop_hub_img = cv.imread(patch_img_path, cv.IMREAD_GRAYSCALE)
+                # print(cop_hub_img.shape)
+                # 1. get coordinates of the center of the MARIDA patch
+                center_marida_x = HALF_MARIDA_SIZE_X
+                center_marida_y = HALF_MARIDA_SIZE_Y
+                # 2. shift them (horizontally and vertically) by the mean
+                #    of differences previously computed
+                corresponding_center_cop_hub_x = center_marida_x - mean_diffs_x
+                corresponding_center_cop_hub_y = center_marida_y - mean_diffs_y
+                # 3. crop the Copernicus Hub patch by considering the
+                #    shifted center coordinates and the size of the MARIDA patch
+                cop_hub_2_marida_img = cop_hub_img[
+                    corresponding_center_cop_hub_y
+                    - HALF_MARIDA_SIZE_Y : corresponding_center_cop_hub_y
+                    + HALF_MARIDA_SIZE_Y,
+                    corresponding_center_cop_hub_x
+                    - HALF_MARIDA_SIZE_X : corresponding_center_cop_hub_x
+                    + HALF_MARIDA_SIZE_X,
+                ]
 
-                    output_shifted_img_path = (
-                        COP_HUB_BASE_NAME
-                        + separator
-                        + patch_name
-                        + separator
-                        + band_name
-                        + separator
-                        + "shifted"
-                        + out_ext
-                    )
-                    save_img(
-                        cop_hub_2_marida_img,
-                        os.path.join(
-                            cop_hub_png_output_imgs_path,
-                            output_shifted_img_path,
-                        ),
-                    )
+                output_shifted_img_path = (
+                    COP_HUB_BASE_NAME
+                    + separator
+                    + patch_name
+                    + separator
+                    + band_name
+                    + separator
+                    + "shifted"
+                    + out_ext
+                )
+                save_img(
+                    cop_hub_2_marida_img,
+                    os.path.join(
+                        cop_hub_png_output_imgs_path,
+                        output_shifted_img_path,
+                    ),
+                )
 
     @staticmethod
     def _discard_means_out_of_std_dev(
