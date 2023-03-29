@@ -1,5 +1,6 @@
 import os
 import argparse
+from pathlib import PurePath
 
 from src.utils.constants import (
     BAND_NAMES_IN_MARIDA,
@@ -58,85 +59,88 @@ def save_marida_and_cop_hub_2_png(
     ):
         raise Exception(f"The file at {pairs_file_path} should be empty.")
 
-    # Cycle through all MARIDA patches
+    # Cycles through all MARIDA patches folders
+    folders_to_investigate = []
     for marida_patch_folder_name in os.listdir(marida_patches_path):
-        # TODO: remove this if condition asa you have all the cop hub images
+        # TODO: remove this if condition asa you have all the cop hub images,
+        # but keep the appending to list (outside the if condition when you
+        # remove it)
         if marida_patch_folder_name in TEMP:
             marida_patch_folder_path = os.path.join(
                 marida_patches_path, marida_patch_folder_name
             )
-            # cycle through all the cropped patches of a patch
-            for marida_patch_name in os.listdir(marida_patch_folder_path):
-                marida_patch_name = remove_extension_from_name(
-                    marida_patch_name, ext
-                )
-                # do not consider confidence segmentation maps
-                if not (marida_patch_name.endswith(NOT_TO_CONSIDER_MARIDA)):
-                    number = marida_patch_name[-1]
-                    # path of the current MARIDA patch
-                    marida_tif_path = os.path.join(
-                        marida_patches_path,
+            folders_to_investigate.append(marida_patch_folder_path)
+
+    marida_files_to_investigate = []
+    for marida_patch_folder_path in folders_to_investigate:
+        # Cycles through all the cropped patches of a patch
+        for marida_patch_name in os.listdir(marida_patch_folder_path):
+            marida_file_path = os.path.join(
+                marida_patch_folder_path, marida_patch_name
+            )
+            marida_files_to_investigate.append(marida_file_path)
+    # Cycles through all MARIDA files
+    for marida_file_path in marida_files_to_investigate:
+        tokens = PurePath(marida_file_path).parts
+        marida_patch_folder_name = tokens[-2]
+        marida_patch_name = tokens[-1]
+
+        marida_patch_name = remove_extension_from_name(marida_patch_name, ext)
+        # do not consider confidence segmentation maps
+        if not (marida_patch_name.endswith(NOT_TO_CONSIDER_MARIDA)):
+
+            for band_cop_hub in BAND_NAMES_IN_COPERNICUS_HUB:
+
+                if band_cop_hub in BAND_NAMES_IN_MARIDA:
+                    band_marida = get_marida_band_idx(band_cop_hub)
+                    # .tif marida patch
+                    img_marida, _ = acquire_data(marida_file_path)
+                    # .tif copernicus hub patch
+                    img_cop_hub_tif_path = os.path.join(
+                        cop_hub_patches_path,
                         marida_patch_folder_name,
-                        marida_patch_name + ext,
+                        marida_patch_name,
+                        marida_patch_name + l1c + band_cop_hub + ext,
                     )
+                    img_marida = scale_img_to_0_255(
+                        img_marida[:, :, band_marida]
+                    )
+                    # Saves marida patch as .png
+                    name_marida_img = (
+                        base_name_marida_img
+                        + separator
+                        + marida_patch_name
+                        + separator
+                        + band_cop_hub
+                        + out_img_ext
+                    )
+                    save_img(
+                        img_marida,
+                        os.path.join(output_folder_path, name_marida_img),
+                    )
+                img_cop_hub, _ = acquire_data(img_cop_hub_tif_path)
 
-                    for band_cop_hub in BAND_NAMES_IN_COPERNICUS_HUB:
-
-                        if band_cop_hub in BAND_NAMES_IN_MARIDA:
-                            band_marida = get_marida_band_idx(band_cop_hub)
-                            # .tif marida patch
-                            img_marida, _ = acquire_data(marida_tif_path)
-                            # .tif copernicus hub patch
-                            img_cop_hub_tif_path = os.path.join(
-                                cop_hub_patches_path,
-                                marida_patch_folder_name,
-                                marida_patch_name,
-                                marida_patch_name + l1c + band_cop_hub + ext,
-                            )
-                            img_marida = scale_img_to_0_255(
-                                img_marida[:, :, band_marida]
-                            )
-                            # Saves marida patch as .png
-                            name_marida_img = (
-                                base_name_marida_img
-                                + separator
-                                + marida_patch_name
-                                + separator
-                                + band_cop_hub
-                                + out_img_ext
-                            )
-                            save_img(
-                                img_marida,
-                                os.path.join(
-                                    output_folder_path, name_marida_img
-                                ),
-                            )
-                        img_cop_hub, _ = acquire_data(img_cop_hub_tif_path)
-
-                        # Saves copernicus hub patch as .png
-                        name_cop_hub_img = (
-                            base_name_cop_hub_img
-                            + separator
-                            + marida_patch_name
-                            + separator
-                            + band_cop_hub
-                            + out_img_ext
+                # Saves copernicus hub patch as .png
+                name_cop_hub_img = (
+                    base_name_cop_hub_img
+                    + separator
+                    + marida_patch_name
+                    + separator
+                    + band_cop_hub
+                    + out_img_ext
+                )
+                img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
+                save_img(
+                    img_cop_hub,
+                    os.path.join(output_folder_path, name_cop_hub_img),
+                )
+                if band_cop_hub in BAND_NAMES_IN_MARIDA:
+                    # Updates the file containing all the pairs of
+                    # corresponding copernicus hub and marida names
+                    with open(pairs_file_path, "a") as myfile:
+                        myfile.write(
+                            name_marida_img + " " + name_cop_hub_img + "\n"
                         )
-                        img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
-                        save_img(
-                            img_cop_hub,
-                            os.path.join(output_folder_path, name_cop_hub_img),
-                        )
-                        if band_cop_hub in BAND_NAMES_IN_MARIDA:
-                            # Updates the file containing all the pairs of
-                            # corresponding copernicus hub and marida names
-                            with open(pairs_file_path, "a") as myfile:
-                                myfile.write(
-                                    name_marida_img
-                                    + " "
-                                    + name_cop_hub_img
-                                    + "\n"
-                                )
 
 
 if __name__ == "__main__":
