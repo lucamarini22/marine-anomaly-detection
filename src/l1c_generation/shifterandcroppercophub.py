@@ -49,9 +49,15 @@ class ShifterAndCropperCopHub:
         cop_hub_png_input_imgs_path: str,
         cop_hub_png_output_imgs_path: str,
     ) -> None:
-        assert os.path.isdir(path_keypoints_folder)
-        assert os.path.isdir(cop_hub_png_input_imgs_path)
-        assert os.path.isdir(cop_hub_png_output_imgs_path)
+        assert os.path.isdir(
+            path_keypoints_folder
+        ), f"{path_keypoints_folder} directory does not exist"
+        assert os.path.isdir(
+            cop_hub_png_input_imgs_path
+        ), f"{cop_hub_png_input_imgs_path} directory does not exist"
+        assert os.path.isdir(
+            cop_hub_png_output_imgs_path
+        ), f"{cop_hub_png_output_imgs_path} directory does not exist"
 
         self.path_keypoints_folder = path_keypoints_folder
         self.cop_hub_png_input_imgs_path = cop_hub_png_input_imgs_path
@@ -90,60 +96,58 @@ class ShifterAndCropperCopHub:
         """
         patches_mean_diffs = {}
 
-        # Cycles all files in folder
-        for keypoint_file_name in os.listdir(path_keypoints_folder):
-            # Considers only keypoint files
-            if keypoint_file_name.endswith(keypoint_file_ext):
+        # Considers only keypoint files
+        keypoint_file_paths = glob.glob(
+            os.path.join(path_keypoints_folder, "*" + keypoint_file_ext)
+        )
+        # Cycles all keypoint files
+        for keypoint_file_path in keypoint_file_paths:
+            tokens = PurePath(keypoint_file_path).parts
+            keypoint_file_name = tokens[-1]
 
-                (
-                    band_name,
-                    patch_name,
-                    _,
-                    _,
-                ) = get_band_and_patch_names_from_file_name(
-                    keypoint_file_name, separator
+            (
+                band_name,
+                patch_name,
+                _,
+                _,
+            ) = get_band_and_patch_names_from_file_name(
+                keypoint_file_name, separator
+            )
+
+            if not exclude_band_1 or not is_first_band(band_name):
+                keypoint_file_path = os.path.join(
+                    path_keypoints_folder, keypoint_file_name
                 )
+                keypoints = np.load(keypoint_file_path)
 
-                if not exclude_band_1 or not is_first_band(band_name):
-                    keypoint_file_path = os.path.join(
-                        path_keypoints_folder, keypoint_file_name
-                    )
-                    keypoints = np.load(keypoint_file_path)
+                x_diff_key = patch_name + separator + x_axis
+                y_diff_key = patch_name + separator + y_axis
+                patches_mean_diffs.setdefault(x_diff_key, [])
+                patches_mean_diffs.setdefault(y_diff_key, [])
 
-                    x_diff_key = patch_name + separator + x_axis
-                    y_diff_key = patch_name + separator + y_axis
-                    patches_mean_diffs.setdefault(x_diff_key, [])
-                    patches_mean_diffs.setdefault(y_diff_key, [])
-
-                    # Asserts that keypoints["matches"] is an array.
-                    assert len(keypoints["matches"].shape) == 1
-                    for idx_keypoint_0, idx_keypoint_1 in enumerate(
-                        keypoints["matches"]
-                    ):
-                        # For each keypoint in keypoints0, the matches array
-                        # indicates the index of the matching keypoint in
-                        # keypoints1, or -1 if the keypoint is unmatched.
-                        if idx_keypoint_1 != NOT_A_MATCH:
-                            # Get coordinates of matched keypoints
-                            (
-                                keypoint_0_x,
-                                keypoint_0_y,
-                            ) = get_coords_of_keypoint(
-                                keypoints["keypoints0"][idx_keypoint_0]
-                            )
-                            (
-                                keypoint_1_x,
-                                keypoint_1_y,
-                            ) = get_coords_of_keypoint(
-                                keypoints["keypoints1"][idx_keypoint_1]
-                            )
-                            # Get signed horizontal and vertical differences
-                            # of corrdinates of matched keypoints
-                            diff_x = keypoint_0_x - keypoint_1_x
-                            diff_y = keypoint_0_y - keypoint_1_y
-                            # Update lists of differences
-                            patches_mean_diffs[x_diff_key].append(diff_x)
-                            patches_mean_diffs[y_diff_key].append(diff_y)
+                # Asserts that keypoints["matches"] is an array.
+                assert len(keypoints["matches"].shape) == 1
+                for idx_keypoint_0, idx_keypoint_1 in enumerate(
+                    keypoints["matches"]
+                ):
+                    # For each keypoint in keypoints0, the matches array
+                    # indicates the index of the matching keypoint in
+                    # keypoints1, or -1 if the keypoint is unmatched.
+                    if idx_keypoint_1 != NOT_A_MATCH:
+                        # Get coordinates of matched keypoints
+                        (keypoint_0_x, keypoint_0_y,) = get_coords_of_keypoint(
+                            keypoints["keypoints0"][idx_keypoint_0]
+                        )
+                        (keypoint_1_x, keypoint_1_y,) = get_coords_of_keypoint(
+                            keypoints["keypoints1"][idx_keypoint_1]
+                        )
+                        # Get signed horizontal and vertical differences
+                        # of coordinates of matched keypoints
+                        diff_x = keypoint_0_x - keypoint_1_x
+                        diff_y = keypoint_0_y - keypoint_1_y
+                        # Update lists of differences
+                        patches_mean_diffs[x_diff_key].append(diff_x)
+                        patches_mean_diffs[y_diff_key].append(diff_y)
 
         return patches_mean_diffs
 
@@ -233,10 +237,6 @@ class ShifterAndCropperCopHub:
             out_ext (str, optional): extension of output images. Defaults to
               ".png".
         """
-        # Creates folder where to store output images if it does not exist
-        if not os.path.exists(cop_hub_png_output_imgs_path):
-            os.makedirs(cop_hub_png_output_imgs_path)
-
         # Considers only images with out_ext extension
         img_file_paths = glob.glob(
             os.path.join(cop_hub_png_input_imgs_path, "*" + out_ext)

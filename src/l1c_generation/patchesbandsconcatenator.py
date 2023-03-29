@@ -68,6 +68,10 @@ class PatchesBandsConcatenator:
               parameter is needed to read the metadata of a marida
               patch and then update it.
         """
+        assert os.path.isdir(
+            out_folder_tif
+        ), f"{out_folder_tif} directory does not exist"
+
         with rasterio.open(marida_file_path) as src_marida:
             meta = src_marida.read()
             meta = src_marida.profile
