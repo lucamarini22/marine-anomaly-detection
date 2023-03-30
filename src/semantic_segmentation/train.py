@@ -562,13 +562,11 @@ def main(options):
                 except:
                     labeled_iter = iter(labeled_train_loader)
                     img_x, seg_map = next(labeled_iter)
-
                 try:
-                    # TODO: modify dataloader to get only weakly augm image
-                    img_u_w, img_u_s = next(unlabeled_iter)
+                    img_u_w = next(unlabeled_iter)
                 except:
                     unlabeled_iter = iter(unlabeled_train_loader)
-                    img_u_w, img_u_s = next(unlabeled_iter)
+                    img_u_w = next(unlabeled_iter)
 
                 # Initialize RandAugment with n random augmentations.
                 # So, every batch will have different random augmentations.
@@ -584,11 +582,11 @@ def main(options):
                     img_u_w_i = img_u_w[i, :, :, :]
                     img_u_w_i = img_u_w_i.cpu().detach().numpy()
                     img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
-                    # a = img_u_w_i[:, :, 10]
-                    # b = img_u_w_i[:, :, 9]
+                    #a = img_u_w_i[:, :, 10]
+                    #b = img_u_w_i[:, :, 9]
                     img_u_s_i = strong_transform(img_u_w_i)
-                    # c = img_u_s_i[10, :, :]
-                    # d = img_u_s_i[9, :, :]
+                    #c = img_u_s_i[10, :, :]
+                    #d = img_u_s_i[9, :, :]
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 # img_u_s = img_u_s.to(device)

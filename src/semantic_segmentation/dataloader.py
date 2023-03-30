@@ -261,33 +261,19 @@ class AnomalyMarineDataset(Dataset):
     def __getitem__(self, index):
         # Unlabeled dataloader
         if self.mode == DataLoaderType.TRAIN_SSL.value:
-            # TODO: check it works
             img = self.X_u[index]
             # CxWxH to WxHxC
             img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
 
-            # img = Image.fromarray(img)
-
             if self.transform is not None:
-                # (256, 256) -> (256, 256, 1)
-                # target = target[:, :, np.newaxis]
-                # stack = np.concatenate([img, target], axis=-1).astype(
-                #    "float32"
-                # )  # In order to rotate-transform both mask and image
                 img = self.transform(img)
-                # img = stack[:-1, :, :]
-                # target = stack[
-                #    -1, :, :
-                # ].long()  # Recast target values back to int64 or torch long dtype
 
             if self.standardization is not None:
-                weak, strong = img
+                weak = img
                 weak = self.standardization(weak)
-                strong = self.standardization(strong)
-            # img = unlabeled_weak_aug, unlabeled_strong_aug
-            return weak, strong  # (weak, strong), None  # this works
+            return weak
 
         # Labeled dataloader
         else:
