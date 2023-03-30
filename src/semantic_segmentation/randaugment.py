@@ -112,7 +112,9 @@ def Rotate(img, v, max_v, bias=0):
     v = _int_parameter(v, max_v) + bias
     if random.random() < 0.5:
         v = -v
-    aug = A.rotate(img, v)
+    aug = A.rotate(
+        img, v, border_mode=0, value=0 #np.power(-10, 13)
+    )  # , value=-1)
     # np.reshape(aug, prev_shape)[8, :, :] # TODO returning np.reshape was the problem!!! Modify also other augmentations
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     # if img.shape != prev_shape:
@@ -168,7 +170,11 @@ def TranslateX(img, v, max_v, bias=0):
     if random.random() < 0.5:
         v = -v
     # v = int(v * img.shape[1])
-    aug = A.Affine(translate_percent=(v, 0), always_apply=True)(image=img)[
+    aug = A.Affine(
+        translate_percent=(v, 0), always_apply=True, cval=0 #np.power(-10, 13)
+    )(  # cval=-1)(
+        image=img
+    )[
         "image"
     ]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
@@ -270,24 +276,29 @@ class RandAugmentMC(object):
         self.m = m
         self.augment_pool = fixmatch_augment_pool()
         self.ops = random.choices(self.augment_pool, k=self.n)
-        self.probs = [random.uniform(0, 1) for _ in range(len(self.ops))]
+        # self.probs = [random.uniform(0, 1) for _ in range(len(self.ops))]
         self.values_op = [
             np.random.randint(1, self.m) for _ in range(len(self.ops))
         ]
+        self.cutout = True
+
+    def use_cutout(self, use: bool):
+        self.cutout = use
 
     def __call__(self, img):
         idx_op = 0
 
         for op, max_v, bias in self.ops:
             # v = np.random.randint(1, self.m)
-            if self.probs[idx_op] < 0.5:  # random.random() < 0.5:
-                # img = torch.moveaxis(img, 0, -1)
-                v = self.values_op[idx_op]
-                img_np = img.cpu().detach().numpy()
-                img_np = op(img_np, v=v, max_v=max_v, bias=bias)
-                img = torch.from_numpy(img_np)
+            # if self.probs[idx_op] < 0.5:  # random.random() < 0.5:
+            # img = torch.moveaxis(img, 0, -1)
+            v = self.values_op[idx_op]
+            img_np = img.cpu().detach().numpy()
+            img_np = op(img_np, v=v, max_v=max_v, bias=bias)
+            img = torch.from_numpy(img_np)
             idx_op += 1
-        for _ in range(NUM_TIMES_CUTOUT):
-            # Applies CutOut NUM_TIMES_CUTOUT times
-            img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
+        if self.cutout:
+            for _ in range(NUM_TIMES_CUTOUT):
+                # Applies CutOut NUM_TIMES_CUTOUT times
+                img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
         return img

@@ -8,7 +8,7 @@ from src.semantic_segmentation.randaugment import RandAugmentMC
 from src.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 
 
-class RandomRotationTransform:
+class DiscreteRandomRotationTransform:
     """Rotate by one of the given angles."""
 
     def __init__(self, angles):
@@ -26,7 +26,9 @@ class TransformFixMatch(object):
         self.weak = transforms.Compose(
             [
                 transforms.ToTensor(),
-                # transforms.RandomHorizontalFlip(),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                DiscreteRandomRotationTransform([-90, 90])
                 # transforms.RandomCrop(
                 #    size=(
                 #        MARIDA_SIZE_X,

@@ -30,7 +30,7 @@ from src.semantic_segmentation.dataloader import (
     get_labeled_and_unlabeled_rois,
 )
 from src.semantic_segmentation.transformations import (
-    RandomRotationTransform,
+    DiscreteRandomRotationTransform,
     TransformFixMatch,
     StrongAugmentation,
 )
@@ -110,7 +110,7 @@ def main(options):
     transform_train = transforms.Compose(
         [
             transforms.ToTensor(),
-            RandomRotationTransform([-90, 0, 90, 180]),
+            DiscreteRandomRotationTransform([-90, 0, 90, 180]),
             transforms.RandomHorizontalFlip(),
         ]
     )
@@ -122,7 +122,6 @@ def main(options):
     # Construct Data loader
 
     if options["mode"] == TrainMode.TRAIN.value:
-
         dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SUP.value,
             transform=transform_train,
@@ -225,7 +224,6 @@ def main(options):
         )
 
     elif options["mode"] == TrainMode.TEST.value:
-
         dataset_test = AnomalyMarineDataset(
             DataLoaderType.TEST.value,
             transform=transform_test,
@@ -273,7 +271,6 @@ def main(options):
 
     # Load model from specific epoch to continue the training or start the evaluation
     if options["resume_from_epoch"] > 1:
-
         resume_model_dir = os.path.join(
             options["checkpoint_path"], str(options["resume_from_epoch"])
         )
@@ -347,6 +344,7 @@ def main(options):
         alpha=alphas.to(device),
         gamma=2.0,
         reduction="none",
+        # ignore_index=-1
     )
 
     optimizer = torch.optim.Adam(
@@ -385,8 +383,7 @@ def main(options):
             training_batches = 0
 
             i_board = 0
-            for (image, target) in tqdm(train_loader, desc="training"):
-
+            for image, target in tqdm(train_loader, desc="training"):
                 image = image.to(device)
                 target = target.to(device)
 
@@ -430,8 +427,7 @@ def main(options):
                 y_predicted = []
 
                 with torch.no_grad():
-                    for (image, target) in tqdm(test_loader, desc="testing"):
-
+                    for image, target in tqdm(test_loader, desc="testing"):
                         image = image.to(device)
                         target = target.to(device)
 
@@ -596,9 +592,9 @@ def main(options):
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 # img_u_s = img_u_s.to(device)
-                x = img_u_w[2, 10, :, :]
+                # x = img_u_w[2, 10, :, :]
 
-                z = img_u_s[2, 10, :, :]
+                # z = img_u_s[2, 10, :, :]
 
                 seg_map = seg_map.to(device)
                 """ # DEBUGGING
@@ -634,6 +630,10 @@ def main(options):
 
                 # logits_u_s = model(img_u_s)
 
+                # Do not apply CutOut to the labels because the model has to
+                # learn to interpolate when part of the image is missing.
+                # It is only an augmentation on the inputs.
+                randaugment.use_cutout(False)
                 # Applies strong augmentation to pseudo label map
                 tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
                 for i in range(logits_u_w.shape[0]):
@@ -699,8 +699,7 @@ def main(options):
                 y_predicted = []
 
                 with torch.no_grad():
-                    for (image, target) in tqdm(test_loader, desc="testing"):
-
+                    for image, target in tqdm(test_loader, desc="testing"):
                         image = image.to(device)
                         target = target.to(device)
 
@@ -810,7 +809,6 @@ def main(options):
                 model.train()
     # CODE ONLY FOR EVALUATION - TESTING MODE !
     elif options["mode"] == TrainMode.TEST.value:
-
         model.eval()
 
         test_loss = []
@@ -819,8 +817,7 @@ def main(options):
         y_predicted = []
 
         with torch.no_grad():
-            for (image, target) in tqdm(test_loader, desc="testing"):
-
+            for image, target in tqdm(test_loader, desc="testing"):
                 image = image.to(device)
                 target = target.to(device)
 
@@ -862,7 +859,6 @@ def main(options):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
