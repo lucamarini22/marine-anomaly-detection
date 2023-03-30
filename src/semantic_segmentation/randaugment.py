@@ -23,7 +23,8 @@ def AutoContrast(img, v):
     return iaaa.pillike.Autocontrast(cutoff=0)(image=img)["image"]
 
 
-def Brightness(img, v):
+def Brightness(img, v, max_v, bias=0):
+    v = _float_parameter(v, max_v) + bias
     return iaaa.pillike.EnhanceBrightness(factor=v)(image=img)["image"]
 
 
@@ -45,14 +46,14 @@ def Cutout(img, v, max_v, bias=0):
 """
 
 
-def CutoutAbs(img, v, **kwarg):
+def CutoutAbs(img, v1, v2, **kwarg):
     w, h = img.shape[1], img.shape[2]
     x0 = np.random.uniform(0, w)
     y0 = np.random.uniform(0, h)
-    x0 = int(max(0, x0 - v / 2.0))
-    y0 = int(max(0, y0 - v / 2.0))
-    x1 = int(min(w, x0 + v))
-    y1 = int(min(h, y0 + v))
+    x0 = int(max(0, x0 - v1 / 2.0))
+    y0 = int(max(0, y0 - v2 / 2.0))
+    x1 = int(min(w, x0 + v1))
+    y1 = int(min(h, y0 + v2))
 
     black_color = 0
     img = img.clone()
@@ -83,13 +84,13 @@ def Identity(img, **kwarg):
     return aug
 
 
-# def Posterize(img, v, max_v, bias=0):
-#    prev_shape = img.shape
-#    img = change_shape_for_augmentation(img)
-#    v = _int_parameter(v, max_v) + bias
-#    aug = A.posterize(img, v)
-#    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-#    return np.reshape(aug, prev_shape)
+def Posterize(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    img = change_shape_for_augmentation(img)
+    v = _int_parameter(v, max_v) + bias
+    aug = A.posterize(img, v)
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return np.reshape(aug, prev_shape)
 
 
 def change_shape_for_augmentation(img):
@@ -113,7 +114,7 @@ def Rotate(img, v, max_v, bias=0):
     if random.random() < 0.5:
         v = -v
     aug = A.rotate(
-        img, v, border_mode=0, value=0 #np.power(-10, 13)
+        img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
     # np.reshape(aug, prev_shape)[8, :, :] # TODO returning np.reshape was the problem!!! Modify also other augmentations
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
@@ -171,7 +172,9 @@ def TranslateX(img, v, max_v, bias=0):
         v = -v
     # v = int(v * img.shape[1])
     aug = A.Affine(
-        translate_percent=(v, 0), always_apply=True, cval=0 #np.power(-10, 13)
+        translate_percent=(v, 0),
+        always_apply=True,
+        cval=0,  # np.power(-10, 13)
     )(  # cval=-1)(
         image=img
     )[
@@ -188,9 +191,13 @@ def TranslateY(img, v, max_v, bias=0):
     if random.random() < 0.5:
         v = -v
     # v = int(v * img.shape[1])
-    aug = A.Affine(translate_percent=(0, v), always_apply=True)(image=img)[
-        "image"
-    ]
+    aug = A.Affine(
+        translate_percent=(0, v),
+        always_apply=True,
+        cval=0,
+    )(
+        image=img
+    )["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -220,7 +227,7 @@ def fixmatch_augment_pool():
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
         (TranslateX, 0.3, 0),
-        # (TranslateY, 0.3, 0),
+        (TranslateY, 0.3, 0),
     ]
     return augs
 
@@ -296,9 +303,12 @@ class RandAugmentMC(object):
             img_np = img.cpu().detach().numpy()
             img_np = op(img_np, v=v, max_v=max_v, bias=bias)
             img = torch.from_numpy(img_np)
+            a = img[4, :, :]
             idx_op += 1
         if self.cutout:
             for _ in range(NUM_TIMES_CUTOUT):
                 # Applies CutOut NUM_TIMES_CUTOUT times
-                img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
+                v1 = random.uniform(0.05, 0.15) * MARIDA_SIZE_X
+                v2 = random.uniform(0.05, 0.15) * MARIDA_SIZE_X
+                img = CutoutAbs(img, v1, v2)
         return img
