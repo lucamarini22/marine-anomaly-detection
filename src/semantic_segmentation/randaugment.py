@@ -111,8 +111,8 @@ def Rotate(img, v, max_v, bias=0):
     # if img.shape[0] != img.shape[1]:
     #    img = np.moveaxis(img, 0, -1)
     v = _int_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
+    # if random.random() < 0.5:
+    #   v = -v
     aug = A.rotate(
         img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
@@ -137,8 +137,8 @@ def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
+    # if random.random() < 0.5:
+    #    v = -v
     aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
@@ -148,8 +148,8 @@ def ShearY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
+    # if random.random() < 0.5:
+    #    v = -v
     aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
@@ -168,8 +168,8 @@ def TranslateX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
+    # if random.random() < 0.5:
+    #    v = -v
     # v = int(v * img.shape[1])
     aug = A.Affine(
         translate_percent=(v, 0),
@@ -181,6 +181,7 @@ def TranslateX(img, v, max_v, bias=0):
         "image"
     ]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    t = aug[4, :, :]
     return aug
 
 
@@ -188,8 +189,8 @@ def TranslateY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    if random.random() < 0.5:
-        v = -v
+    # if random.random() < 0.5:
+    #    v = -v
     # v = int(v * img.shape[1])
     aug = A.Affine(
         translate_percent=(0, v),
@@ -221,13 +222,13 @@ def fixmatch_augment_pool():
         # (Equalize, None, None),
         (Identity, None, None),
         # (Posterize, 4, 4),
-        (Rotate, 30, 0),
+        # (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
         (TranslateX, 0.3, 0),
-        (TranslateY, 0.3, 0),
+        # (TranslateY, 0.3, 0),
     ]
     return augs
 
@@ -282,12 +283,26 @@ class RandAugmentMC(object):
         self.n = n
         self.m = m
         self.augment_pool = fixmatch_augment_pool()
+        # Fix the probabilities and operations at init time.
+        # In this way, the exactly same augmentations will be applied to both
+        # strongly augmented input images and pseudo label maps.
         self.ops = random.choices(self.augment_pool, k=self.n)
-        # self.probs = [random.uniform(0, 1) for _ in range(len(self.ops))]
+        self.probs_op = [random.uniform(0, 1) for _ in range(len(self.ops))]
         self.values_op = [
             np.random.randint(1, self.m) for _ in range(len(self.ops))
         ]
         self.cutout = True
+        # List of operations that can invert the value
+        self.ops_can_invert_value = [
+            "Rotate",
+            "ShearX",
+            "ShearY",
+            "TranslateX",
+            "TranslateY",
+        ]
+        self.probs_invert_value = [
+            random.uniform(0, 1) for _ in range(len(self.ops))
+        ]
 
     def use_cutout(self, use: bool):
         self.cutout = use
@@ -296,11 +311,16 @@ class RandAugmentMC(object):
         idx_op = 0
 
         for op, max_v, bias in self.ops:
-            # v = np.random.randint(1, self.m)
-            # if self.probs[idx_op] < 0.5:  # random.random() < 0.5:
-            # img = torch.moveaxis(img, 0, -1)
+            # if self.probs_op[idx_op] < 0.5:  # random.random() < 0.5:
+            ## img = torch.moveaxis(img, 0, -1)
             v = self.values_op[idx_op]
+            # if (
+            #    op.__name__ in self.ops_can_invert_value
+            #    and self.probs_invert_value[idx_op] < 0.5
+            # ):
+            #    v = -v
             img_np = img.cpu().detach().numpy()
+            b = img_np[4, :, :]
             img_np = op(img_np, v=v, max_v=max_v, bias=bias)
             img = torch.from_numpy(img_np)
             a = img[4, :, :]
