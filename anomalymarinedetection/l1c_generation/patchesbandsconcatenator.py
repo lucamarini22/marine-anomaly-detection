@@ -11,9 +11,8 @@ from anomalymarinedetection.utils.constants import (
     MARIDA_SIZE_Y,
     BAND_NAMES_IN_COPERNICUS_HUB,
 )
-from anomalymarinedetection.utils.utils import (
-    get_cop_hub_band_idx,
-    get_band_and_patch_names_from_file_name,
+from anomalymarinedetection.utils.bands import (
+    get_band_and_patch_names_from_file_name, get_cop_hub_band_idx
 )
 
 

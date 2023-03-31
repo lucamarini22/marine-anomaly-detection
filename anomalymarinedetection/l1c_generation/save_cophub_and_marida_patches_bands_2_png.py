@@ -9,12 +9,15 @@ from anomalymarinedetection.utils.constants import (
     NOT_TO_CONSIDER_MARIDA,
     COP_HUB_BASE_NAME,
 )
-from anomalymarinedetection.utils.utils import (
+from anomalymarinedetection.utils.string import (
     remove_extension_from_name,
-    get_marida_band_idx,
-    acquire_data,
-    scale_img_to_0_255,
-    save_img,
+)
+from anomalymarinedetection.utils.bands import get_marida_band_idx
+from anomalymarinedetection.io.file_io import FileIO
+from anomalymarinedetection.io.image_io import ImageIO
+from anomalymarinedetection.io.tif_io import TifIO
+from anomalymarinedetection.imageprocessing.scale_img_to_0_255 import (
+    scale_img_to_0_255
 )
 
 # TODO: Remove this
@@ -52,6 +55,9 @@ def save_marida_and_cop_hub_2_png(
         ext (str): extension of marida and copernicus hub files.
         l1c (str): string characterizzing l1c.
     """
+    file_io = FileIO()
+    image_io = ImageIO()
+    tif_io = TifIO()
     # Asserts the file containing all the pairs of corresponding copernicus
     # hub does not already exist and that is empty if it exists
     if (
@@ -82,13 +88,11 @@ def save_marida_and_cop_hub_2_png(
             )
             # do not consider confidence segmentation maps
             if not (marida_patch_name.endswith(NOT_TO_CONSIDER_MARIDA)):
-
                 for band_cop_hub in BAND_NAMES_IN_COPERNICUS_HUB:
-
                     if band_cop_hub in BAND_NAMES_IN_MARIDA:
                         band_marida = get_marida_band_idx(band_cop_hub)
                         # .tif marida patch
-                        img_marida, _ = acquire_data(marida_file_path)
+                        img_marida, _ = tif_io.acquire_data(marida_file_path)
                         # .tif copernicus hub patch
                         img_cop_hub_tif_path = os.path.join(
                             cop_hub_patches_path,
@@ -108,11 +112,11 @@ def save_marida_and_cop_hub_2_png(
                             + band_cop_hub
                             + out_img_ext
                         )
-                        save_img(
+                        image_io.save_img(
                             img_marida,
                             os.path.join(output_folder_path, name_marida_img),
                         )
-                    img_cop_hub, _ = acquire_data(img_cop_hub_tif_path)
+                    img_cop_hub, _ = tif_io.acquire_data(img_cop_hub_tif_path)
 
                     # Saves copernicus hub patch as .png
                     name_cop_hub_img = (
@@ -124,17 +128,17 @@ def save_marida_and_cop_hub_2_png(
                         + out_img_ext
                     )
                     img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
-                    save_img(
+                    image_io.save_img(
                         img_cop_hub,
                         os.path.join(output_folder_path, name_cop_hub_img),
                     )
                     if band_cop_hub in BAND_NAMES_IN_MARIDA:
                         # Updates the file containing all the pairs of
                         # corresponding copernicus hub and marida names
-                        with open(pairs_file_path, "a") as myfile:
-                            myfile.write(
-                                name_marida_img + " " + name_cop_hub_img + "\n"
-                            )
+                        text_2_append = (
+                            name_marida_img + " " + name_cop_hub_img + "\n"
+                        )
+                        file_io.append(pairs_file_path, text_2_append)
 
 
 if __name__ == "__main__":

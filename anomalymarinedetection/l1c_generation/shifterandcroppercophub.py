@@ -4,18 +4,19 @@ import numpy as np
 import cv2 as cv
 import os
 
-from anomalymarinedetection.utils.utils import (
+from anomalymarinedetection.utils.bands import (
     get_band_and_patch_names_from_file_name,
-    get_coords_of_keypoint,
-    save_img,
-    is_first_band,
 )
+from anomalymarinedetection.utils.bands import is_first_band
+from anomalymarinedetection.utils.get_coords_of_keypoint import get_coords_of_keypoint
 from anomalymarinedetection.utils.constants import (
     NOT_A_MATCH,
     COP_HUB_BASE_NAME,
     HALF_MARIDA_SIZE_X,
     HALF_MARIDA_SIZE_Y,
 )
+from anomalymarinedetection.io.load_keypoints import load_keypoints
+from anomalymarinedetection.io.image_io import ImageIO
 
 
 class ShifterAndCropperCopHub:
@@ -62,6 +63,7 @@ class ShifterAndCropperCopHub:
         self.path_keypoints_folder = path_keypoints_folder
         self.cop_hub_png_input_imgs_path = cop_hub_png_input_imgs_path
         self.cop_hub_png_output_imgs_path = cop_hub_png_output_imgs_path
+        self.image_io = ImageIO()
 
     def get_horizontal_and_vertical_differences_of_matched_keypoints_of_patches(
         self,
@@ -118,7 +120,7 @@ class ShifterAndCropperCopHub:
                 keypoint_file_path = os.path.join(
                     path_keypoints_folder, keypoint_file_name
                 )
-                keypoints = np.load(keypoint_file_path)
+                keypoints = load_keypoints(keypoint_file_path)
 
                 x_diff_key = patch_name + separator + x_axis
                 y_diff_key = patch_name + separator + y_axis
@@ -135,10 +137,16 @@ class ShifterAndCropperCopHub:
                     # keypoints1, or -1 if the keypoint is unmatched.
                     if idx_keypoint_1 != NOT_A_MATCH:
                         # Get coordinates of matched keypoints
-                        (keypoint_0_x, keypoint_0_y,) = get_coords_of_keypoint(
+                        (
+                            keypoint_0_x,
+                            keypoint_0_y,
+                        ) = get_coords_of_keypoint(
                             keypoints["keypoints0"][idx_keypoint_0]
                         )
-                        (keypoint_1_x, keypoint_1_y,) = get_coords_of_keypoint(
+                        (
+                            keypoint_1_x,
+                            keypoint_1_y,
+                        ) = get_coords_of_keypoint(
                             keypoints["keypoints1"][idx_keypoint_1]
                         )
                         # Get signed horizontal and vertical differences
@@ -302,7 +310,7 @@ class ShifterAndCropperCopHub:
                     + "shifted"
                     + out_ext
                 )
-                save_img(
+                self.image_io.save_img(
                     cop_hub_2_marida_img,
                     os.path.join(
                         cop_hub_png_output_imgs_path,
