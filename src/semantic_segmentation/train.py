@@ -638,9 +638,9 @@ def main(options):
                 # Applies strong augmentation to pseudo label map
                 tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
                 for i in range(logits_u_w.shape[0]):
-                    print(randaugment.ops)
-                    print(randaugment.probs_op)
-                    print(randaugment.values_op)
+                    # print(randaugment.ops)
+                    # print(randaugment.probs_op)
+                    # print(randaugment.values_op)
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)

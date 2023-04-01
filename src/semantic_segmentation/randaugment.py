@@ -175,6 +175,7 @@ def TranslateX(img, v, max_v, bias=0):
         translate_percent=(v, 0),
         always_apply=True,
         cval=0,  # np.power(-10, 13)
+        #keep_ratio=True,
     )(  # cval=-1)(
         image=img
     )[
@@ -222,58 +223,15 @@ def fixmatch_augment_pool():
         # (Equalize, None, None),
         (Identity, None, None),
         # (Posterize, 4, 4),
-        # (Rotate, 30, 0),
+        (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
         # (ShearY, 0.3, 0),
         # (Solarize, 256, 0),
-        (TranslateX, 0.3, 0),
+        # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]
     return augs
-
-
-"""
-def my_augment_pool():
-    # Test
-    augs = [
-        (AutoContrast, None, None),
-        (Brightness, 1.8, 0.1),
-        (Color, 1.8, 0.1),
-        (Contrast, 1.8, 0.1),
-        (Cutout, 0.2, 0),
-        (Equalize, None, None),
-        (Invert, None, None),
-        (Posterize, 4, 4),
-        (Rotate, 30, 0),
-        (Sharpness, 1.8, 0.1),
-        (ShearX, 0.3, 0),
-        (ShearY, 0.3, 0),
-        (Solarize, 256, 0),
-        (SolarizeAdd, 110, 0),
-        (TranslateX, 0.45, 0),
-        (TranslateY, 0.45, 0),
-    ]
-    return augs
-
-
-class RandAugmentPC(object):
-    def __init__(self, n, m):
-        assert n >= 1
-        assert 1 <= m <= 10
-        self.n = n
-        self.m = m
-        self.augment_pool = my_augment_pool()
-
-    def __call__(self, img):
-        ops = random.choices(self.augment_pool, k=self.n)
-        for op, max_v, bias in ops:
-            prob = np.random.uniform(0.2, 0.8)
-            if random.random() + prob >= 1:
-                img = op(img, v=self.m, max_v=max_v, bias=bias)
-        img = CutoutAbs(img, int(MARIDA_SIZE_X * 0.1))
-        return img
-"""
 
 
 class RandAugmentMC(object):
@@ -314,11 +272,11 @@ class RandAugmentMC(object):
             # if self.probs_op[idx_op] < 0.5:  # random.random() < 0.5:
             ## img = torch.moveaxis(img, 0, -1)
             v = self.values_op[idx_op]
-            # if (
-            #    op.__name__ in self.ops_can_invert_value
-            #    and self.probs_invert_value[idx_op] < 0.5
-            # ):
-            #    v = -v
+            if (
+                op.__name__ in self.ops_can_invert_value
+                and self.probs_invert_value[idx_op] < 0.5
+            ):
+                v = -v
             img_np = img.cpu().detach().numpy()
             b = img_np[4, :, :]
             img_np = op(img_np, v=v, max_v=max_v, bias=bias)
