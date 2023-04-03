@@ -43,25 +43,6 @@ class TifIO:
         print(coords)
         return img_rgb, coords
 
-    """
-    def tif_2_fdi(self, file_path: str) -> np.ndarray:
-        img, _ = self.acquire_data(file_path)
-        fdi_img = fdi(img[:, :, 5], img[:, :, 7], img[:, :, 9])
-        return fdi_img
-
-
-    def tif_2_ndvi(self, file_path: str) -> np.ndarray:
-        img, _ = self.acquire_data(file_path)
-        fdi_img = ndvi(img[:, :, 3], img[:, :, 7])
-        return fdi_img
-
-
-    def tif_2_ndvi(self, file_path: str) -> np.ndarray:
-        img, _ = self.acquire_data(file_path)
-        fdi_img = ndvi(img[:, :, 3], img[:, :, 7])
-        return fdi_img
-    """
-
     def tif_2_swir(self, file_path: str) -> np.ndarray:
         img, _ = self.acquire_data(file_path)
 
