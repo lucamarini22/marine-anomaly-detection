@@ -16,19 +16,8 @@ dependencies:
   - pandas
   - pytables
   - tqdm
-<<<<<<< HEAD
-  - pip  
-  - pip:
-    - jupyter
-    - opencv-python
-    - matplotlib
-    - imgaug
-    - albumentations
-=======
+  - opencv
+  - imgaug
+  - albumentations
   - jupyter
   - matplotlib
-  - opencv
-  #- pip
-  #- pip:
-  #    - opencv-python
->>>>>>> main
