@@ -16,6 +16,7 @@ dependencies:
   - pandas
   - pytables
   - tqdm
+<<<<<<< HEAD
   - pip  
   - pip:
     - jupyter
@@ -23,3 +24,11 @@ dependencies:
     - matplotlib
     - imgaug
     - albumentations
+=======
+  - jupyter
+  - matplotlib
+  - opencv
+  #- pip
+  #- pip:
+  #    - opencv-python
+>>>>>>> main

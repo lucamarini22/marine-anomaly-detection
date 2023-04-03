@@ -1,6 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="src",
+    name="anomalymarinedetection",
+    author="Luca Marini",
     packages=find_packages(),
 )
