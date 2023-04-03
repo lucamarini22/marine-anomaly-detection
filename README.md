@@ -1,5 +1,5 @@
 ## About the project
-The anomaly-marine-detection project provides code to apply the state of the art of semi-supervised learning techniques to anomaly detection semantic segmentation problems on satellite imagery of marine regions.
+The anomaly-marine-detection project provides code to apply the state of the art of semi-supervised learning techniques to anomaly detection semantic segmentation problems on satellite imagery of marine regions. The considered anomalies are marine-litter (marine debris), ships, clouds, and algae/organic materials.
 
 The code builds on and extends the following two repositories:
 - [FixMatch-pytorch](https://github.com/kekmodel/FixMatch-pytorch) implementation based on [PyTorch](https://pytorch.org/). Compared to the original repository, this repository adapts FixMatch to be used for semantic segmentation tasks and to work with multispectral images.
