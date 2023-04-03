@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Author: Ioannis Kakogeorgiou
-Email: gkakogeorgiou@gmail.com
-Python Version: 3.7.10
+Initial Pytorch Implementation: Ioannis Kakogeorgiou (https://github.com/marine-debris/marine-debris.github.io)
+Modified implementation: Luca Marini
 Description: assets.py includes the appropriate mappings.
 """
 import numpy as np
@@ -89,24 +88,6 @@ roi_mapping = {
     "51PTS": "Manila (51PTS)",
 }
 
-color_mapping = {
-    "Marine Debris": "red",
-    "Dense Sargassum": "green",
-    "Sparse Sargassum": "limegreen",
-    "Marine Water": "navy",
-    "Foam": "purple",
-    "Clouds": "silver",
-    "Cloud Shadows": "gray",
-    "Natural Organic Material": "brown",
-    "Ship": "orange",
-    "Wakes": "yellow",
-    "Shallow Water": "darkturquoise",
-    "Turbid Water": "darkkhaki",
-    "Sediment-Laden Water": "gold",
-    "Waves": "seashell",
-    "Mixed Water": "rosybrown",
-}
-
 s2_mapping = {
     "nm440": 0,
     "nm490": 1,
@@ -149,35 +130,6 @@ texture_mapping = {
 
 # Confidence level of annotation
 conf_mapping = {"High": 1, "Moderate": 2, "Low": 3}
-
-rf_features = [
-    "nm440",
-    "nm490",
-    "nm560",
-    "nm665",
-    "nm705",
-    "nm740",
-    "nm783",
-    "nm842",
-    "nm865",
-    "nm1600",
-    "nm2200",
-    "NDVI",
-    "FAI",
-    "FDI",
-    "SI",
-    "NDWI",
-    "NRD",
-    "NDMI",
-    "BSI",
-    "CON",
-    "DIS",
-    "HOMO",
-    "ENER",
-    "COR",
-    "ASM",
-]
-
 
 def cat_map(x):
     return cat_mapping[x]
