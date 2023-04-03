@@ -11,7 +11,7 @@ from torchvision.utils import draw_bounding_boxes
 import albumentations as A
 from imgaug import augmenters as iaaa
 
-from src.utils.constants import MARIDA_SIZE_X
+from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ def TranslateX(img, v, max_v, bias=0):
         translate_percent=(v, 0),
         always_apply=True,
         cval=0,  # np.power(-10, 13)
-        #keep_ratio=True,
+        # keep_ratio=True,
     )(  # cval=-1)(
         image=img
     )[
