@@ -96,3 +96,36 @@ def get_patch_name_from_prediction_name(pred_name: str) -> str:
 
 def get_tile_name_from_prediction_name(pred_name: str) -> str:
     return "_".join(pred_name.split("_"))  # [:-2])
+
+
+def get_patch_name_and_axis_id_from_key(
+    key: str,
+    separator: str = "_",
+    x_axis: str = "x",
+    y_axis: str = "y",
+) -> tuple[str, int]:
+    """Gets the name of the patch and the id corresponding to a cartesian
+    axis from a string containing information of a patch.
+
+    Args:
+        key (str): string containing information of a patch.
+        separator (str, optional): separates information contained in key.
+            Defaults to "_".
+        x_axis (str, optional): string corresponding to the x axis.
+            Defaults to "x".
+        y_axis (str, optional): string corresponding to the y axis.
+            Defaults to "y".
+
+    Returns:
+        tuple[str, int]: name of the patch, string id corresponding to a
+            cartesian axis.
+    """
+    # key has the form: S2_dd-mm-yy_id_num_axis-str-id
+    patch_name = separator.join(key.split(separator)[:-1])
+    axis_str_id = key.split(separator)[-1]
+    if axis_str_id == x_axis:
+        axis_id = 0
+    elif axis_str_id == y_axis:
+        axis_id = 1
+
+    return patch_name, axis_id

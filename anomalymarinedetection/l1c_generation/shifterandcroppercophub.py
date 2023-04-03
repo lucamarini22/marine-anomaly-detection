@@ -4,11 +4,19 @@ import numpy as np
 import cv2 as cv
 import os
 
+from anomalymarinedetection.l1c_generation.discard_means_out_of_std_dev import (
+    discard_means_out_of_std_dev
+)
 from anomalymarinedetection.utils.bands import (
     get_band_and_patch_names_from_file_name,
 )
-from anomalymarinedetection.utils.bands import is_first_band
-from anomalymarinedetection.utils.get_coords_of_keypoint import get_coords_of_keypoint
+from anomalymarinedetection.utils.bands import (
+    is_first_band,
+    get_patch_name_and_axis_id_from_key
+)
+from anomalymarinedetection.utils.get_coords_of_keypoint import (
+    get_coords_of_keypoint
+)
 from anomalymarinedetection.utils.constants import (
     NOT_A_MATCH,
     COP_HUB_BASE_NAME,
@@ -198,7 +206,7 @@ class ShifterAndCropperCopHub:
             # and do this for both horizontal and vertical differences
             patches_mean_diffs[
                 key
-            ] = ShifterAndCropperCopHub._discard_means_out_of_std_dev(
+            ] = discard_means_out_of_std_dev(
                 patches_mean_diffs[key],
                 mean_diffs,
                 std_dev_diffs,
@@ -212,7 +220,7 @@ class ShifterAndCropperCopHub:
             (
                 patch_name,
                 axis_id,
-            ) = ShifterAndCropperCopHub._get_patch_name_and_axis_id_from_key(
+            ) = get_patch_name_and_axis_id_from_key(
                 key, separator, x_axis, y_axis
             )
 
@@ -317,63 +325,7 @@ class ShifterAndCropperCopHub:
                         output_shifted_img_path,
                     ),
                 )
-
-    @staticmethod
-    def _discard_means_out_of_std_dev(
-        diffs: list[float],
-        mean_diffs: float,
-        std_dev_diffs: float,
-    ) -> np.ndarray:
-        """Discards differences whose value is not in
-        the interval [mean_diff - std_dev, mean_diff + std_dev].
-
-        Args:
-            diffs_x (list[float]): list of differences.
-            mean_diffs_x (float): mean of differences.
-            std_dev_diffs_x (float): standard deviation of differences.
-
-        Returns:
-            np.ndarray: array of differences whose value is in
-        the interval [mean_diff - std_dev, mean_diff + std_dev].
-        """
-        differences = np.array(diffs)
-        less_than_std_away = np.abs(differences - mean_diffs) < std_dev_diffs
-        differences = differences[less_than_std_away]
-
-        return differences
-
-    @staticmethod
-    def _get_patch_name_and_axis_id_from_key(
-        key: str,
-        separator: str = "_",
-        x_axis: str = "x",
-        y_axis: str = "y",
-    ) -> tuple[str, int]:
-        """Gets the name of the patch and the id corresponding to a cartesian
-        axis from a string containing information of a patch.
-
-        Args:
-            key (str): string containing information of a patch.
-            separator (str, optional): separates information contained in key.
-              Defaults to "_".
-            x_axis (str, optional): string corresponding to the x axis.
-              Defaults to "x".
-            y_axis (str, optional): string corresponding to the y axis.
-              Defaults to "y".
-
-        Returns:
-            tuple[str, int]: name of the patch, string id corresponding to a
-              cartesian axis.
-        """
-        # key has the form: S2_dd-mm-yy_id_num_axis-str-id
-        patch_name = separator.join(key.split(separator)[:-1])
-        axis_str_id = key.split(separator)[-1]
-        if axis_str_id == x_axis:
-            axis_id = 0
-        elif axis_str_id == y_axis:
-            axis_id = 1
-
-        return patch_name, axis_id
+    
 
     @staticmethod
     def _update_single_mean(
