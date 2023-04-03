@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def discard_means_out_of_std_dev(
     diffs: list[float],
     mean_diffs: float,
@@ -17,6 +18,7 @@ def discard_means_out_of_std_dev(
         np.ndarray: array of differences whose value is in
     the interval [mean_diff - std_dev, mean_diff + std_dev].
     """
+    assert std_dev_diffs > 0
     differences = np.array(diffs)
     less_than_std_away = np.abs(differences - mean_diffs) < std_dev_diffs
     differences = differences[less_than_std_away]
