@@ -2,6 +2,13 @@ import datetime
 
 
 def get_today_str() -> str:
+    """Gets the string containing information about the current istance of 
+    time. 
+
+    Returns:
+        str: the string containing information about the current istance of 
+    time.
+    """
     return (
         datetime.datetime.now()
         .replace(microsecond=0)

@@ -8,13 +8,40 @@ from anomalymarinedetection.utils.string import (
 
 
 def is_first_band(band_name: str) -> bool:
+    """Checks if the given band name corresponds to Sentinel-2's first band
+    name.
+
+    Args:
+        band_name (str): name of the band.
+
+    Returns:
+        bool: True if the given band name corresponds to Sentinel-2's first
+          band name. False otherwise.
+    """
     return band_name == "B01"
 
 
 def get_band_and_patch_names_from_file_name(
     file_name: str, separator: str = "_"
-) -> tuple[str, str]:
-    # file_name has the form: dataset_S2_dd-mm-yy_id_num_bandname_...
+) -> tuple[str, str, str, str]:
+    """Gets:
+      - the name of the band
+      - the name of the patch
+      - the name of the dataset
+      - the number of the patch
+    from a string that contains information about a patch.
+
+    Args:
+        file_name (str): name of the file.
+          It has the form: dataset_S2_dd-mm-yy_id_num_bandname_.
+        separator (str, optional): character that separates the various
+          information in file_name. Defaults to "_".
+
+    Returns:
+        tuple[str, str, str, str]: the name of the band,
+          the name of the patch, the name of the dataset,
+          the number of the patch.
+    """
     tokens = file_name.split(separator)
     patch_name = separator.join(tokens[1:5])
     band_name = tokens[5]
@@ -91,10 +118,28 @@ def get_cop_hub_band_idx(band_name: str) -> int:
 
 
 def get_patch_name_from_prediction_name(pred_name: str) -> str:
+    """Gets the patch name from a file name that contains the prediction
+    (performed by a model) of the segmentation map of a patch.
+
+    Args:
+        pred_name (str): file name that contains the prediction.
+
+    Returns:
+        str: the patch name.
+    """
     return "_".join(pred_name.split("_"))  # [:-1])
 
 
 def get_tile_name_from_prediction_name(pred_name: str) -> str:
+    """Gets the tile name from a file name that contains the prediction
+    (performed by a model) of the segmentation map of a patch.
+
+    Args:
+        pred_name (str): file name that contains the prediction.
+
+    Returns:
+        str: the tile name.
+    """
     return "_".join(pred_name.split("_"))  # [:-2])
 
 
