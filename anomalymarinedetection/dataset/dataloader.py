@@ -22,14 +22,17 @@ from anomalymarinedetection.utils.assets import (
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN
 from anomalymarinedetection.io.load_roi import load_roi
+from anomalymarinedetection.io.load_data import (
+    load_patch,
+    load_segmentation_map,
+)
+from anomalymarinedetection.dataset.categoryaggregation import (
+    CategoryAggregation,
+)
 
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
-
-###############################################################
-# Pixel-level Semantic Segmentation Data Loader               #
-###############################################################
 
 
 class DataLoaderType(Enum):
@@ -37,11 +40,6 @@ class DataLoaderType(Enum):
     TRAIN_SSL = "train_ssl"
     VAL = "val"
     TEST = "test"
-
-
-class CategoryAggregation(Enum):
-    BINARY = "binary"
-    MULTI = "multi"
 
 
 def get_labeled_and_unlabeled_rois(
@@ -130,7 +128,7 @@ class AnomalyMarineDataset(Dataset):
                 self.ROIs, desc="Load unlabeled train set to memory"
             ):
                 roi_file_path, _ = self.get_roi_tokens(path, roi)
-                patch = self.load_patch(roi_file_path)
+                patch = load_patch(roi_file_path)
                 self.X_u.append(patch)
 
         # Labeled dataloader
@@ -144,7 +142,7 @@ class AnomalyMarineDataset(Dataset):
                 # Gets patch path and its semantic segmentation map path
                 roi_file_path, roi_file_cl_path = self.get_roi_tokens(path, roi)
                 # Loads semantic segmentation map
-                seg_map = self.load_segmentation_map(roi_file_cl_path)
+                seg_map = load_segmentation_map(roi_file_cl_path)
 
                 # Aggregation
                 if aggregate_classes == CategoryAggregation.MULTI.value:
@@ -226,7 +224,7 @@ class AnomalyMarineDataset(Dataset):
                 seg_map = np.copy(seg_map - 1)
                 self.y.append(seg_map)
                 # Load Patch
-                patch = self.load_patch(roi_file_path)
+                patch = load_patch(roi_file_path)
                 self.X.append(patch)
 
         self.impute_nan = np.tile(
@@ -278,16 +276,14 @@ class AnomalyMarineDataset(Dataset):
             if self.transform is not None:
                 # (256, 256) -> (256, 256, 1)
                 target = target[:, :, np.newaxis]
-                stack = np.concatenate([img, target], axis=-1).astype(
-                    "float32"
-                )  # In order to rotate-transform both mask and image
+                # In order to rotate-transform both mask and image
+                stack = np.concatenate([img, target], axis=-1).astype("float32")
 
                 stack = self.transform(stack)
 
                 img = stack[:-1, :, :]
-                target = stack[
-                    -1, :, :
-                ].long()  # Recast target values back to int64 or torch long dtype
+                # Recast target values back to int64 or torch long dtype
+                target = stack[-1, :, :].long()
 
             if self.standardization is not None:
                 img = self.standardization(img)
@@ -353,37 +349,6 @@ class AnomalyMarineDataset(Dataset):
             path_of_dataset, "patches", roi_folder, roi_name + "_cl.tif"
         )
         return roi_file_path, roi_file_cl_path
-
-    def load_patch(self, patch_path: str) -> np.ndarray:
-        """Loads a patch from its .tif file.
-
-        Args:
-            patch_path (str): path of the .tif file of the patch.
-
-        Returns:
-            np.ndarray: the patch stored in a numpy array.
-        """
-        ds = None
-        ds = gdal.Open(patch_path)
-        patch = np.copy(ds.ReadAsArray())
-        ds = None
-        return patch
-
-    def load_segmentation_map(self, seg_map_path: str) -> np.ndarray:
-        """Loads a patch from its .tif file.
-
-        Args:
-            seg_map_path (str): path of the .tif file of the segmentation
-              map of the  patch.
-
-        Returns:
-            np.ndarray: segmentation map of the patch stored in a numpy array.
-        """
-        ds = None
-        ds = gdal.Open(seg_map_path)
-        seg_map = np.copy(ds.ReadAsArray().astype(np.int64))
-        ds = None
-        return seg_map
 
 
 ###############################################################
