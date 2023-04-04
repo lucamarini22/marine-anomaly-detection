@@ -32,7 +32,6 @@ from anomalymarinedetection.dataset.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
     gen_weights,
-    CategoryAggregation,
     get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.dataset.transformations import (
@@ -49,6 +48,9 @@ from anomalymarinedetection.utils.constants import (
 )
 from anomalymarinedetection.dataset.randaugment import (
     RandAugmentMC,
+)
+from anomalymarinedetection.dataset.categoryaggregation import (
+    CategoryAggregation,
 )
 
 

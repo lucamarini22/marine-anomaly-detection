@@ -20,7 +20,6 @@ from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
-    CategoryAggregation,
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 from anomalymarinedetection.io.load_roi import load_roi
@@ -29,6 +28,9 @@ from anomalymarinedetection.utils.assets import (
     labels,
     labels_binary,
     labels_multi,
+)
+from anomalymarinedetection.dataset.categoryaggregation import (
+    CategoryAggregation,
 )
 
 random.seed(0)
