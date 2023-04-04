@@ -28,7 +28,7 @@ from anomalymarinedetection.loss.focal_loss import (
     FocalLoss,
 )
 from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.dataset.dataloader import (
+from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
     DataLoaderType,
 )
