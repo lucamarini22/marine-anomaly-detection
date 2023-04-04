@@ -2,7 +2,7 @@ import numpy as np
 from osgeo import gdal
 
 
-def load_patch(self, patch_path: str) -> np.ndarray:
+def load_patch(patch_path: str) -> np.ndarray:
     """Loads a patch from its .tif file.
 
     Args:
