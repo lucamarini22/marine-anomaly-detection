@@ -3,6 +3,7 @@ import rasterio
 
 
 class TifIO:
+    @staticmethod
     def acquire_data(file_name: str) -> tuple[np.ndarray, dict]:
         """Reads an L1C Sentinel-2 image from a cropped TIF.
 

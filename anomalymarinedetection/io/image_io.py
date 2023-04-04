@@ -3,7 +3,7 @@ import cv2 as cv
 
 
 class ImageIO():
-    
+    @staticmethod
     def read_img_as_grayscale(img_path: str) -> np.ndarray:
         """Reads an image as a grayscale image.
 
@@ -15,6 +15,7 @@ class ImageIO():
         """
         return cv.imread(img_path, cv.IMREAD_GRAYSCALE)
     
+    @staticmethod
     def save_img(img: np.ndarray, path: str):
         """Saves an image to path.
 

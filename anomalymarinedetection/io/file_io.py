@@ -1,4 +1,5 @@
 class FileIO:
+    @staticmethod
     def append(file_path: str, text: str):
         """Appends text to a file.
 
