@@ -31,8 +31,6 @@ from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
-    gen_weights,
-    get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.dataset.transformations import (
     DiscreteRandomRotationTransform,
@@ -51,6 +49,10 @@ from anomalymarinedetection.dataset.randaugment import (
 )
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
+)
+from anomalymarinedetection.utils.gen_weights import gen_weights
+from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
+    get_labeled_and_unlabeled_rois,
 )
 
 
@@ -258,7 +260,6 @@ def main(options):
         )
 
     # Use gpu or cpu
-
     if torch.cuda.is_available():
         device = torch.device("cuda")
     else:
