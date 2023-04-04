@@ -4,7 +4,7 @@ import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 import numpy as np
 
-from anomalymarinedetection.semantic_segmentation.randaugment import RandAugmentMC
+from anomalymarinedetection.dataset.randaugment import RandAugmentMC
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 
 

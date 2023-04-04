@@ -16,18 +16,14 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-# sys.path.append(up(os.path.abspath(__file__)))
-from anomalymarinedetection.semantic_segmentation.models.unet import UNet
-from dataloader import (
+from anomalymarinedetection.models.unet import UNet
+from anomalymarinedetection.dataset.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
     CategoryAggregation,
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 from anomalymarinedetection.io.load_roi import load_roi
-
-
-# sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
 from anomalymarinedetection.utils.assets import (
     labels,

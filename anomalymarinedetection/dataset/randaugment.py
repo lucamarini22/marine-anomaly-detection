@@ -7,7 +7,6 @@ import random
 
 import numpy as np
 import torch
-from torchvision.utils import draw_bounding_boxes
 import albumentations as A
 from imgaug import augmenters as iaaa
 

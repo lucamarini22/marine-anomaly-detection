@@ -24,18 +24,18 @@ from anomalymarinedetection.utils.assets import (
     labels_multi,
 )
 from anomalymarinedetection.utils.string import get_today_str
-from anomalymarinedetection.semantic_segmentation.supervised.focal_loss import (
+from anomalymarinedetection.loss.focal_loss import (
     FocalLoss,
 )
-from anomalymarinedetection.semantic_segmentation.models.unet import UNet
-from anomalymarinedetection.semantic_segmentation.dataloader import (
+from anomalymarinedetection.models.unet import UNet
+from anomalymarinedetection.dataset.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
     gen_weights,
     CategoryAggregation,
     get_labeled_and_unlabeled_rois,
 )
-from anomalymarinedetection.semantic_segmentation.transformations import (
+from anomalymarinedetection.dataset.transformations import (
     DiscreteRandomRotationTransform,
     TransformFixMatch,
     StrongAugmentation,
@@ -47,11 +47,9 @@ from anomalymarinedetection.utils.constants import (
     BANDS_STD,
     SEPARATOR,
 )
-from anomalymarinedetection.semantic_segmentation.randaugment import (
+from anomalymarinedetection.dataset.randaugment import (
     RandAugmentMC,
 )
-
-root_path = up(up(up(os.path.abspath(__file__))))
 
 
 class TrainMode(Enum):
@@ -59,15 +57,6 @@ class TrainMode(Enum):
     TRAIN_SSL = "SSL"
     VAL = "val"
     TEST = "test"
-
-
-logging.basicConfig(
-    filename=os.path.join(root_path, "logs", "log_unet.log"),
-    filemode="a",
-    level=logging.INFO,
-    format="%(name)s - %(levelname)s - %(message)s",
-)
-logging.info("*" * 10)
 
 
 def seed_all(seed):
@@ -88,11 +77,6 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 
-###############################################################
-# Training                                                    #
-###############################################################
-
-
 def main(options):
     # Reproducibility
     # Limit the number of sources of nondeterministic behavior
@@ -111,15 +95,14 @@ def main(options):
     # Tensorboard
     writer = SummaryWriter(
         os.path.join(
-            root_path,
-            "logs",
+            # TODO: set log folder as an argument
+            options["log_folder"],
             options["tensorboard"],
             model_name,
         )
     )
 
     # Transformations
-
     transform_train = transforms.Compose(
         [
             transforms.ToTensor(),
@@ -133,7 +116,6 @@ def main(options):
     standardization = transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
-
     if options["mode"] == TrainMode.TRAIN.value:
         dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SUP.value,
@@ -1029,6 +1011,12 @@ if __name__ == "__main__":
         type=str,
         help="Name for tensorboard run",
     )
+    parser.add_argument(
+        "--log_folder",
+        default="logs",
+        type=str,
+        help="Path of the log folder",
+    )
 
     args = parser.parse_args()
     args.today_str = today_str
@@ -1061,6 +1049,14 @@ if __name__ == "__main__":
         raise
 
     options["lr_steps"] = lr_steps
+    # Logging
+    logging.basicConfig(
+        filename=os.path.join(options["log_folder"], "log_unet.log"),
+        filemode="a",
+        level=logging.INFO,
+        format="%(name)s - %(levelname)s - %(message)s",
+    )
+    logging.info("*" * 10)
 
     logging.info("parsed input parameters:")
     logging.info(json.dumps(options, indent=2))
