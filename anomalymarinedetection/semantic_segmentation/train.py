@@ -140,12 +140,14 @@ def main(options):
             transform=transform_train,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
+            path=options["dataset_path"],
         )
         dataset_test = AnomalyMarineDataset(
             DataLoaderType.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
+            path=options["dataset_path"],
         )
 
         train_loader = DataLoader(
@@ -174,7 +176,7 @@ def main(options):
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
         # Split training data into labeled and unlabeled sets
         ROIs, ROIs_u = get_labeled_and_unlabeled_rois(
-            perc_labeled=options["perc_labeled"]
+            perc_labeled=options["perc_labeled"], path=options["dataset_path"]
         )
 
         # TODO: update (e.g. transformations and other)
@@ -184,6 +186,7 @@ def main(options):
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs,
+            path=options["dataset_path"],
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SSL.value,
@@ -191,12 +194,14 @@ def main(options):
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs_u,
+            path=options["dataset_path"],
         )
         dataset_test = AnomalyMarineDataset(
             DataLoaderType.VAL.value,
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
+            path=options["dataset_path"],
         )
         # TODO: fix batch size for labeled and unlabeled data loaders
         labeled_train_loader = DataLoader(
@@ -242,6 +247,7 @@ def main(options):
             transform=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
+            path=options["dataset_path"],
         )
 
         test_loader = DataLoader(
@@ -282,10 +288,13 @@ def main(options):
 
     model.to(device)
 
-    # Load model from specific epoch to continue the training or start the evaluation
+    # Load model from specific epoch to continue the training or start the
+    # evaluation
     if options["resume_from_epoch"] > 1:
         resume_model_dir = os.path.join(
-            options["checkpoint_path"], str(options["resume_from_epoch"])
+            options["checkpoint_path"],
+            model_name,
+            str(options["resume_from_epoch"]),
         )
         model_file = os.path.join(resume_model_dir, "model.pth")
         logging.info("Loading model files from folder: %s" % model_file)
@@ -301,12 +310,13 @@ def main(options):
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()
         # Aggregate Distributions:
-        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water','Waves',
-        #   'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
+        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water',
+        #   'Waves', 'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
         agg_distr_water = sum(class_distr_tmp[-9:])
 
         # Aggregate Distributions:
-        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic Material'
+        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic
+        #    Material'
         agg_distr_algae_nom = sum(class_distr_tmp[1:4])
 
         agg_distr_ship = class_distr_tmp[labels.index("Ship")]
@@ -324,7 +334,8 @@ def main(options):
         class_distr = class_distr[: len(labels_multi)]
 
     elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
-        # Aggregate Distribution of all classes (except Marine Debris) with 'Others'
+        # Aggregate Distribution of all classes (except Marine Debris) with
+        # 'Others'
         agg_distr = sum(class_distr[1:])
         # Move the class distrib of Other to the 2nd position
         class_distr[labels_binary.index("Other")] = agg_distr
@@ -466,9 +477,7 @@ def main(options):
                         target = target.cpu().numpy()
 
                         test_batches += target.shape[0]
-                        test_loss.append(
-                            (loss.data * target.shape[0]).tolist()
-                        )
+                        test_loss.append((loss.data * target.shape[0]).tolist())
                         y_predicted += probs.argmax(1).tolist()
                         y_true += target.tolist()
 
@@ -492,7 +501,6 @@ def main(options):
                     logging.info("Saving models")
                     model_dir = os.path.join(
                         options["checkpoint_path"],
-                        "supervised",
                         model_name,
                         str(epoch),
                     )
@@ -506,8 +514,7 @@ def main(options):
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
-                            "Train loss": sum(training_loss)
-                            / training_batches,
+                            "Train loss": sum(training_loss) / training_batches,
                         },
                         epoch,
                     )
@@ -534,9 +541,7 @@ def main(options):
 
                     writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
                     writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar(
-                        "F1/val weightF1", acc["weightF1"], epoch
-                    )
+                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
 
                     writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
 
@@ -636,9 +641,9 @@ def main(options):
                 logits_x = logits[: options["batch"]]
                 logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
                 del logits
-                print(randaugment.ops)
-                print(randaugment.probs_op)
-                print(randaugment.values_op)
+                # print(randaugment.ops)
+                # print(randaugment.probs_op)
+                # print(randaugment.values_op)
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
 
@@ -657,15 +662,15 @@ def main(options):
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    a = logits_u_w_i[:, :, 0]
-                    b = logits_u_w_i[:, :, 1]
+                    # a = logits_u_w_i[:, :, 0]
+                    # b = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    c = logits_u_w_i[0, :, :]
-                    d = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    # c = logits_u_w_i[0, :, :]
+                    # d = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    e = logits_u_s[i, 0, :, :]
-                    f = logits_u_s[i, 1, :, :]
-                    print()
+                    # e = logits_u_s[i, 0, :, :]
+                    # f = logits_u_s[i, 1, :, :]
+                    # print()
                 logits_u_w = torch.from_numpy(tmp)
 
                 g = logits_u_w[13, 0, :, :]
@@ -685,8 +690,7 @@ def main(options):
                 mask = max_probs.ge(options["threshold"]).float()
                 # Unsupervised loss
                 Lu = (
-                    criterion_unsup(logits_u_s, targets_u)
-                    * torch.flatten(mask)
+                    criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
                 ).mean()
                 # Final loss
                 loss = Lx + options["lambda"] * Lu
@@ -750,9 +754,7 @@ def main(options):
                         target = target.cpu().numpy()
 
                         test_batches += target.shape[0]
-                        test_loss.append(
-                            (loss.data * target.shape[0]).tolist()
-                        )
+                        test_loss.append((loss.data * target.shape[0]).tolist())
                         y_predicted += probs.argmax(1).tolist()
                         y_true += target.tolist()
 
@@ -776,7 +778,6 @@ def main(options):
                     logging.info("Saving models")
                     model_dir = os.path.join(
                         options["checkpoint_path"],
-                        "semi-supervised",
                         model_name,
                         str(epoch),
                     )
@@ -820,9 +821,7 @@ def main(options):
 
                     writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
                     writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar(
-                        "F1/val weightF1", acc["weightF1"], epoch
-                    )
+                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
 
                     writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
 
@@ -858,9 +857,7 @@ def main(options):
                 logits = logits[mask]
                 target = target[mask]
 
-                probs = (
-                    torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
-                )
+                probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
                 target = target.cpu().numpy()
 
                 test_batches += target.shape[0]
@@ -876,9 +873,7 @@ def main(options):
             ####################################################################
             acc = Evaluation(y_predicted, y_true)
             logging.info("\n")
-            logging.info(
-                "Test loss was: " + str(sum(test_loss) / test_batches)
-            )
+            logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
             logging.info("STATISTICS: \n")
             logging.info("Evaluation: " + str(acc))
 
@@ -959,6 +954,9 @@ if __name__ == "__main__":
         type=int,
         help="Number of hidden features",
     )
+    parser.add_argument(
+        "--dataset_path", help="path of dataset", default="data"
+    )
     # parser.add_argument(
     #    "--weight_param",
     #    default=1.03,
@@ -988,7 +986,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)),
+            "results",
             "trained_models",
         ),
         help="Folder to save checkpoints into (empty = this folder)",
@@ -1034,7 +1032,24 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.today_str = today_str
-    options = vars(args)  # convert to ordinary dict
+    # convert to ordinary dict
+    options = vars(args)
+
+    if options["mode"] == TrainMode.TRAIN_SSL.value:
+        options["checkpoint_path"] = os.path.join(
+            options["checkpoint_path"], "semi-supervised"
+        )
+    elif options["mode"] == TrainMode.TRAIN.value:
+        options["checkpoint_path"] = os.path.join(
+            options["checkpoint_path"], "supervised"
+        )
+    else:
+        pass
+
+    if not os.path.isdir(options["checkpoint_path"]):
+        raise Exception(
+            f'The checkpoint directory {options["checkpoint_path"]} does not exist'
+        )
 
     # lr_steps list or single float
     lr_steps = ast.literal_eval(options["lr_steps"])

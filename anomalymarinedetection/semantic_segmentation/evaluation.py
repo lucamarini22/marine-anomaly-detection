@@ -24,11 +24,16 @@ from dataloader import (
     CategoryAggregation,
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
+from anomalymarinedetection.io.load_roi import load_roi
 
 
 # sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
 from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
-from anomalymarinedetection.utils.assets import labels, labels_binary, labels_multi
+from anomalymarinedetection.utils.assets import (
+    labels,
+    labels_binary,
+    labels_multi,
+)
 
 random.seed(0)
 np.random.seed(0)
@@ -58,6 +63,7 @@ def main(options):
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
+        path=options["dataset_path"],
     )
 
     test_loader = DataLoader(
@@ -146,9 +152,8 @@ def main(options):
         if options["predict_masks"]:
 
             path = os.path.join(root_path, "data", "patches")
-            ROIs = np.genfromtxt(
-                os.path.join(root_path, "data", "splits", "test_X.txt"),
-                dtype="str",
+            ROIs = load_roi(
+                os.path.join(root_path, "data", "splits", "test_X.txt")
             )
 
             impute_nan = np.tile(BANDS_MEAN, (256, 256, 1))
@@ -248,7 +253,9 @@ if __name__ == "__main__":
         type=int,
         help="Number of hidden features",
     )
-
+    parser.add_argument(
+        "--dataset_path", help="path of dataset", default="data"
+    )
     # Unet model path
     parser.add_argument(
         "--model_path",
