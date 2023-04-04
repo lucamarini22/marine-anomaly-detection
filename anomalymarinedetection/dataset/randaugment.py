@@ -107,18 +107,11 @@ def change_shape_for_dataloader(prev_shape, new_shape, aug):
 def Rotate(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
-    # if img.shape[0] != img.shape[1]:
-    #    img = np.moveaxis(img, 0, -1)
     v = _int_parameter(v, max_v) + bias
-    # if random.random() < 0.5:
-    #   v = -v
     aug = A.rotate(
         img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
-    # np.reshape(aug, prev_shape)[8, :, :] # TODO returning np.reshape was the problem!!! Modify also other augmentations
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    # if img.shape != prev_shape:
-    #    aug = np.moveaxis(aug, -1, 0)
     return aug
 
 
@@ -136,8 +129,6 @@ def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    # if random.random() < 0.5:
-    #    v = -v
     aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
@@ -147,8 +138,6 @@ def ShearY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    # if random.random() < 0.5:
-    #    v = -v
     aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
@@ -167,9 +156,6 @@ def TranslateX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    # if random.random() < 0.5:
-    #    v = -v
-    # v = int(v * img.shape[1])
     aug = A.Affine(
         translate_percent=(v, 0),
         always_apply=True,
@@ -189,14 +175,7 @@ def TranslateY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    # if random.random() < 0.5:
-    #    v = -v
-    # v = int(v * img.shape[1])
-    aug = A.Affine(
-        translate_percent=(0, v),
-        always_apply=True,
-        cval=0,
-    )(
+    aug = A.Affine(translate_percent=(0, v), always_apply=True, cval=0,)(
         image=img
     )["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
@@ -212,7 +191,6 @@ def _int_parameter(v, max_v):
 
 
 def fixmatch_augment_pool():
-    # FixMatch paper
     augs = [
         # The below four don't work with multispectral images
         # (AutoContrast, None, None),
@@ -268,8 +246,6 @@ class RandAugmentMC(object):
         idx_op = 0
 
         for op, max_v, bias in self.ops:
-            # if self.probs_op[idx_op] < 0.5:  # random.random() < 0.5:
-            ## img = torch.moveaxis(img, 0, -1)
             v = self.values_op[idx_op]
             if (
                 op.__name__ in self.ops_can_invert_value
