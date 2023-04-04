@@ -260,7 +260,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         default=os.path.join(
-            up(os.path.abspath(__file__)),
+            "results",
             "trained_models",
             "semi-supervised",
             "2023_03_28_H_08_33_07_SSL_multi",
