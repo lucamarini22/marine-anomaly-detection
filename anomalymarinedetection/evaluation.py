@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.dataset.dataloader import (
+from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
     DataLoaderType,
 )
