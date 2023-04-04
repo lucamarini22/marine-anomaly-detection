@@ -12,7 +12,7 @@ from osgeo import gdal
 from os.path import dirname as up
 from torch.utils.data import Dataset
 
-from src.utils.assets import (
+from anomalymarinedetection.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
     cat_mapping_multi,
@@ -20,7 +20,8 @@ from src.utils.assets import (
     labels_binary,
     labels_multi,
 )
-from src.utils.constants import BANDS_MEAN
+from anomalymarinedetection.utils.constants import BANDS_MEAN
+from anomalymarinedetection.io.load_roi import load_roi
 
 random.seed(0)
 np.random.seed(0)
@@ -29,7 +30,6 @@ torch.manual_seed(0)
 ###############################################################
 # Pixel-level Semantic Segmentation Data Loader               #
 ###############################################################
-dataset_path = os.path.join((up(up(up(__file__)))), "data")
 
 
 class DataLoaderType(Enum):
@@ -45,23 +45,21 @@ class CategoryAggregation(Enum):
 
 
 def get_labeled_and_unlabeled_rois(
-    perc_labeled: float, path: str = dataset_path
+    perc_labeled: float, path: str
 ) -> tuple[list[str], list[str]]:
     """Gets lists of regions of interests of labeled and unlabeled training
     set.
 
     Args:
         perc_labeled (float): percentage of labeled data to use.
-        path (str, optional): path to dataset. Defaults to dataset_path.
+        path (str, optional): path to dataset.
 
     Returns:
         tuple[list[str], list[str]]: list of names of labeled rois and list of
           names of unlabeled rois.
     """
     # Semi-Supervised Learning (SSL)
-    ROIs = np.genfromtxt(
-        os.path.join(path, "splits", "train_X.txt"), dtype="str"
-    )
+    ROIs = load_roi(os.path.join(path, "splits", "train_X.txt"))
     num_unlabeled_samples = round(len(ROIs) * (1 - perc_labeled))
     # Unlabeled regions of interests
     ROIs_u = np.random.choice(ROIs, num_unlabeled_samples, replace=False)
@@ -77,7 +75,7 @@ class AnomalyMarineDataset(Dataset):
         mode: DataLoaderType = DataLoaderType.TRAIN_SUP.value,
         transform=None,
         standardization=None,
-        path: str = dataset_path,
+        path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI.value,
         rois: list[str] = None,
     ):
@@ -90,7 +88,7 @@ class AnomalyMarineDataset(Dataset):
               Defaults to None.
             standardization (_type_, optional): standardization.
               Defaults to None.
-            path (str, optional): dataset path. Defaults to dataset_path.
+            path (str, optional): dataset path.
             aggregate_classes (CategoryAggregation, optional): type
               of aggragation of categories.
               Defaults to CategoryAggregation.MULTI.value.
@@ -104,8 +102,8 @@ class AnomalyMarineDataset(Dataset):
         if mode == DataLoaderType.TRAIN_SUP.value:
             if rois is None:
                 # Supervised learning case - training labeled data
-                self.ROIs = np.genfromtxt(
-                    os.path.join(path, "splits", "train_X.txt"), dtype="str"
+                self.ROIs = load_roi(
+                    os.path.join(path, "splits", "train_X.txt")
                 )
             else:
                 # Semi-supervised learning case - training labeled data
@@ -116,14 +114,10 @@ class AnomalyMarineDataset(Dataset):
             self.ROIs = rois
 
         elif mode == DataLoaderType.TEST.value:
-            self.ROIs = np.genfromtxt(
-                os.path.join(path, "splits", "test_X.txt"), dtype="str"
-            )
+            self.ROIs = load_roi(os.path.join(path, "splits", "test_X.txt"))
 
         elif mode == DataLoaderType.VAL.value:
-            self.ROIs = np.genfromtxt(
-                os.path.join(path, "splits", "val_X.txt"), dtype="str"
-            )
+            self.ROIs = load_roi(os.path.join(path, "splits", "val_X.txt"))
 
         else:
             raise Exception("Bad mode.")
@@ -148,9 +142,7 @@ class AnomalyMarineDataset(Dataset):
                 self.ROIs, desc="Load labeled " + mode + " set to memory"
             ):
                 # Gets patch path and its semantic segmentation map path
-                roi_file_path, roi_file_cl_path = self.get_roi_tokens(
-                    path, roi
-                )
+                roi_file_path, roi_file_cl_path = self.get_roi_tokens(path, roi)
                 # Loads semantic segmentation map
                 seg_map = self.load_segmentation_map(roi_file_cl_path)
 
@@ -218,9 +210,7 @@ class AnomalyMarineDataset(Dataset):
                     # Keep classes: Marine Debris and Other
                     # Aggregate all classes (except Marine Debris) to Marine
                     # Water Class
-                    other_classes_names = labels[
-                        labels_binary.index("Other") :
-                    ]
+                    other_classes_names = labels[labels_binary.index("Other") :]
                     super_class_name = labels_binary[
                         labels_binary.index("Other")
                     ]
