@@ -18,25 +18,38 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
-from src.utils.assets import labels, labels_binary, labels_multi
-from src.utils.utils import get_today_str
-from src.semantic_segmentation.supervised.focal_loss import FocalLoss
-from src.semantic_segmentation.supervised.models.unet import UNet
-from src.semantic_segmentation.dataloader import (
+from anomalymarinedetection.utils.assets import (
+    labels,
+    labels_binary,
+    labels_multi,
+)
+from anomalymarinedetection.utils.string import get_today_str
+from anomalymarinedetection.semantic_segmentation.supervised.focal_loss import (
+    FocalLoss,
+)
+from anomalymarinedetection.semantic_segmentation.models.unet import UNet
+from anomalymarinedetection.semantic_segmentation.dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
     gen_weights,
     CategoryAggregation,
     get_labeled_and_unlabeled_rois,
 )
-from src.semantic_segmentation.transformations import (
+from anomalymarinedetection.semantic_segmentation.transformations import (
     DiscreteRandomRotationTransform,
     TransformFixMatch,
     StrongAugmentation,
 )
-from src.utils.metrics import Evaluation
-from src.utils.constants import CLASS_DISTR, BANDS_MEAN, BANDS_STD, SEPARATOR
-from src.semantic_segmentation.randaugment import RandAugmentMC
+from anomalymarinedetection.utils.metrics import Evaluation
+from anomalymarinedetection.utils.constants import (
+    CLASS_DISTR,
+    BANDS_MEAN,
+    BANDS_STD,
+    SEPARATOR,
+)
+from anomalymarinedetection.semantic_segmentation.randaugment import (
+    RandAugmentMC,
+)
 
 root_path = up(up(up(os.path.abspath(__file__))))
 

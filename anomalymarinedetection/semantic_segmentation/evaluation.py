@@ -17,18 +17,18 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 # sys.path.append(up(os.path.abspath(__file__)))
-from src.semantic_segmentation.supervised.models.unet import UNet
+from anomalymarinedetection.semantic_segmentation.models.unet import UNet
 from dataloader import (
     AnomalyMarineDataset,
     DataLoaderType,
     CategoryAggregation,
 )
-from src.utils.constants import BANDS_MEAN, BANDS_STD
+from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 
 
 # sys.path.append(os.path.join(up(up(up(os.path.abspath(__file__)))), "utils"))
-from src.utils.metrics import Evaluation, confusion_matrix
-from src.utils.assets import labels, labels_binary, labels_multi
+from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
+from anomalymarinedetection.utils.assets import labels, labels_binary, labels_multi
 
 random.seed(0)
 np.random.seed(0)
