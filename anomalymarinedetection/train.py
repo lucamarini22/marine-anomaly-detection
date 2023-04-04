@@ -24,9 +24,7 @@ from anomalymarinedetection.utils.assets import (
     labels_multi,
 )
 from anomalymarinedetection.utils.string import get_today_str
-from anomalymarinedetection.loss.focal_loss import (
-    FocalLoss,
-)
+from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
@@ -44,9 +42,7 @@ from anomalymarinedetection.utils.constants import (
     BANDS_STD,
     SEPARATOR,
 )
-from anomalymarinedetection.dataset.randaugment import (
-    RandAugmentMC,
-)
+from anomalymarinedetection.dataset.randaugment import RandAugmentMC
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
@@ -99,7 +95,6 @@ def main(options):
     # Tensorboard
     writer = SummaryWriter(
         os.path.join(
-            # TODO: set log folder as an argument
             options["log_folder"],
             options["tensorboard"],
             model_name,
