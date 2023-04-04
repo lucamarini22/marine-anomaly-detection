@@ -35,16 +35,6 @@ def Contrast(img, v):
     return iaaa.pillike.EnhanceContrast(factor=v)(image=img)["image"]
 
 
-"""
-def Cutout(img, v, max_v, bias=0):
-    if v == 0:
-        return img
-    v = _float_parameter(v, max_v) + bias
-    v = int(v * min(img.size))
-    return CutoutAbs(img, v)
-"""
-
-
 def CutoutAbs(img, v1, v2, **kwarg):
     w, h = img.shape[1], img.shape[2]
     x0 = np.random.uniform(0, w)
