@@ -11,7 +11,7 @@ if [ ! -d "$DIRECTORY" ]; then
   git clone https://github.com/magicleap/SuperGluePretrainedNetwork
 fi
 
-../anomalymarinedetection/l1c_generation/SuperGluePretrainedNetworkSuperGluePretrainedNetwork/match_pairs.py \
+../anomalymarinedetection/l1c_generation/SuperGluePretrainedNetwork/match_pairs.py \
 --input_pairs="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs/cop_hub_marida_pairs.txt" \
 --input_dir="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching" \
 --output_dir="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs" \
