@@ -16,8 +16,8 @@ from anomalymarinedetection.utils.bands import get_marida_band_idx
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.image_io import ImageIO
 from anomalymarinedetection.io.tif_io import TifIO
-from anomalymarinedetection.imageprocessing.scale_img_to_0_255 import (
-    scale_img_to_0_255
+from anomalymarinedetection.imageprocessing.float_32_to_uint8 import (
+    float_32_to_uint8,
 )
 
 # TODO: Remove this
@@ -60,10 +60,7 @@ def save_marida_and_cop_hub_2_png(
     tif_io = TifIO()
     # Asserts the file containing all the pairs of corresponding copernicus
     # hub does not already exist and that is empty if it exists
-    if (
-        os.path.exists(pairs_file_path)
-        and os.path.getsize(pairs_file_path) > 0
-    ):
+    if os.path.exists(pairs_file_path) and os.path.getsize(pairs_file_path) > 0:
         raise Exception(f"The file at {pairs_file_path} should be empty.")
 
     assert os.path.isdir(
@@ -100,7 +97,7 @@ def save_marida_and_cop_hub_2_png(
                             marida_patch_name,
                             marida_patch_name + l1c + band_cop_hub + ext,
                         )
-                        img_marida = scale_img_to_0_255(
+                        img_marida = float_32_to_uint8(
                             img_marida[:, :, band_marida]
                         )
                         # Saves marida patch as .png
@@ -127,7 +124,7 @@ def save_marida_and_cop_hub_2_png(
                         + band_cop_hub
                         + out_img_ext
                     )
-                    img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
+                    img_cop_hub = float_32_to_uint8(img_cop_hub[:, :, 0])
                     image_io.save_img(
                         img_cop_hub,
                         os.path.join(output_folder_path, name_cop_hub_img),
