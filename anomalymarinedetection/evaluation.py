@@ -19,7 +19,6 @@ import torchvision.transforms as transforms
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
-    DataLoaderType,
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 from anomalymarinedetection.io.load_roi import load_roi
@@ -32,6 +31,7 @@ from anomalymarinedetection.utils.assets import (
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
+from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 
 random.seed(0)
 np.random.seed(0)
@@ -114,8 +114,7 @@ def main(options):
     y_predicted = []
 
     with torch.no_grad():
-        for (image, target) in tqdm(test_loader, desc="testing"):
-
+        for image, target in tqdm(test_loader, desc="testing"):
             image = image.to(device)
             target = target.to(device)
 
@@ -148,7 +147,6 @@ def main(options):
         print("Confusion Matrix:  \n" + str(conf_mat.to_string()))
 
         if options["predict_masks"]:
-
             path = os.path.join(root_path, "data", "patches")
             ROIs = load_roi(
                 os.path.join(root_path, "data", "splits", "test_X.txt")
@@ -157,7 +155,6 @@ def main(options):
             impute_nan = np.tile(BANDS_MEAN, (256, 256, 1))
 
             for roi in tqdm(ROIs):
-
                 roi_folder = "_".join(
                     ["S2"] + roi.split("_")[:-1]
                 )  # Get Folder Name
@@ -186,7 +183,6 @@ def main(options):
 
                 # Write it
                 with rasterio.open(output_image, "w", **meta) as dst:
-
                     # Preprocessing before prediction
                     nan_mask = np.isnan(image)
                     image[nan_mask] = impute_nan[nan_mask]
@@ -217,7 +213,6 @@ def main(options):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
 
     # Options

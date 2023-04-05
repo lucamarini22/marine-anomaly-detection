@@ -28,7 +28,6 @@ from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
-    DataLoaderType,
 )
 from anomalymarinedetection.dataset.transformations import (
     DiscreteRandomRotationTransform,
@@ -46,6 +45,7 @@ from anomalymarinedetection.dataset.randaugment import RandAugmentMC
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
+from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.utils.gen_weights import gen_weights
 from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,

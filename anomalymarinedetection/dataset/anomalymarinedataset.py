@@ -3,7 +3,6 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
-from enum import Enum
 import torch
 import random
 import numpy as np
@@ -27,6 +26,7 @@ from anomalymarinedetection.io.load_data import (
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
+from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.dataset.aggregate_classes_to_super_class import (
     aggregate_classes_to_super_class,
 )
@@ -37,11 +37,7 @@ np.random.seed(0)
 torch.manual_seed(0)
 
 
-class DataLoaderType(Enum):
-    TRAIN_SUP = "train_sup"
-    TRAIN_SSL = "train_ssl"
-    VAL = "val"
-    TEST = "test"
+
 
 
 class AnomalyMarineDataset(Dataset):
