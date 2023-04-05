@@ -11,6 +11,9 @@ import albumentations as A
 from imgaug import augmenters as iaaa
 
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
+from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
+    float_32_to_uint8,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +168,11 @@ def TranslateY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _float_parameter(v, max_v) + bias
-    aug = A.Affine(translate_percent=(0, v), always_apply=True, cval=0,)(
+    aug = A.Affine(
+        translate_percent=(0, v),
+        always_apply=True,
+        cval=0,
+    )(
         image=img
     )["image"]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
@@ -189,7 +196,7 @@ def fixmatch_augment_pool():
         # (Contrast, 0.9, 0.05),
         # (Equalize, None, None),
         (Identity, None, None),
-        # (Posterize, 4, 4),
+        (Posterize, 4, 4),
         (Rotate, 30, 0),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 0.3, 0),
@@ -233,6 +240,9 @@ class RandAugmentMC(object):
         self.cutout = use
 
     def __call__(self, img):
+        a = img[7, :, :]
+        img = float_32_to_uint8(img)
+        b = img[7, :, :]
         idx_op = 0
 
         for op, max_v, bias in self.ops:
@@ -243,10 +253,10 @@ class RandAugmentMC(object):
             ):
                 v = -v
             img_np = img.cpu().detach().numpy()
-            b = img_np[4, :, :]
+            # b = img_np[4, :, :]
             img_np = op(img_np, v=v, max_v=max_v, bias=bias)
             img = torch.from_numpy(img_np)
-            a = img[4, :, :]
+            # a = img[4, :, :]
             idx_op += 1
         if self.cutout:
             for _ in range(NUM_TIMES_CUTOUT):
