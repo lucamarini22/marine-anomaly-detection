@@ -54,13 +54,15 @@ def CutoutAbs(img, v1, v2, **kwarg):
     return img
 
 
+"""
+# Removed because too drastic effect
 def Equalize(img, **kwarg):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     aug = A.equalize(img)
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
-
+"""
 
 """
 def Equalize(img, **kwarg):
@@ -101,9 +103,11 @@ def Rotate(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
+    a = img[:, :, 4]
     aug = A.rotate(
         img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
+    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -121,8 +125,21 @@ def Sharpness(img, v, max_v, bias=0):
 def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
-    v = _float_parameter(v, max_v) + bias
-    aug = A.IAAAffine(shear=(v, 0), always_apply=True)(image=img)["image"]
+    v = _int_parameter(v, max_v) + bias
+    a = img[:, :, 4]
+    aug = iaaa.ShearX(shear=v, cval=0)(image=img)
+    b = aug[:, :, 4]
+    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
+
+
+def ShearX2(img, v, max_v, bias=0):
+    prev_shape = img.shape
+    img = change_shape_for_augmentation(img)
+    v = _int_parameter(v, max_v) + bias
+    a = img[:, :, 4]
+    aug = A.Affine(shear=v, always_apply=True, cval=0)(image=img)["image"]
+    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -140,7 +157,9 @@ def Solarize(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
+    a = img[:, :, 4]
     aug = A.solarize(img, v)
+    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -194,14 +213,14 @@ def fixmatch_augment_pool():
         # (Brightness, 0.9, 0.05),
         # (Color, 0.9, 0.05),
         # (Contrast, 0.9, 0.05),
-        # (Equalize, None, None),
-        (Identity, None, None),
-        (Posterize, 4, 4),
-        (Rotate, 30, 0),
+        ##(Equalize, None, None),
+        # (Identity, None, None),
+        # (Posterize, 4, 4),
+        (Rotate, 0, 30),
         # (Sharpness, 0.9, 0.05),
-        # (ShearX, 0.3, 0),
+        (ShearX, 5, 30),
         # (ShearY, 0.3, 0),
-        # (Solarize, 256, 0),
+        (Solarize, 0, 256),
         # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]
@@ -240,12 +259,9 @@ class RandAugmentMC(object):
         self.cutout = use
 
     def __call__(self, img):
-        a = img[7, :, :]
-        img = float_32_to_uint8(img)
-        b = img[7, :, :]
         idx_op = 0
 
-        for op, max_v, bias in self.ops:
+        for op, v, max_v in self.ops:
             v = self.values_op[idx_op]
             if (
                 op.__name__ in self.ops_can_invert_value
@@ -253,10 +269,12 @@ class RandAugmentMC(object):
             ):
                 v = -v
             img_np = img.cpu().detach().numpy()
-            # b = img_np[4, :, :]
-            img_np = op(img_np, v=v, max_v=max_v, bias=bias)
+            a = img_np[4, :, :]
+            img_np = float_32_to_uint8(img_np)
+            b = img_np[4, :, :]
+            img_np = op(img_np, v=v, max_v=max_v)
             img = torch.from_numpy(img_np)
-            # a = img[4, :, :]
+
             idx_op += 1
         if self.cutout:
             for _ in range(NUM_TIMES_CUTOUT):
