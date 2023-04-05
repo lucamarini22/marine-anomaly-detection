@@ -13,17 +13,17 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
 
 ### Installation
 
-1. Get [miniconda](https://docs.conda.io/en/latest/miniconda.html) or similar.
+1. Get [micromamba](https://mamba.readthedocs.io/en/latest/installation.html#micromamba) or similar.
 2. Clone the repo.
    ```sh
    git clone https://github.com/lucamarini22/anomaly-marine-detection.git
    ```
 3. Setup and activate the environment. This will create a conda environment called `anomaly-marine-detection`.
    ```sh
-   conda env create -f environment.yml
+   micromamba env create -f environment.yml
    ```
    ```sh
-   conda activate anomaly-marine-detection
+   micromamba activate anomaly-marine-detection
    ```
 4. Install the local package.
    ```
