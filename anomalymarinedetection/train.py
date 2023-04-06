@@ -29,10 +29,17 @@ from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
 )
-from anomalymarinedetection.dataset.transformations import (
-    DiscreteRandomRotationTransform,
-    TransformFixMatch,
+from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
+    WeakAugmentation,
+)
+from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
+)
+from anomalymarinedetection.dataset.augmentation.randaugment import (
+    RandAugmentMC,
+)
+from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
+    DiscreteRandomRotation,
 )
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
@@ -41,7 +48,6 @@ from anomalymarinedetection.utils.constants import (
     BANDS_STD,
     SEPARATOR,
 )
-from anomalymarinedetection.dataset.randaugment import RandAugmentMC
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
@@ -105,7 +111,7 @@ def main(options):
     transform_train = transforms.Compose(
         [
             transforms.ToTensor(),
-            DiscreteRandomRotationTransform([-90, 0, 90, 180]),
+            DiscreteRandomRotation([-90, 0, 90, 180]),
             transforms.RandomHorizontalFlip(),
         ]
     )
@@ -171,7 +177,7 @@ def main(options):
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SSL.value,
-            transform=TransformFixMatch(mean=BANDS_MEAN, std=BANDS_STD),
+            transform=WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs_u,
@@ -377,7 +383,7 @@ def main(options):
         writer.add_graph(model, image_temp.to(device))
 
         ###############################################################
-        # Start Training                                              #
+        # Start Supervised Training                                   #
         ###############################################################
         model.train()
 
@@ -533,18 +539,13 @@ def main(options):
                 model.train()
 
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
-        # TODO
         classes_channel_idx = 1
 
         labeled_iter = iter(labeled_train_loader)
         unlabeled_iter = iter(unlabeled_train_loader)
 
-        # dataiter = iter(train_loader)
-        # image_temp, _ = next(dataiter)
-        # writer.add_graph(model, image_temp.to(device))
-
         ###############################################################
-        # Start Training SEMI-SUPERVISED LEARINING                    #
+        # Start SEMI-SUPERVISED LEARNING Training                     #
         ###############################################################
         model.train()
 
@@ -554,7 +555,7 @@ def main(options):
             training_batches = 0
 
             i_board = 0
-            for batch_idx in tqdm(range(len(labeled_iter)), desc="training"):
+            for _ in tqdm(range(len(labeled_iter)), desc="training"):
                 try:
                     img_x, seg_map = next(labeled_iter)
                 except:
@@ -580,20 +581,17 @@ def main(options):
                     img_u_w_i = img_u_w[i, :, :, :]
                     img_u_w_i = img_u_w_i.cpu().detach().numpy()
                     img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
-                    a = img_u_w_i[:, :, 10]
-                    b = img_u_w_i[:, :, 9]
+                    # Strongly-augmented image
                     img_u_s_i = strong_transform(img_u_w_i)
-                    c = img_u_s_i[10, :, :]
-                    d = img_u_s_i[9, :, :]
+                    # a = img_u_w_i[:, :, 10]
+                    # b = img_u_w_i[:, :, 9]
+
+                    # c = img_u_s_i[10, :, :]
+                    # d = img_u_s_i[9, :, :]
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
-                # img_u_s = img_u_s.to(device)
-                x = img_u_w[13, 4, :, :]
-
-                z = img_u_s[13, 4, :, :]
-
                 seg_map = seg_map.to(device)
-                """ # DEBUGGING
+                """ DEBUGGING
                 for i in range(img_x.shape[0]):
                     a = img_x[i, 7, :, :]
                     b = seg_map[i, :, :].float()
@@ -609,7 +607,6 @@ def main(options):
                 # make inference singularly
                 # img = img.to(device)
                 # seg_map = seg_map.to(device)
-
                 # img_u_w = img_u_w.to(device)
                 # img_u_s = img_u_s.to(device)
 
@@ -624,11 +621,9 @@ def main(options):
                 # print(randaugment.ops)
                 # print(randaugment.probs_op)
                 # print(randaugment.values_op)
+
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
-
-                # logits_u_s = model(img_u_s)
-
                 # Do not apply CutOut to the labels because the model has to
                 # learn to interpolate when part of the image is missing.
                 # It is only an augmentation on the inputs.
@@ -636,9 +631,6 @@ def main(options):
                 # Applies strong augmentation to pseudo label map
                 tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
                 for i in range(logits_u_w.shape[0]):
-                    # print(randaugment.ops)
-                    # print(randaugment.probs_op)
-                    # print(randaugment.values_op)
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
@@ -650,15 +642,17 @@ def main(options):
                     tmp[i, :, :, :] = logits_u_w_i
                     # e = logits_u_s[i, 0, :, :]
                     # f = logits_u_s[i, 1, :, :]
+
+                    # aa = img_x[i, 7, :, :]
+                    # bb = seg_map[i, :, :].float()
+
+                    # cc = img_u_w[i, 4, :, :]
+                    # dd = img_u_s[i, 4, :, :]
                     # print()
                 logits_u_w = torch.from_numpy(tmp)
 
-                g = logits_u_w[13, 0, :, :]
-                h = logits_u_w[13, 1, :, :]
-                k = logits_u_s[13, 0, :, :]
-                l = logits_u_s[13, 1, :, :]
                 logits_u_w = logits_u_w.to(device)
-                # logits_u_w = strong_transform(logits_u_w)
+
                 pseudo_label = torch.softmax(
                     logits_u_w.detach(), dim=-1
                 )  # / args.T, dim=-1) -> to add temperature
