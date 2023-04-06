@@ -27,7 +27,6 @@ def AutoContrast(img, v):
 
 
 def Brightness(img, v, max_v, bias=0):
-    v = _float_parameter(v, max_v) + bias
     return iaaa.pillike.EnhanceBrightness(factor=v)(image=img)["image"]
 
 
@@ -68,87 +67,73 @@ def Equalize(img, **kwarg):
 
 def Identity(img, **kwarg):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
+    img = _change_shape_for_augmentation(img)
     aug = img
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def Posterize(img, v, max_v, bias=0):
+    # Reduces the number of bits for each color channel.
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
-    a = img[:, :, 4]
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
     aug = A.posterize(img, v)
-    b = aug[:, :, 4]
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
-
-
-def change_shape_for_augmentation(img):
-    if img.shape[0] != img.shape[1]:
-        img = np.moveaxis(img, 0, -1)
-    return img
-
-
-def change_shape_for_dataloader(prev_shape, new_shape, aug):
-    if prev_shape != new_shape:
-        aug = np.moveaxis(aug, -1, 0)
-    return aug
 
 
 def Rotate(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
     aug = A.rotate(
         img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def Sharpness(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _float_parameter(v, max_v) + bias
-    v = v / 2  # In PIL code 0.1 to 1.9
-    aug = A.IAASharpen(alpha=v, always_apply=True)(image=img)["image"]
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    img = _change_shape_for_augmentation(img)
+    a = img[:, :, 4]
+    aug = A.Sharpen(alpha=v, always_apply=True)(image=img)["image"]
+    b = aug[:, :, 4]
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
     aug = iaaa.ShearX(shear=v, cval=CVAL)(image=img)
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def ShearY(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
     aug = iaaa.ShearY(shear=v, cval=CVAL)(image=img)
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def Solarize(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
     aug = A.solarize(img, v)
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
 def TranslateX(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _float_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
     aug = A.Affine(
         translate_percent=(v, 0),
         always_apply=True,
@@ -159,15 +144,14 @@ def TranslateX(img, v, max_v, bias=0):
     )[
         "image"
     ]
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     t = aug[4, :, :]
     return aug
 
 
 def TranslateY(img, v, max_v, bias=0):
     prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _float_parameter(v, max_v) + bias
+    img = _change_shape_for_augmentation(img)
     aug = A.Affine(
         translate_percent=(0, v),
         always_apply=True,
@@ -175,22 +159,27 @@ def TranslateY(img, v, max_v, bias=0):
     )(
         image=img
     )["image"]
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
 
-def _float_parameter(v, max_v):
-    return float(v) * max_v / PARAMETER_MAX
+def _change_shape_for_augmentation(img):
+    if img.shape[0] != img.shape[1]:
+        img = np.moveaxis(img, 0, -1)
+    return img
 
 
-def _int_parameter(v, max_v):
-    if v == max_v:
-        return int(v)
-    else:
-        return int(v * max_v / PARAMETER_MAX)
+def _change_shape_for_dataloader(prev_shape, new_shape, aug):
+    if prev_shape != new_shape:
+        aug = np.moveaxis(aug, -1, 0)
+    return aug
 
 
-def fixmatch_augment_pool():
+def _int_parameter(v):
+    return round(v)
+
+
+def _fixmatch_augment_pool():
     augs = [
         # The below four don't work with multispectral images
         # (AutoContrast, None, None),
@@ -199,9 +188,9 @@ def fixmatch_augment_pool():
         # (Contrast, 0.9, 0.05),
         ##(Equalize, None, None),
         # (Identity, None, None),
-        (Posterize, 4, 6),
-        (Rotate, 0, 30),
-        # (Sharpness, 0.9, 0.05),
+        # (Posterize, 4, 6),
+        # (Rotate, 0, 30),
+        (Sharpness, 0.2, 0.5),
         # (ShearX, 5, 30),
         # (ShearY, 5, 30),
         # (Solarize, 0, 256),
@@ -218,7 +207,7 @@ class RandAugmentMC(object):
         self.min_m = 1
         self.n = n
         self.m = m
-        self.augment_pool = fixmatch_augment_pool()
+        self.augment_pool = _fixmatch_augment_pool()
         # Fix the probabilities and operations at init time.
         # In this way, the exactly same augmentations will be applied to both
         # strongly augmented input images and pseudo label maps.
