@@ -78,7 +78,9 @@ def Posterize(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
+    a = img[:, :, 4]
     aug = A.posterize(img, v)
+    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return np.reshape(aug, prev_shape)
 
@@ -99,11 +101,9 @@ def Rotate(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
-    a = img[:, :, 4]
     aug = A.rotate(
         img, v, border_mode=0, value=0  # np.power(-10, 13)
     )  # , value=-1)
-    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -184,7 +184,10 @@ def _float_parameter(v, max_v):
 
 
 def _int_parameter(v, max_v):
-    return int(v * max_v / PARAMETER_MAX)
+    if v == max_v:
+        return int(v)
+    else:
+        return int(v * max_v / PARAMETER_MAX)
 
 
 def fixmatch_augment_pool():
@@ -196,12 +199,12 @@ def fixmatch_augment_pool():
         # (Contrast, 0.9, 0.05),
         ##(Equalize, None, None),
         # (Identity, None, None),
-        # (Posterize, 4, 4),
+        (Posterize, 4, 6),
         (Rotate, 0, 30),
         # (Sharpness, 0.9, 0.05),
         # (ShearX, 5, 30),
-        (ShearY, 5, 30),
-        (Solarize, 0, 256),
+        # (ShearY, 5, 30),
+        # (Solarize, 0, 256),
         # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
     ]
@@ -212,6 +215,7 @@ class RandAugmentMC(object):
     def __init__(self, n, m):
         assert n >= 1
         assert 1 <= m <= 10
+        self.min_m = 1
         self.n = n
         self.m = m
         self.augment_pool = fixmatch_augment_pool()
@@ -242,8 +246,13 @@ class RandAugmentMC(object):
     def __call__(self, img):
         idx_op = 0
 
-        for op, v, max_v in self.ops:
+        for op, min_v, max_v in self.ops:
             v = self.values_op[idx_op]
+            # old_range = self.m - self.min_m
+            # new_range = max_v - min_v
+            # v = (((v - self.min_m) * new_range) / old_range) + min_v
+            # TODO: this is ok, but fix the change of v inside all augmentations (to int or float)
+            v = np.interp(v, [self.min_m, self.m], [min_v, max_v])
             if (
                 op.__name__ in self.ops_can_invert_value
                 and self.probs_invert_value[idx_op] < 0.5
