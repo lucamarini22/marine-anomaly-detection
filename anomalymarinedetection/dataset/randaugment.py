@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 PARAMETER_MAX = 10
 NUM_TIMES_CUTOUT = 3
+CVAL = 0
 
 
 def AutoContrast(img, v):
@@ -62,11 +63,6 @@ def Equalize(img, **kwarg):
     aug = A.equalize(img)
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
-"""
-
-"""
-def Equalize(img, **kwarg):
-    return PIL.ImageOps.equalize(img)
 """
 
 
@@ -126,20 +122,7 @@ def ShearX(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
-    a = img[:, :, 4]
-    aug = iaaa.ShearX(shear=v, cval=0)(image=img)
-    b = aug[:, :, 4]
-    aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return aug
-
-
-def ShearX2(img, v, max_v, bias=0):
-    prev_shape = img.shape
-    img = change_shape_for_augmentation(img)
-    v = _int_parameter(v, max_v) + bias
-    a = img[:, :, 4]
-    aug = A.Affine(shear=v, always_apply=True, cval=0)(image=img)["image"]
-    b = aug[:, :, 4]
+    aug = iaaa.ShearX(shear=v, cval=CVAL)(image=img)
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -147,8 +130,8 @@ def ShearX2(img, v, max_v, bias=0):
 def ShearY(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
-    v = _float_parameter(v, max_v) + bias
-    aug = A.IAAAffine(shear=(0, v), always_apply=True)(image=img)["image"]
+    v = _int_parameter(v, max_v) + bias
+    aug = iaaa.ShearY(shear=v, cval=CVAL)(image=img)
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -157,9 +140,7 @@ def Solarize(img, v, max_v, bias=0):
     prev_shape = img.shape
     img = change_shape_for_augmentation(img)
     v = _int_parameter(v, max_v) + bias
-    a = img[:, :, 4]
     aug = A.solarize(img, v)
-    b = aug[:, :, 4]
     aug = change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -171,7 +152,7 @@ def TranslateX(img, v, max_v, bias=0):
     aug = A.Affine(
         translate_percent=(v, 0),
         always_apply=True,
-        cval=0,  # np.power(-10, 13)
+        cval=CVAL,  # np.power(-10, 13)
         # keep_ratio=True,
     )(  # cval=-1)(
         image=img
@@ -190,7 +171,7 @@ def TranslateY(img, v, max_v, bias=0):
     aug = A.Affine(
         translate_percent=(0, v),
         always_apply=True,
-        cval=0,
+        cval=CVAL,
     )(
         image=img
     )["image"]
@@ -218,8 +199,8 @@ def fixmatch_augment_pool():
         # (Posterize, 4, 4),
         (Rotate, 0, 30),
         # (Sharpness, 0.9, 0.05),
-        (ShearX, 5, 30),
-        # (ShearY, 0.3, 0),
+        # (ShearX, 5, 30),
+        (ShearY, 5, 30),
         (Solarize, 0, 256),
         # (TranslateX, 0.3, 0),
         # (TranslateY, 0.3, 0),
