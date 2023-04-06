@@ -12,7 +12,7 @@ from imgaug import augmenters as iaaa
 
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
 from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
-    float_32_to_uint8,
+    float32_to_uint8,
 )
 
 logger = logging.getLogger(__name__)
@@ -270,7 +270,7 @@ class RandAugmentMC(object):
                 v = -v
             img_np = img.cpu().detach().numpy()
             a = img_np[4, :, :]
-            img_np = float_32_to_uint8(img_np)
+            img_np = float32_to_uint8(img_np)
             b = img_np[4, :, :]
             img_np = op(img_np, v=v, max_v=max_v)
             img = torch.from_numpy(img_np)

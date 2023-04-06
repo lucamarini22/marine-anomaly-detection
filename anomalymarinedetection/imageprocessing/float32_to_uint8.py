@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 
 
-def float_32_to_uint8(img: np.ndarray) -> np.ndarray:
+def float32_to_uint8(img: np.ndarray) -> np.ndarray:
     """Takes an input image of type np.float32, 
     and normalizes it between 0 and 255 with type np.uint8.
 
