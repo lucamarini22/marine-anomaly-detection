@@ -13,7 +13,7 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
 
 ### Installation
 
-1. Get [micromamba](https://mamba.readthedocs.io/en/latest/installation.html#micromamba) or similar.
+1. Get [micromamba](https://mamba.readthedocs.io/en/latest/installation.html#micromamba), or [Miniconda](https://docs.conda.io/en/latest/miniconda.html), or similar. Micromamba is preferred to Miniconda for its greater speed in creating the virtual environment.
 2. Clone the repo.
    ```sh
    git clone https://github.com/lucamarini22/anomaly-marine-detection.git
