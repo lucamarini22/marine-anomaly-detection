@@ -171,19 +171,51 @@ def TranslateY(img, v):
     return aug
 
 
-def _change_shape_for_augmentation(img):
+def _change_shape_for_augmentation(img: np.ndarray) -> np.ndarray:
+    """Changes the shape of an image by putting the channels in its last
+    dimension. This function assumes the width and height of the image are
+    equal.
+
+    Args:
+        img (np.ndarray): image.
+
+    Returns:
+        np.ndarray: image with channels contained in its last dimension.
+    """
     if img.shape[0] != img.shape[1]:
         img = np.moveaxis(img, 0, -1)
     return img
 
 
-def _change_shape_for_dataloader(prev_shape, new_shape, aug):
+def _change_shape_for_dataloader(
+    prev_shape: tuple[int], new_shape: tuple[int], img: np.ndarray
+):
+    """Changes the shape of an image by putting the channels in its first
+    dimension.
+
+    Args:
+        prev_shape (tuple[int]): initial shape of the image.
+        new_shape (tuple[int]): new shape of the image with channels in its
+          first dimension.
+        img (np.ndarray): image.
+
+    Returns:
+        np.ndarray: image with channels in its first dimension
+    """
     if prev_shape != new_shape:
-        aug = np.moveaxis(aug, -1, 0)
-    return aug
+        img = np.moveaxis(img, -1, 0)
+    return img
 
 
-def _int_parameter(v):
+def _int_parameter(v: float) -> int:
+    """Rounds a value to its nearest integer.
+
+    Args:
+        v (float): value.
+
+    Returns:
+        int: rounded value.
+    """
     return round(v)
 
 
@@ -227,47 +259,52 @@ class RandAugmentMC(object):
     def __init__(self, n, m):
         assert n >= 1
         assert 1 <= m <= 10
-        self.min_m = 1
-        self.n = n
-        self.m = m
-        self.augment_pool = _fixmatch_augment_pool()
+        self._min_m = 1
+        self._n = n
+        self._m = m
+        self._augment_pool = _fixmatch_augment_pool()
         # Fix the probabilities and operations at init time.
         # In this way, the exactly same augmentations will be applied to both
         # strongly augmented input images and pseudo label maps.
-        self.ops = random.choices(self.augment_pool, k=self.n)
-        self.probs_op = [random.uniform(0, 1) for _ in range(len(self.ops))]
-        self.values_op = [
-            np.random.randint(1, self.m) for _ in range(len(self.ops))
+        self._ops = random.choices(self._augment_pool, k=self._n)
+        self._probs_op = [random.uniform(0, 1) for _ in range(len(self._ops))]
+        self._values_op = [
+            np.random.randint(1, self.m) for _ in range(len(self._ops))
         ]
-        self.cutout = True
+        self._cutout = True
         # List of operations that can invert the value
-        self.ops_can_invert_value = [
+        self._ops_can_invert_value = [
             "Rotate",
             "ShearX",
             "ShearY",
             "TranslateX",
             "TranslateY",
         ]
-        self.probs_invert_value = [
-            random.uniform(0, 1) for _ in range(len(self.ops))
+        self._probs_invert_value = [
+            random.uniform(0, 1) for _ in range(len(self._ops))
         ]
 
     def use_cutout(self, use: bool):
-        self.cutout = use
+        """Sets if CutOut has to be used.
+
+        Args:
+            use (bool): True to apply CutOut. False otherwise.
+        """
+        self._cutout = use
 
     def __call__(self, img):
         idx_op = 0
 
-        for op, min_v, max_v in self.ops:
-            v = self.values_op[idx_op]
-            # Interpolates value v from interval [self.min_m, self.m] to
-            # interval [min_v, max_v].
+        for op, min_v, max_v in self._ops:
+            v = self._values_op[idx_op]
             if min_v is not None and max_v is not None:
-                v = np.interp(v, [self.min_m, self.m], [min_v, max_v])
+                # Interpolates value v from interval [self.min_m, self.m] to
+                # interval [min_v, max_v].
+                v = np.interp(v, [self._min_m, self._m], [min_v, max_v])
                 self._assert_value_in_interval(v, min_v, max_v)
                 if (
-                    op.__name__ in self.ops_can_invert_value
-                    and self.probs_invert_value[idx_op] < 0.5
+                    op.__name__ in self._ops_can_invert_value
+                    and self._probs_invert_value[idx_op] < 0.5
                 ):
                     # Inverts the sign of value v if the operation supports
                     # negative values and if prob of inverting the sign is < 0.5.
@@ -282,7 +319,7 @@ class RandAugmentMC(object):
             img = torch.from_numpy(img_np)
 
             idx_op += 1
-        if self.cutout:
+        if self._cutout:
             for _ in range(NUM_TIMES_CUTOUT):
                 # Applies CutOut NUM_TIMES_CUTOUT times
                 v1 = (
