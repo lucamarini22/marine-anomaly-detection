@@ -164,9 +164,7 @@ def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
-    a = img[:, :, 4]
     aug = iaaa.TranslateY(percent=v, cval=CVAL)(image=img)
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -310,10 +308,8 @@ class RandAugmentMC(object):
                     # negative values and if prob of inverting the sign is < 0.5.
                     v = -v
             img_np = img.cpu().detach().numpy()
-            a = img_np[4, :, :]
             # Converts image to uint8 to make all augmentations work.
             img_np = float32_to_uint8(img_np)
-            b = img_np[4, :, :]
             # Applies the selected augmentation.
             img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)
