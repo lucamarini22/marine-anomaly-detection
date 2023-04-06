@@ -17,9 +17,10 @@ from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
 
 logger = logging.getLogger(__name__)
 
-PARAMETER_MAX = 10
-NUM_TIMES_CUTOUT = 3
 CVAL = 0
+NUM_TIMES_CUTOUT = 3
+MIN_PERC_CUTOUT = 0.05
+MAX_PERC_CUTOUT = 0.15
 
 
 def AutoContrast(img, v):
@@ -73,7 +74,7 @@ def Identity(img, **kwarg):
     return aug
 
 
-def Posterize(img, v, max_v, bias=0):
+def Posterize(img, v):
     # Reduces the number of bits for each color channel.
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
@@ -83,7 +84,7 @@ def Posterize(img, v, max_v, bias=0):
     return np.reshape(aug, prev_shape)
 
 
-def Rotate(img, v, max_v, bias=0):
+def Rotate(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
@@ -94,7 +95,7 @@ def Rotate(img, v, max_v, bias=0):
     return aug
 
 
-def Sharpness(img, v, max_v, bias=0):
+def Sharpness(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     a = img[:, :, 4]
@@ -104,7 +105,7 @@ def Sharpness(img, v, max_v, bias=0):
     return aug
 
 
-def ShearX(img, v, max_v, bias=0):
+def ShearX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
@@ -113,7 +114,7 @@ def ShearX(img, v, max_v, bias=0):
     return aug
 
 
-def ShearY(img, v, max_v, bias=0):
+def ShearY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
@@ -122,7 +123,7 @@ def ShearY(img, v, max_v, bias=0):
     return aug
 
 
-def Solarize(img, v, max_v, bias=0):
+def Solarize(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
@@ -131,7 +132,7 @@ def Solarize(img, v, max_v, bias=0):
     return aug
 
 
-def TranslateX(img, v, max_v, bias=0):
+def TranslateX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     aug = A.Affine(
@@ -149,7 +150,7 @@ def TranslateX(img, v, max_v, bias=0):
     return aug
 
 
-def TranslateY(img, v, max_v, bias=0):
+def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     aug = A.Affine(
@@ -237,28 +238,48 @@ class RandAugmentMC(object):
 
         for op, min_v, max_v in self.ops:
             v = self.values_op[idx_op]
-            # old_range = self.m - self.min_m
-            # new_range = max_v - min_v
-            # v = (((v - self.min_m) * new_range) / old_range) + min_v
-            # TODO: this is ok, but fix the change of v inside all augmentations (to int or float)
+            # Interpolates value v from interval [self.min_m, self.m] to
+            # interval [min_v, max_v].
             v = np.interp(v, [self.min_m, self.m], [min_v, max_v])
+            self._assert_value_in_interval(v, min_v, max_v)
             if (
                 op.__name__ in self.ops_can_invert_value
                 and self.probs_invert_value[idx_op] < 0.5
             ):
+                # Inverts the sign of value v if the operation supports
+                # negative values and if prob of inverting the sign is < 0.5.
                 v = -v
             img_np = img.cpu().detach().numpy()
             a = img_np[4, :, :]
+            # Converts image to uint8 to make all augmentations work.
             img_np = float32_to_uint8(img_np)
             b = img_np[4, :, :]
-            img_np = op(img_np, v=v, max_v=max_v)
+            # Applies the selected augmentation.
+            img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)
 
             idx_op += 1
         if self.cutout:
             for _ in range(NUM_TIMES_CUTOUT):
                 # Applies CutOut NUM_TIMES_CUTOUT times
-                v1 = random.uniform(0.05, 0.15) * MARIDA_SIZE_X
-                v2 = random.uniform(0.05, 0.15) * MARIDA_SIZE_X
+                v1 = (
+                    random.uniform(MIN_PERC_CUTOUT, MAX_PERC_CUTOUT)
+                    * MARIDA_SIZE_X
+                )
+                v2 = (
+                    random.uniform(MIN_PERC_CUTOUT, MAX_PERC_CUTOUT)
+                    * MARIDA_SIZE_X
+                )
                 img = CutoutAbs(img, v1, v2)
         return img
+
+    @staticmethod
+    def _assert_value_in_interval(v: float, v_min: float, v_max: float):
+        """Asserts that a value is contained in the interval [v_min, v_max].
+
+        Args:
+            v (float): value.
+            v_min (float): minimum value that value v can be.
+            v_max (float): maximum value that value v can be.
+        """
+        assert v_min <= v <= v_max
