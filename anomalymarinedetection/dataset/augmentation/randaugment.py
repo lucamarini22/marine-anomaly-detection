@@ -17,26 +17,46 @@ from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
 
 logger = logging.getLogger(__name__)
 
-CVAL = 0
+CVAL = 0  # cval=-1, np.power(-10, 13)
 NUM_TIMES_CUTOUT = 3
 MIN_PERC_CUTOUT = 0.05
 MAX_PERC_CUTOUT = 0.15
 
 
 def AutoContrast(img, v):
-    return iaaa.pillike.Autocontrast(cutoff=0)(image=img)["image"]
+    prev_shape = img.shape
+    img = _change_shape_for_augmentation(img)
+    v = _int_parameter(v)
+    aug = iaaa.pillike.Autocontrast(cutoff=(v))(image=img)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
 
 
-def Brightness(img, v, max_v, bias=0):
-    return iaaa.pillike.EnhanceBrightness(factor=v)(image=img)["image"]
+def Brightness(img, v):
+    prev_shape = img.shape
+    img = _change_shape_for_augmentation(img)
+    v = _truncate_float(v)
+    aug = iaaa.pillike.EnhanceBrightness(factor=v)(image=img)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
 
 
 def Color(img, v):
-    return iaaa.pillike.EnhanceColor(factor=v)(image=img)["image"]
+    prev_shape = img.shape
+    img = _change_shape_for_augmentation(img)
+    v = _truncate_float(v)
+    aug = iaaa.pillike.EnhanceColor(factor=v)(image=img)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
 
 
 def Contrast(img, v):
-    return iaaa.pillike.EnhanceContrast(factor=v)(image=img)["image"]
+    prev_shape = img.shape
+    img = _change_shape_for_augmentation(img)
+    v = _truncate_float(v)
+    aug = iaaa.pillike.EnhanceContrast(factor=v)(image=img)
+    aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
+    return aug
 
 
 def CutoutAbs(img, v1, v2, **kwarg):
@@ -98,9 +118,8 @@ def Rotate(img, v):
 def Sharpness(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    a = img[:, :, 4]
+    v = _truncate_float(v)
     aug = A.Sharpen(alpha=v, always_apply=True)(image=img)["image"]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -135,31 +154,19 @@ def Solarize(img, v):
 def TranslateX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    aug = A.Affine(
-        translate_percent=(v, 0),
-        always_apply=True,
-        cval=CVAL,  # np.power(-10, 13)
-        # keep_ratio=True,
-    )(  # cval=-1)(
-        image=img
-    )[
-        "image"
-    ]
+    v = _truncate_float(v)
+    aug = iaaa.TranslateX(percent=v, cval=CVAL)(image=img)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
-    t = aug[4, :, :]
     return aug
 
 
 def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    aug = A.Affine(
-        translate_percent=(0, v),
-        always_apply=True,
-        cval=CVAL,
-    )(
-        image=img
-    )["image"]
+    v = _truncate_float(v)
+    a = img[:, :, 4]
+    aug = iaaa.TranslateY(percent=v, cval=CVAL)(image=img)
+    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -180,23 +187,38 @@ def _int_parameter(v):
     return round(v)
 
 
+def _truncate_float(v: float, num_decimals: int = 2) -> float:
+    """Truncates a float number by setting the number of decimals.
+
+    Args:
+        v (float): Number to truncate.
+        num_decimals (int, optional): Number of decimals to keep.
+          Defaults to 2.
+
+    Returns:
+        float: Truncated number.
+    """
+    return round(v, 2)
+
+
 def _fixmatch_augment_pool():
     augs = [
         # The below four don't work with multispectral images
-        # (AutoContrast, None, None),
-        # (Brightness, 0.9, 0.05),
-        # (Color, 0.9, 0.05),
-        # (Contrast, 0.9, 0.05),
+        (AutoContrast, 2, 20),
+        # The following three do not work when having too many channels
+        ##(Brightness, 0.5, 1.5),
+        ##(Color, 0.0, 3.0),
+        ##(Contrast, 0.5, 1.5),
         ##(Equalize, None, None),
-        # (Identity, None, None),
-        # (Posterize, 4, 6),
-        # (Rotate, 0, 30),
+        (Identity, None, None),
+        (Posterize, 4, 6),
+        (Rotate, 0, 30),
         (Sharpness, 0.2, 0.5),
-        # (ShearX, 5, 30),
-        # (ShearY, 5, 30),
-        # (Solarize, 0, 256),
-        # (TranslateX, 0.3, 0),
-        # (TranslateY, 0.3, 0),
+        (ShearX, 5, 30),
+        (ShearY, 5, 30),
+        (Solarize, 0, 256),
+        (TranslateX, 0.1, 0.2),
+        (TranslateY, 0.1, 0.2),
     ]
     return augs
 
@@ -240,15 +262,16 @@ class RandAugmentMC(object):
             v = self.values_op[idx_op]
             # Interpolates value v from interval [self.min_m, self.m] to
             # interval [min_v, max_v].
-            v = np.interp(v, [self.min_m, self.m], [min_v, max_v])
-            self._assert_value_in_interval(v, min_v, max_v)
-            if (
-                op.__name__ in self.ops_can_invert_value
-                and self.probs_invert_value[idx_op] < 0.5
-            ):
-                # Inverts the sign of value v if the operation supports
-                # negative values and if prob of inverting the sign is < 0.5.
-                v = -v
+            if min_v is not None and max_v is not None:
+                v = np.interp(v, [self.min_m, self.m], [min_v, max_v])
+                self._assert_value_in_interval(v, min_v, max_v)
+                if (
+                    op.__name__ in self.ops_can_invert_value
+                    and self.probs_invert_value[idx_op] < 0.5
+                ):
+                    # Inverts the sign of value v if the operation supports
+                    # negative values and if prob of inverting the sign is < 0.5.
+                    v = -v
             img_np = img.cpu().detach().numpy()
             a = img_np[4, :, :]
             # Converts image to uint8 to make all augmentations work.
