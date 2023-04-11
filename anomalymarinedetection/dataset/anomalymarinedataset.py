@@ -231,8 +231,8 @@ class AnomalyMarineDataset(Dataset):
             if self.transform is not None:
                 img = self.transform(img)
 
+            weak = img
             if self.standardization is not None:
-                weak = img
                 weak = self.standardization(weak)
             return weak
 
