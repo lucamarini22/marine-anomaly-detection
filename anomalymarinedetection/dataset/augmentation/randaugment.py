@@ -9,6 +9,8 @@ import numpy as np
 import torch
 import albumentations as A
 from imgaug import augmenters as iaaa
+from skimage.util import img_as_ubyte
+
 
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
 from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
@@ -234,21 +236,21 @@ def _truncate_float(v: float, num_decimals: int = 2) -> float:
 def _fixmatch_augment_pool():
     augs = [
         # The below four don't work with multispectral images
-        (AutoContrast, 2, 20),
+        # (AutoContrast, 2, 20),
         # The following three do not work when having too many channels
         ##(Brightness, 0.5, 1.5),
         ##(Color, 0.0, 3.0),
         ##(Contrast, 0.5, 1.5),
         ##(Equalize, None, None),
-        (Identity, None, None),
-        (Posterize, 4, 6),
+        # (Identity, None, None),
+        # (Posterize, 4, 6),
         (Rotate, 0, 30),
-        (Sharpness, 0.2, 0.5),
-        (ShearX, 5, 30),
-        (ShearY, 5, 30),
-        (Solarize, 0, 256),
-        (TranslateX, 0.1, 0.2),
-        (TranslateY, 0.1, 0.2),
+        # (Sharpness, 0.2, 0.5),
+        # (ShearX, 5, 30),
+        # (ShearY, 5, 30),
+        # (Solarize, 0, 256),
+        # (TranslateX, 0.1, 0.2),
+        # (TranslateY, 0.1, 0.2),
     ]
     return augs
 
@@ -267,7 +269,7 @@ class RandAugmentMC(object):
         self._ops = random.choices(self._augment_pool, k=self._n)
         self._probs_op = [random.uniform(0, 1) for _ in range(len(self._ops))]
         self._values_op = [
-            np.random.randint(1, self.m) for _ in range(len(self._ops))
+            np.random.randint(1, self._m) for _ in range(len(self._ops))
         ]
         self._cutout = True
         # List of operations that can invert the value
@@ -309,7 +311,8 @@ class RandAugmentMC(object):
                     v = -v
             img_np = img.cpu().detach().numpy()
             # Converts image to uint8 to make all augmentations work.
-            img_np = float32_to_uint8(img_np)
+
+            # img_np = float32_to_uint8(img_np)
             # Applies the selected augmentation.
             img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)

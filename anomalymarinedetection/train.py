@@ -56,6 +56,7 @@ from anomalymarinedetection.utils.gen_weights import gen_weights
 from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
+from anomalymarinedetection.io.file_io import FileIO
 
 
 class TrainMode(Enum):
@@ -84,6 +85,7 @@ def seed_worker(worker_id):
 
 
 def main(options):
+    file_io = FileIO()
     # Reproducibility
     # Limit the number of sources of nondeterministic behavior
     seed_all(0)
@@ -118,7 +120,7 @@ def main(options):
 
     transform_test = transforms.Compose([transforms.ToTensor()])
     class_distr = CLASS_DISTR
-    standardization = transforms.Normalize(BANDS_MEAN, BANDS_STD)
+    standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN.value:
@@ -591,7 +593,7 @@ def main(options):
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 seg_map = seg_map.to(device)
-                """ DEBUGGING
+                # """ DEBUGGING
                 for i in range(img_x.shape[0]):
                     a = img_x[i, 7, :, :]
                     b = seg_map[i, :, :].float()
@@ -599,7 +601,7 @@ def main(options):
                     c = img_u_w[i, 7, :, :]
                     d = img_u_s[i, 7, :, :]
                     print()
-                """
+                # """
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -637,18 +639,18 @@ def main(options):
                     # a = logits_u_w_i[:, :, 0]
                     # b = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    # c = logits_u_w_i[0, :, :]
-                    # d = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    c = logits_u_w_i[0, :, :]
+                    d = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    # e = logits_u_s[i, 0, :, :]
-                    # f = logits_u_s[i, 1, :, :]
+                    e = logits_u_s[i, 0, :, :]
+                    f = logits_u_s[i, 1, :, :]
 
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
 
-                    # cc = img_u_w[i, 4, :, :]
-                    # dd = img_u_s[i, 4, :, :]
-                    # print()
+                    cc = img_u_w[i, 4, :, :]
+                    dd = img_u_s[i, 4, :, :]
+                    print()
                 logits_u_w = torch.from_numpy(tmp)
 
                 logits_u_w = logits_u_w.to(device)
@@ -661,11 +663,21 @@ def main(options):
                 max_probs, targets_u = torch.max(
                     pseudo_label, dim=classes_channel_idx
                 )  # dim=-1)
+
                 mask = max_probs.ge(options["threshold"]).float()
                 # Unsupervised loss
                 Lu = (
                     criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
                 ).mean()
+
+                if Lu > 0:
+                    file_io.append(
+                        "/data/anomaly-marine-detection/anomalymarinedetection/lu.txt",
+                        f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
+                    )
+                print(Lu)
+                print(max_probs.max())
+
                 # Final loss
                 loss = Lx + options["lambda"] * Lu
                 loss.backward()
@@ -876,7 +888,7 @@ if __name__ == "__main__":
     ###### SSL hyperparameters ######
     parser.add_argument(
         "--perc_labeled",
-        default=0.1,
+        default=0.9,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL.value. "
@@ -893,7 +905,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--threshold",
-        default=0.9,
+        default=0.7,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )

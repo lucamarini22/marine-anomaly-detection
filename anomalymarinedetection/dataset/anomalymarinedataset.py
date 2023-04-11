@@ -31,6 +31,8 @@ from anomalymarinedetection.dataset.aggregate_classes_to_super_class import (
     aggregate_classes_to_super_class,
 )
 from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
+from anomalymarinedetection.imageprocessing.float32_to_uint8 import normalize_to_0_1
+from anomalymarinedetection.utils.constants import MIN_ALL_BANDS, MAX_ALL_BANDS
 
 random.seed(0)
 np.random.seed(0)
@@ -102,6 +104,7 @@ class AnomalyMarineDataset(Dataset):
             ):
                 roi_file_path, _ = get_roi_tokens(path, roi)
                 patch = load_patch(roi_file_path)
+                patch = (patch + MIN_ALL_BANDS) / MAX_ALL_BANDS
                 self.X_u.append(patch)
 
         # Labeled dataloader
@@ -198,6 +201,7 @@ class AnomalyMarineDataset(Dataset):
                 self.y.append(seg_map)
                 # Load Patch
                 patch = load_patch(roi_file_path)
+                patch = (patch + MIN_ALL_BANDS) / MAX_ALL_BANDS
                 self.X.append(patch)
 
         self.impute_nan = np.tile(

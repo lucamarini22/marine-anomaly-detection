@@ -14,3 +14,8 @@ def float32_to_uint8(img: np.ndarray) -> np.ndarray:
     """
     img = cv.normalize(img, None, 255, 0, cv.NORM_MINMAX, cv.CV_8U)
     return img
+
+
+def normalize_to_0_1(img: np.ndarray) -> np.ndarray:
+    img = cv.normalize(img, None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+    return img
