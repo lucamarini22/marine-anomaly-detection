@@ -900,7 +900,7 @@ if __name__ == "__main__":
     ###### SSL hyperparameters ######
     parser.add_argument(
         "--perc_labeled",
-        default=0.5,
+        default=0.9,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL.value. "
@@ -911,7 +911,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--mu",
-        default=1,
+        default=9,
         help=("Unlabeled data ratio."),
         type=float,
     )
@@ -934,7 +934,7 @@ if __name__ == "__main__":
         type=int,
         help="Number of epochs to run",  # 45
     )
-    parser.add_argument("--batch", default=2, type=int, help="Batch size")
+    parser.add_argument("--batch", default=5, type=int, help="Batch size")
     parser.add_argument(
         "--resume_from_epoch",
         default=0,
