@@ -236,21 +236,21 @@ def _truncate_float(v: float, num_decimals: int = 2) -> float:
 def _fixmatch_augment_pool():
     augs = [
         # The below four don't work with multispectral images
-        # (AutoContrast, 2, 20),
+        # (AutoContrast, 2, 20), # no
         # The following three do not work when having too many channels
         ##(Brightness, 0.5, 1.5),
         ##(Color, 0.0, 3.0),
         ##(Contrast, 0.5, 1.5),
-        ##(Equalize, None, None),
-        # (Identity, None, None),
-        # (Posterize, 4, 6),
-        (Rotate, 0, 30),
-        # (Sharpness, 0.2, 0.5),
-        # (ShearX, 5, 30),
-        # (ShearY, 5, 30),
-        # (Solarize, 0, 256),
-        # (TranslateX, 0.1, 0.2),
-        # (TranslateY, 0.1, 0.2),
+        # (Equalize, None, None),
+        (Identity, None, None),
+        # (Posterize, 4, 6), # no
+        (Rotate, 0, 30),  # ok
+        (Sharpness, 0.2, 0.5),  # ok
+        (ShearX, 5, 30),  # ok
+        (ShearY, 5, 30),  # ok
+        (Solarize, 0, 256),  # ok
+        (TranslateX, 0.1, 0.2),  # ok
+        (TranslateY, 0.1, 0.2),  # ok
     ]
     return augs
 
@@ -310,9 +310,11 @@ class RandAugmentMC(object):
                     # negative values and if prob of inverting the sign is < 0.5.
                     v = -v
             img_np = img.cpu().detach().numpy()
-            # Converts image to uint8 to make all augmentations work.
+            # if img_np.min() == 0.0 and img_np.max() == 1.0:
+            #    # float32_to_uint8(img_np)
+            #    img_np *= 255
+            #    img_np = img_np.astype(np.uint8)
 
-            # img_np = float32_to_uint8(img_np)
             # Applies the selected augmentation.
             img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)

@@ -105,7 +105,7 @@ class AnomalyMarineDataset(Dataset):
                 roi_file_path, _ = get_roi_tokens(path, roi)
                 patch = load_patch(roi_file_path)
                 min_patch, max_patch = patch.min(), patch.max()
-                patch = normalize_img(patch, min_patch, max_patch)
+                #patch = normalize_img(patch, min_patch, max_patch)
                 self.X_u.append(patch)
 
         # Labeled dataloader
@@ -203,7 +203,7 @@ class AnomalyMarineDataset(Dataset):
                 # Load Patch
                 patch = load_patch(roi_file_path)
                 min_patch, max_patch = patch.min(), patch.max()
-                patch = normalize_img(patch, min_patch, max_patch)
+                #patch = normalize_img(patch, min_patch, max_patch)
                 self.X.append(patch)
 
         self.impute_nan = np.tile(
