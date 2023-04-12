@@ -27,9 +27,14 @@ class WeakAugmentation(object):
                 # ),
             ]
         )
-        self.normalize = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
-        )
+        if mean is not None and std is not None:
+            self.normalize = transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
+            )
+        else:
+            self.normalize = transforms.Compose(
+                [transforms.ToTensor()]
+            )
 
     def __call__(self, x):
         weak = self.weak(x)

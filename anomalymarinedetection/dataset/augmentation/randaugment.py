@@ -243,7 +243,7 @@ def _fixmatch_augment_pool():
         ##(Contrast, 0.5, 1.5),
         ##(Equalize, None, None),
         # (Identity, None, None),
-        # (Posterize, 4, 6),
+        #(Posterize, 4, 6),
         (Rotate, 0, 30),
         # (Sharpness, 0.2, 0.5),
         # (ShearX, 5, 30),
@@ -311,8 +311,10 @@ class RandAugmentMC(object):
                     v = -v
             img_np = img.cpu().detach().numpy()
             # Converts image to uint8 to make all augmentations work.
-
-            # img_np = float32_to_uint8(img_np)
+            if img_np.min() == 0.0 and img_np.max() == 1.0:
+                # float32_to_uint8(img_np)
+                img_np *= 255
+                img_np = img_np.astype(np.uint8)
             # Applies the selected augmentation.
             img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)

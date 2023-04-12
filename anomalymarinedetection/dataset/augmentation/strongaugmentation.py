@@ -8,7 +8,7 @@ from anomalymarinedetection.dataset.augmentation.randaugment import (
 
 
 class StrongAugmentation(object):
-    def __init__(self, mean, std, randaugment: RandAugmentMC):
+    def __init__(self, randaugment: RandAugmentMC): #mean, std, 
         self.strong = transforms.Compose(
             [
                 transforms.ToTensor(),

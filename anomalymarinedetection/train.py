@@ -17,6 +17,7 @@ import torch
 import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 
 from anomalymarinedetection.utils.assets import (
     labels,
@@ -57,6 +58,7 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.io.file_io import FileIO
+from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 
 
 class TrainMode(Enum):
@@ -179,7 +181,9 @@ def main(options):
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SSL.value,
-            transform=WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
+            transform=WeakAugmentation(
+                mean=None, std=None
+            ),  # WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs_u,
@@ -574,9 +578,8 @@ def main(options):
                 randaugment = RandAugmentMC(n=2, m=10)
                 # Get strong transform to apply to both pseudo-label map and
                 # weakly augmented image
-                strong_transform = StrongAugmentation(
-                    mean=BANDS_MEAN, std=BANDS_STD, randaugment=randaugment
-                )
+                strong_transform = StrongAugmentation(randaugment=randaugment)
+                # mean=BANDS_MEAN, std=BANDS_STD, randaugment=randaugment)
                 # Applies strong augmentation on weakly augmented images
                 img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
                 for i in range(img_u_w.shape[0]):
@@ -595,11 +598,11 @@ def main(options):
                 seg_map = seg_map.to(device)
                 # """ DEBUGGING
                 for i in range(img_x.shape[0]):
-                    a = img_x[i, 7, :, :]
+                    a = img_x[i, 8, :, :]
                     b = seg_map[i, :, :].float()
 
-                    c = img_u_w[i, 7, :, :]
-                    d = img_u_s[i, 7, :, :]
+                    c = img_u_w[i, 8, :, :]
+                    d = img_u_s[i, 8, :, :]
                     print()
                 # """
 
@@ -636,14 +639,23 @@ def main(options):
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    # a = logits_u_w_i[:, :, 0]
-                    # b = logits_u_w_i[:, :, 1]
+                    a = logits_u_w_i[:, :, 0]
+                    b = logits_u_w_i[:, :, 1]
+                    min_logits_u_w_i, max_logits_u_w_i = (
+                        logits_u_w_i.min(),
+                        logits_u_w_i.max(),
+                    )
+                    # logits_u_w_i = normalize_img(
+                    #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
+                    # )
+                    c = logits_u_w_i[:, :, 0]
+                    d = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    c = logits_u_w_i[0, :, :]
-                    d = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    e = logits_u_w_i[0, :, :]
+                    f = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    e = logits_u_s[i, 0, :, :]
-                    f = logits_u_s[i, 1, :, :]
+                    g = logits_u_s[i, 0, :, :]
+                    h = logits_u_s[i, 1, :, :]
 
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
@@ -663,7 +675,7 @@ def main(options):
                 max_probs, targets_u = torch.max(
                     pseudo_label, dim=classes_channel_idx
                 )  # dim=-1)
-
+                # aaa = torch.max(logits_u_s, dim=classes_channel_idx)[1]
                 mask = max_probs.ge(options["threshold"]).float()
                 # Unsupervised loss
                 Lu = (
@@ -672,7 +684,7 @@ def main(options):
 
                 if Lu > 0:
                     file_io.append(
-                        "/data/anomaly-marine-detection/anomalymarinedetection/lu.txt",
+                        "./lu.txt",
                         f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
                     )
                 print(Lu)
@@ -888,7 +900,7 @@ if __name__ == "__main__":
     ###### SSL hyperparameters ######
     parser.add_argument(
         "--perc_labeled",
-        default=0.9,
+        default=0.5,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL.value. "
@@ -899,7 +911,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--mu",
-        default=9,
+        default=1,
         help=("Unlabeled data ratio."),
         type=float,
     )
@@ -922,7 +934,7 @@ if __name__ == "__main__":
         type=int,
         help="Number of epochs to run",  # 45
     )
-    parser.add_argument("--batch", default=5, type=int, help="Batch size")
+    parser.add_argument("--batch", default=2, type=int, help="Batch size")
     parser.add_argument(
         "--resume_from_epoch",
         default=0,
