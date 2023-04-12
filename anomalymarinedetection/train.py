@@ -641,10 +641,10 @@ def main(options):
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
                     a = logits_u_w_i[:, :, 0]
                     b = logits_u_w_i[:, :, 1]
-                    min_logits_u_w_i, max_logits_u_w_i = (
-                        logits_u_w_i.min(),
-                        logits_u_w_i.max(),
-                    )
+                    #min_logits_u_w_i, max_logits_u_w_i = (
+                    #    logits_u_w_i.min(),
+                    #    logits_u_w_i.max(),
+                    #)
                     # logits_u_w_i = normalize_img(
                     #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
                     # )
