@@ -15,9 +15,7 @@ from os.path import dirname as up
 
 import torch
 import torchvision.transforms as transforms
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 from anomalymarinedetection.utils.assets import (
     labels,
@@ -59,6 +57,7 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
 )
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
+from anomalymarinedetection.io.tbwriter import TBWriter
 
 
 class TrainMode(Enum):
@@ -106,7 +105,7 @@ def main(options):
         )
 
     # Tensorboard
-    writer = SummaryWriter(
+    tb_writer = TBWriter(
         os.path.join(
             options["log_folder"],
             options["tensorboard"],
@@ -388,7 +387,7 @@ def main(options):
     if options["mode"] == TrainMode.TRAIN.value:
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
-        writer.add_graph(model, image_temp.to(device))
+        tb_writer.add_graph(model, image_temp.to(device))
 
         ###############################################################
         # Start Supervised Training                                   #
@@ -420,7 +419,7 @@ def main(options):
                 optimizer.step()
 
                 # Write running loss
-                writer.add_scalar(
+                tb_writer.add_scalar(
                     "training loss",
                     loss,
                     (epoch - 1) * len(train_loader) + i_board,
@@ -504,7 +503,7 @@ def main(options):
                         os.path.join(model_dir, "model.pth"),
                     )
 
-                    writer.add_scalars(
+                    tb_writer.add_scalars(
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
@@ -512,32 +511,7 @@ def main(options):
                         },
                         epoch,
                     )
-
-                    writer.add_scalar(
-                        "Precision/val macroPrec", acc["macroPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val microPrec", acc["microPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val weightPrec", acc["weightPrec"], epoch
-                    )
-
-                    writer.add_scalar(
-                        "Recall/val macroRec", acc["macroRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val microRec", acc["microRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val weightRec", acc["weightRec"], epoch
-                    )
-
-                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
-
-                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
+                    tb_writer.add_eval_metrics(acc, epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
@@ -703,7 +677,7 @@ def main(options):
                 optimizer.step()
 
                 # Write running loss
-                writer.add_scalar(
+                tb_writer.add_scalar(
                     "training loss",
                     loss,
                     (epoch - 1) * len(labeled_train_loader) + i_board,
@@ -787,7 +761,7 @@ def main(options):
                         os.path.join(model_dir, "model.pth"),
                     )
 
-                    writer.add_scalars(
+                    tb_writer.add_scalars(
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
@@ -798,32 +772,7 @@ def main(options):
                         },
                         epoch,
                     )
-
-                    writer.add_scalar(
-                        "Precision/val macroPrec", acc["macroPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val microPrec", acc["microPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val weightPrec", acc["weightPrec"], epoch
-                    )
-
-                    writer.add_scalar(
-                        "Recall/val macroRec", acc["macroRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val microRec", acc["microRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val weightRec", acc["weightRec"], epoch
-                    )
-
-                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
-
-                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
+                    tb_writer.add_eval_metrics(acc, epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
