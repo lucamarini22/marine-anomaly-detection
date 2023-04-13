@@ -94,13 +94,16 @@ def main(options):
     g = torch.Generator()
     g.manual_seed(0)
 
-    model_name = (
-        options["today_str"]
-        + SEPARATOR
-        + options["mode"]
-        + SEPARATOR
-        + options["aggregate_classes"]
-    )
+    if options["resume_model"] is not None:
+        model_name = options["resume_model"].split("/")[-3]
+    else:
+        model_name = (
+            options["today_str"]
+            + SEPARATOR
+            + options["mode"]
+            + SEPARATOR
+            + options["aggregate_classes"]
+        )
 
     # Tensorboard
     writer = SummaryWriter(
@@ -282,21 +285,21 @@ def main(options):
 
     # Load model from specific epoch to continue the training or start the
     # evaluation
-    if options["resume_from_epoch"] > 1:
-        resume_model_dir = os.path.join(
-            options["checkpoint_path"],
-            model_name,
-            str(options["resume_from_epoch"]),
+    if options["resume_model"] is not None:
+        logging.info(
+            f"Loading model files from folder: {options['resume_model']}"
         )
-        model_file = os.path.join(resume_model_dir, "model.pth")
-        logging.info("Loading model files from folder: %s" % model_file)
 
-        checkpoint = torch.load(model_file, map_location=device)
+        checkpoint = torch.load(options["resume_model"], map_location=device)
         model.load_state_dict(checkpoint)
 
         del checkpoint  # dereference
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+        start = int(options["resume_model"].split("/")[-2]) + 1
+    else:
+        start = 1
 
     if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # clone class_distrib tensor
@@ -378,7 +381,6 @@ def main(options):
         )
 
     # Start training
-    start = options["resume_from_epoch"] + 1
     epochs = options["epochs"]
     eval_every = options["eval_every"]
 
@@ -596,7 +598,7 @@ def main(options):
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 seg_map = seg_map.to(device)
-                # """ DEBUGGING
+                """ DEBUGGING
                 for i in range(img_x.shape[0]):
                     a = img_x[i, 8, :, :]
                     b = seg_map[i, :, :].float()
@@ -604,7 +606,7 @@ def main(options):
                     c = img_u_w[i, 8, :, :]
                     d = img_u_s[i, 8, :, :]
                     print()
-                # """
+                """
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -639,30 +641,30 @@ def main(options):
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    a = logits_u_w_i[:, :, 0]
-                    b = logits_u_w_i[:, :, 1]
-                    #min_logits_u_w_i, max_logits_u_w_i = (
+                    # a = logits_u_w_i[:, :, 0]
+                    # b = logits_u_w_i[:, :, 1]
+                    # min_logits_u_w_i, max_logits_u_w_i = (
                     #    logits_u_w_i.min(),
                     #    logits_u_w_i.max(),
-                    #)
+                    # )
                     # logits_u_w_i = normalize_img(
                     #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
                     # )
-                    c = logits_u_w_i[:, :, 0]
-                    d = logits_u_w_i[:, :, 1]
+                    # c = logits_u_w_i[:, :, 0]
+                    # d = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    e = logits_u_w_i[0, :, :]
-                    f = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    # e = logits_u_w_i[0, :, :]
+                    # f = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    g = logits_u_s[i, 0, :, :]
-                    h = logits_u_s[i, 1, :, :]
+                    # g = logits_u_s[i, 0, :, :]
+                    # h = logits_u_s[i, 1, :, :]
 
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
 
-                    cc = img_u_w[i, 4, :, :]
-                    dd = img_u_s[i, 4, :, :]
-                    print()
+                    # cc = img_u_w[i, 4, :, :]
+                    # dd = img_u_s[i, 4, :, :]
+                    # print()
                 logits_u_w = torch.from_numpy(tmp)
 
                 logits_u_w = logits_u_w.to(device)
@@ -687,8 +689,11 @@ def main(options):
                         "./lu.txt",
                         f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
                     )
-                print(Lu)
-                print(max_probs.max())
+                print("-" * 20)
+                print(f"Lx: {Lx}")
+                print(f"Lu: {Lu}")
+                print(f"Max prob: {max_probs.max()}")
+                print(f"n_pixels: {len(mask[mask == 1])}")
 
                 # Final loss
                 loss = Lx + options["lambda"] * Lu
@@ -900,7 +905,7 @@ if __name__ == "__main__":
     ###### SSL hyperparameters ######
     parser.add_argument(
         "--perc_labeled",
-        default=0.9,
+        default=0.8,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL.value. "
@@ -911,13 +916,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--mu",
-        default=9,
+        default=5,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        default=0.7,
+        default=0.05,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -934,12 +939,12 @@ if __name__ == "__main__":
         type=int,
         help="Number of epochs to run",  # 45
     )
-    parser.add_argument("--batch", default=5, type=int, help="Batch size")
+    parser.add_argument("--batch", default=2, type=int, help="Batch size")
     parser.add_argument(
-        "--resume_from_epoch",
-        default=0,
-        type=int,
-        help="Load model from previous epoch",
+        "--resume_model",
+        default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_12_H_20_37_38_SSL_multi/103/model.pth",
+        type=str,
+        help="Load model from previous epoch. Specify path to the checkpoint.",
     )
 
     parser.add_argument(
