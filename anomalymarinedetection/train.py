@@ -625,9 +625,6 @@ def main(options):
                 logits_x = logits[: options["batch"]]
                 logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
                 del logits
-                # print(randaugment.ops)
-                # print(randaugment.probs_op)
-                # print(randaugment.values_op)
 
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
@@ -922,7 +919,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--threshold",
-        default=0.05,
+        default=0.0,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
