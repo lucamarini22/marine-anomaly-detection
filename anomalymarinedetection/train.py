@@ -1,14 +1,8 @@
-"""
-Initial Implementation: Ioannis Kakogeorgiou
-This modified implementation: Luca Marini
-"""
 import os
-from enum import Enum
 import ast
 import json
 import random
 import logging
-import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
@@ -22,7 +16,6 @@ from anomalymarinedetection.utils.assets import (
     labels_binary,
     labels_multi,
 )
-from anomalymarinedetection.utils.string import get_today_str
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
@@ -56,11 +49,10 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.io.file_io import FileIO
-from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
 from anomalymarinedetection.parse_args import parse_args
-
+from anomalymarinedetection.io.model_handler import load_model, save_model
 
 def seed_all(seed):
     # Pytorch Reproducibility
@@ -118,7 +110,7 @@ def main(options):
     )
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    class_distr = CLASS_DISTR
+    # class_distr = CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
@@ -283,9 +275,7 @@ def main(options):
         logging.info(
             f"Loading model files from folder: {options['resume_model']}"
         )
-
-        checkpoint = torch.load(options["resume_model"], map_location=device)
-        model.load_state_dict(checkpoint)
+        load_model(model, options["resume_model"], device)
 
         del checkpoint  # dereference
         if torch.cuda.is_available():
@@ -294,7 +284,7 @@ def main(options):
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
         start = 1
-
+    """ # Commented because I'm not using class_distr atm
     if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()
@@ -330,6 +320,7 @@ def main(options):
         class_distr[labels_binary.index("Other")] = agg_distr
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[: len(labels_binary)]
+    """
 
     # Weighted Cross Entropy Loss & adam optimizer
     # weight = gen_weights(class_distr, c=options["weight_param"])
@@ -493,10 +484,7 @@ def main(options):
                         str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(model_dir, "model.pth"),
-                    )
+                    save_model(model, os.path.join(model_dir, "model.pth"))
 
                     tb_writer.add_scalars(
                         "Loss per epoch",
@@ -751,10 +739,7 @@ def main(options):
                         str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(model_dir, "model.pth"),
-                    )
+                    save_model(model, os.path.join(model_dir, "model.pth"))
 
                     tb_writer.add_scalars(
                         "Loss per epoch",
@@ -823,7 +808,6 @@ def main(options):
 
 
 if __name__ == "__main__":
-
     options = parse_args()
 
     if options["mode"] == TrainMode.TRAIN_SSL.value:
