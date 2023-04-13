@@ -9,13 +9,9 @@ import numpy as np
 import torch
 import albumentations as A
 from imgaug import augmenters as iaaa
-from skimage.util import img_as_ubyte
-
 
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
-from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
-    float32_to_uint8,
-)
+
 
 logger = logging.getLogger(__name__)
 
