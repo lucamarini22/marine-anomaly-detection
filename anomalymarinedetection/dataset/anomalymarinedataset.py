@@ -12,10 +12,14 @@ from torch.utils.data import Dataset
 from anomalymarinedetection.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
+    cat_mapping_binary_inv,
     cat_mapping_multi,
+    cat_mapping_multi_inv,
     labels,
     labels_binary,
     labels_multi,
+    num_labeled_pixels_binary,
+    num_labeled_pixels_multi
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN
 from anomalymarinedetection.io.load_roi import load_roi
@@ -33,13 +37,11 @@ from anomalymarinedetection.dataset.aggregate_classes_to_super_class import (
 from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
 from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 from anomalymarinedetection.utils.constants import MIN_ALL_BANDS, MAX_ALL_BANDS, MARIDA_SIZE_X, MARIDA_SIZE_Y
+from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
 
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
-
-
-
 
 
 class AnomalyMarineDataset(Dataset):
@@ -51,6 +53,7 @@ class AnomalyMarineDataset(Dataset):
         path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI.value,
         rois: list[str] = None,
+        perc_labeled: float = None
     ):
         """Initializes the anomaly marine detection dataset.
 
@@ -81,11 +84,11 @@ class AnomalyMarineDataset(Dataset):
             else:
                 # Semi-supervised learning case - training labeled data
                 self.ROIs = rois
+            self.categories_counter_dict = {}
 
         elif mode == DataLoaderType.TRAIN_SSL.value:
             # Semi-supervised learning case - training unlabeled data
             self.ROIs = rois
-
         elif mode == DataLoaderType.TEST.value:
             self.ROIs = load_roi(os.path.join(path, "splits", "test_X.txt"))
 
@@ -196,7 +199,30 @@ class AnomalyMarineDataset(Dataset):
                         cat_mapping,
                         cat_mapping_binary,
                     )
+                else:
+                    raise Exception("NotImplemented Category Aggregation value.")
 
+                if perc_labeled is not None:
+                    # Counts the # pixels only if it is the ssl setting
+                    
+                    # Semi-supervised learning case - keeping track of 
+                    # the # pixels for each category
+                    if aggregate_classes == CategoryAggregation.MULTI.value:
+                        cat_mapping_inv = cat_mapping_multi_inv
+                        num_pixels_dict = num_labeled_pixels_multi
+                    elif aggregate_classes == CategoryAggregation.BINARY.value:
+                        cat_mapping_inv = cat_mapping_binary_inv
+                        num_pixels_dict = num_labeled_pixels_binary
+                    else:
+                        raise Exception("NotImplemented Category Aggregation value.")
+                    class_ids, counts = np.unique(seg_map, return_counts=True)
+                    for idx in range(len(class_ids)):
+                        if class_ids[idx] == 0:
+                            class_name = "Not labeled"
+                        else:
+                            class_name = cat_mapping_inv[class_ids[idx]]
+                        self.categories_counter_dict[class_name] = \
+                            self.categories_counter_dict.get(class_name, 0) + counts[idx]
                 # Categories from 1 to 0
                 seg_map = np.copy(seg_map - 1)
                 self.y.append(seg_map)
@@ -205,6 +231,8 @@ class AnomalyMarineDataset(Dataset):
                 min_patch, max_patch = patch.min(), patch.max()
                 patch = normalize_img(patch, min_patch, max_patch)
                 self.X.append(patch)
+            
+            assert_percentage_categories(self.categories_counter_dict, perc_labeled, num_pixels_dict)
 
         self.impute_nan = np.tile(
             BANDS_MEAN, (MARIDA_SIZE_X, MARIDA_SIZE_Y, 1)

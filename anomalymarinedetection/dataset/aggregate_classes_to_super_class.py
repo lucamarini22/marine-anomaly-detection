@@ -30,4 +30,5 @@ def aggregate_classes_to_super_class(
         seg_map[seg_map == cat_mapping_old[class_name]] = cat_mapping_new[
             super_class_name
         ]
+        
     return seg_map

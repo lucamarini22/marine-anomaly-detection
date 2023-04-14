@@ -29,6 +29,8 @@ cat_mapping_binary = {
     "Other": 2,
 }
 
+cat_mapping_binary_inv = {v: k for k, v in cat_mapping_binary.items()}
+
 cat_mapping_multi = {
     "Marine Debris": 1,
     "Algae/Natural Organic Material": 2,
@@ -36,6 +38,8 @@ cat_mapping_multi = {
     "Clouds": 4,
     "Marine Water": 5,
 }
+
+cat_mapping_multi_inv = {v: k for k, v in cat_mapping_multi.items()}
 
 labels = [
     "Marine Debris",
@@ -67,6 +71,43 @@ labels_multi = [
     "Clouds",
     "Marine Water",
 ]
+
+num_labeled_pixels = {
+    "Marine Debris": 3399,
+    "Dense Sargassum": 2797,
+    "Sparse Sargassum": 2357,
+    "Natural Organic Material": 864,
+    "Ship": 5803,
+    "Clouds": 117400,
+    "Marine Water": 129159,
+    "Sediment-Laden Water": 372937,
+    "Foam": 1225,
+    "Turbid Water": 157612,
+    "Shallow Water": 17369,
+    "Waves": 5827,
+    "Cloud Shadows": 11728,
+    "Wakes": 8490,
+    "Mixed Water": 410,
+}
+
+num_labeled_pixels_binary = {
+    "Marine Debris": 3399,
+    "Other": 833978,
+}
+
+num_labeled_pixels_multi = {
+    "Marine Debris": 3399,
+    "Algae/Natural Organic Material": 6018,
+    "Ship": 5803,
+    "Clouds": 117400,
+    "Marine Water": 704757,
+}
+
+assert (
+    sum(num_labeled_pixels.values())
+    == sum(num_labeled_pixels_binary.values())
+    == sum(num_labeled_pixels_multi.values())
+)
 
 roi_mapping = {
     "16PCC": "Motagua (16PCC)",
@@ -130,6 +171,7 @@ texture_mapping = {
 
 # Confidence level of annotation
 conf_mapping = {"High": 1, "Moderate": 2, "Low": 3}
+
 
 def cat_map(x):
     return cat_mapping[x]

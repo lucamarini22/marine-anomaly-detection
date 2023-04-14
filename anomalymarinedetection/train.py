@@ -169,6 +169,7 @@ def main(options):
             aggregate_classes=options["aggregate_classes"],
             rois=ROIs,
             path=options["dataset_path"],
+            perc_labeled=options["perc_labeled"],
         )
         unlabeled_dataset_train = AnomalyMarineDataset(
             DataLoaderType.TRAIN_SSL.value,
