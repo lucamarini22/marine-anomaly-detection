@@ -52,7 +52,12 @@ from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
 from anomalymarinedetection.parse_args import parse_args
-from anomalymarinedetection.io.model_handler import load_model, save_model
+from anomalymarinedetection.io.model_handler import (
+    load_model,
+    save_model,
+    get_model_name,
+)
+
 
 def seed_all(seed):
     # Pytorch Reproducibility
@@ -80,16 +85,13 @@ def main(options):
     g = torch.Generator()
     g.manual_seed(0)
 
-    if options["resume_model"] is not None:
-        model_name = options["resume_model"].split("/")[-3]
-    else:
-        model_name = (
-            options["today_str"]
-            + SEPARATOR
-            + options["mode"]
-            + SEPARATOR
-            + options["aggregate_classes"]
-        )
+    model_name = get_model_name(
+        options["resume_model"],
+        options["mode"],
+        options["aggregate_classes"],
+        options["today_str"],
+        SEPARATOR,
+    )
 
     # Tensorboard
     tb_writer = TBWriter(

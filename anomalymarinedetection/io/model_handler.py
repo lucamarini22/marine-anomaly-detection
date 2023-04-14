@@ -1,7 +1,12 @@
 import torch
 
+from anomalymarinedetection.dataset.categoryaggregation import (
+    CategoryAggregation,
+)
+from anomalymarinedetection.trainmode import TrainMode
 
-def load_model(model, path_model_to_load: str, device):
+
+def load_model(model, path_model_to_load: str, device) -> None:
     """Loads a saved model with its checkpoint.
 
     Args:
@@ -13,7 +18,7 @@ def load_model(model, path_model_to_load: str, device):
     model.load_state_dict(checkpoint)
 
 
-def save_model(model, model_path: str):
+def save_model(model, model_path: str) -> None:
     """Saves a model in a specified path.
 
     Args:
@@ -21,3 +26,29 @@ def save_model(model, model_path: str):
         model_path (str): path where to save the model.
     """
     torch.save(model.state_dict(), model_path)
+
+
+def get_model_name(
+    model_to_load: str,
+    mode: TrainMode,
+    category_agg: CategoryAggregation,
+    today_str: str,
+    separator: str = "_",
+) -> str:
+    """Gets the name of the model.
+
+    Args:
+        model_to_load (str): path to the model to load if any.
+        mode (TrainMode): train mode.
+        category_agg (CategoryAggregation): category aggregation.
+        today_str (str): today time represented as a string.
+        separator (str, optional): separator. Defaults to "_".
+
+    Returns:
+        str: the model name.
+    """
+    if model_to_load is not None:
+        model_name = model_to_load.split("/")[-3]
+    else:
+        model_name = (today_str + separator + mode + separator + category_agg)
+    return model_name
