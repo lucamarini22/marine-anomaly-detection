@@ -37,7 +37,7 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
-root_path = up(up(up(os.path.abspath(__file__))))
+root_path = up(up(os.path.abspath(__file__)))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
@@ -52,7 +52,7 @@ def main(options):
     # Transformations
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    standardization = transforms.Normalize(BANDS_MEAN, BANDS_STD)
+    standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
 
@@ -256,8 +256,8 @@ if __name__ == "__main__":
             "results",
             "trained_models",
             "semi-supervised",
-            "2023_03_28_H_08_33_07_SSL_multi",
-            "3934",
+            "2023_04_12_H_20_37_38_SSL_multi",
+            "100",
             "model.pth",
         ),
         help="Path to Unet pytorch model",
