@@ -188,8 +188,8 @@ def main(options):
                     image[nan_mask] = impute_nan[nan_mask]
 
                     image = transform_test(image)
-
-                    image = standardization(image)
+                    if standardization is not None:
+                        image = standardization(image)
 
                     # Image to Cuda if exist
                     image = image.to(device)
@@ -256,8 +256,8 @@ if __name__ == "__main__":
             "results",
             "trained_models",
             "semi-supervised",
-            "2023_04_12_H_20_37_38_SSL_multi",
-            "100",
+            "2023_04_13_H_10_13_18_SSL_multi",
+            "1024",
             "model.pth",
         ),
         help="Path to Unet pytorch model",
