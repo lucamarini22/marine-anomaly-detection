@@ -180,7 +180,8 @@ def main(options):
 
                 # Update meta to reflect the number of layers
                 meta.update(count=1)
-
+                if os.path.isfile(output_image):
+                    os.remove(output_image)
                 # Write it
                 with rasterio.open(output_image, "w", **meta) as dst:
                     # Preprocessing before prediction
@@ -256,8 +257,8 @@ if __name__ == "__main__":
             "results",
             "trained_models",
             "semi-supervised",
-            "2023_04_13_H_10_13_18_SSL_multi",
-            "1024",
+            "2023_04_13_H_13_18_10_SSL_multi",
+            "649",
             "model.pth",
         ),
         help="Path to Unet pytorch model",

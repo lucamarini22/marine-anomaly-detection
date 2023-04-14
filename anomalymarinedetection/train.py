@@ -606,21 +606,21 @@ def main(options):
                     # logits_u_w_i = normalize_img(
                     #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
                     # )
-                    # c = logits_u_w_i[:, :, 0]
-                    # d = logits_u_w_i[:, :, 1]
+                    c = logits_u_w_i[:, :, 0]
+                    d = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    # e = logits_u_w_i[0, :, :]
-                    # f = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    e = logits_u_w_i[0, :, :]
+                    f = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    # g = logits_u_s[i, 0, :, :]
-                    # h = logits_u_s[i, 1, :, :]
+                    g = logits_u_s[i, 0, :, :]
+                    h = logits_u_s[i, 1, :, :]
 
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
 
                     # cc = img_u_w[i, 4, :, :]
                     # dd = img_u_s[i, 4, :, :]
-                    # print()
+                    print()
                 logits_u_w = torch.from_numpy(tmp)
 
                 logits_u_w = logits_u_w.to(device)
