@@ -15,7 +15,7 @@ from anomalymarinedetection.utils.constants import MARIDA_SIZE_X
 
 logger = logging.getLogger(__name__)
 
-CVAL = 0  # cval=-1, np.power(-10, 13)
+CVAL = -(10**10)  # 0  # cval=-1, np.power(-10, 13)
 NUM_TIMES_CUTOUT = 3
 MIN_PERC_CUTOUT = 0.05
 MAX_PERC_CUTOUT = 0.15
