@@ -41,7 +41,6 @@ class TifIO:
 
         img_rgb = np.concatenate((img_r, img_g, img_b), 2)
         img_rgb = img_rgb / img_rgb.max()
-        print(coords)
         return img_rgb, coords
 
     def tif_2_swir(self, file_path: str) -> np.ndarray:
