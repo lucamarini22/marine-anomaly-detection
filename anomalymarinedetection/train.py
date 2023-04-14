@@ -1,30 +1,21 @@
-"""
-Initial Implementation: Ioannis Kakogeorgiou
-This modified implementation: Luca Marini
-"""
 import os
-from enum import Enum
 import ast
 import json
 import random
 import logging
-import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
 
 import torch
 import torchvision.transforms as transforms
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 from anomalymarinedetection.utils.assets import (
     labels,
     labels_binary,
     labels_multi,
 )
-from anomalymarinedetection.utils.string import get_today_str
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.anomalymarinedataset import (
@@ -58,15 +49,10 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.io.file_io import FileIO
-from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
-
-
-class TrainMode(Enum):
-    TRAIN = "SUP"
-    TRAIN_SSL = "SSL"
-    VAL = "val"
-    TEST = "test"
-
+from anomalymarinedetection.io.tbwriter import TBWriter
+from anomalymarinedetection.trainmode import TrainMode
+from anomalymarinedetection.parse_args import parse_args
+from anomalymarinedetection.io.model_handler import load_model, save_model
 
 def seed_all(seed):
     # Pytorch Reproducibility
@@ -94,16 +80,19 @@ def main(options):
     g = torch.Generator()
     g.manual_seed(0)
 
-    model_name = (
-        options["today_str"]
-        + SEPARATOR
-        + options["mode"]
-        + SEPARATOR
-        + options["aggregate_classes"]
-    )
+    if options["resume_model"] is not None:
+        model_name = options["resume_model"].split("/")[-3]
+    else:
+        model_name = (
+            options["today_str"]
+            + SEPARATOR
+            + options["mode"]
+            + SEPARATOR
+            + options["aggregate_classes"]
+        )
 
     # Tensorboard
-    writer = SummaryWriter(
+    tb_writer = TBWriter(
         os.path.join(
             options["log_folder"],
             options["tensorboard"],
@@ -121,7 +110,7 @@ def main(options):
     )
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    class_distr = CLASS_DISTR
+    # class_distr = CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
@@ -282,22 +271,20 @@ def main(options):
 
     # Load model from specific epoch to continue the training or start the
     # evaluation
-    if options["resume_from_epoch"] > 1:
-        resume_model_dir = os.path.join(
-            options["checkpoint_path"],
-            model_name,
-            str(options["resume_from_epoch"]),
+    if options["resume_model"] is not None:
+        logging.info(
+            f"Loading model files from folder: {options['resume_model']}"
         )
-        model_file = os.path.join(resume_model_dir, "model.pth")
-        logging.info("Loading model files from folder: %s" % model_file)
-
-        checkpoint = torch.load(model_file, map_location=device)
-        model.load_state_dict(checkpoint)
+        load_model(model, options["resume_model"], device)
 
         del checkpoint  # dereference
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+        start = int(options["resume_model"].split("/")[-2]) + 1
+    else:
+        start = 1
+    """ # Commented because I'm not using class_distr atm
     if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()
@@ -333,6 +320,7 @@ def main(options):
         class_distr[labels_binary.index("Other")] = agg_distr
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[: len(labels_binary)]
+    """
 
     # Weighted Cross Entropy Loss & adam optimizer
     # weight = gen_weights(class_distr, c=options["weight_param"])
@@ -378,7 +366,6 @@ def main(options):
         )
 
     # Start training
-    start = options["resume_from_epoch"] + 1
     epochs = options["epochs"]
     eval_every = options["eval_every"]
 
@@ -386,7 +373,7 @@ def main(options):
     if options["mode"] == TrainMode.TRAIN.value:
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
-        writer.add_graph(model, image_temp.to(device))
+        tb_writer.add_graph(model, image_temp.to(device))
 
         ###############################################################
         # Start Supervised Training                                   #
@@ -418,7 +405,7 @@ def main(options):
                 optimizer.step()
 
                 # Write running loss
-                writer.add_scalar(
+                tb_writer.add_scalar(
                     "training loss",
                     loss,
                     (epoch - 1) * len(train_loader) + i_board,
@@ -497,12 +484,9 @@ def main(options):
                         str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(model_dir, "model.pth"),
-                    )
+                    save_model(model, os.path.join(model_dir, "model.pth"))
 
-                    writer.add_scalars(
+                    tb_writer.add_scalars(
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
@@ -510,32 +494,7 @@ def main(options):
                         },
                         epoch,
                     )
-
-                    writer.add_scalar(
-                        "Precision/val macroPrec", acc["macroPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val microPrec", acc["microPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val weightPrec", acc["weightPrec"], epoch
-                    )
-
-                    writer.add_scalar(
-                        "Recall/val macroRec", acc["macroRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val microRec", acc["microRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val weightRec", acc["weightRec"], epoch
-                    )
-
-                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
-
-                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
+                    tb_writer.add_eval_metrics(acc, epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
@@ -596,7 +555,7 @@ def main(options):
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 seg_map = seg_map.to(device)
-                # """ DEBUGGING
+                """ DEBUGGING
                 for i in range(img_x.shape[0]):
                     a = img_x[i, 8, :, :]
                     b = seg_map[i, :, :].float()
@@ -604,7 +563,7 @@ def main(options):
                     c = img_u_w[i, 8, :, :]
                     d = img_u_s[i, 8, :, :]
                     print()
-                # """
+                """
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -623,9 +582,6 @@ def main(options):
                 logits_x = logits[: options["batch"]]
                 logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
                 del logits
-                # print(randaugment.ops)
-                # print(randaugment.probs_op)
-                # print(randaugment.values_op)
 
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
@@ -639,30 +595,30 @@ def main(options):
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    a = logits_u_w_i[:, :, 0]
-                    b = logits_u_w_i[:, :, 1]
-                    #min_logits_u_w_i, max_logits_u_w_i = (
+                    # a = logits_u_w_i[:, :, 0]
+                    # b = logits_u_w_i[:, :, 1]
+                    # min_logits_u_w_i, max_logits_u_w_i = (
                     #    logits_u_w_i.min(),
                     #    logits_u_w_i.max(),
-                    #)
+                    # )
                     # logits_u_w_i = normalize_img(
                     #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
                     # )
-                    c = logits_u_w_i[:, :, 0]
-                    d = logits_u_w_i[:, :, 1]
+                    # c = logits_u_w_i[:, :, 0]
+                    # d = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    e = logits_u_w_i[0, :, :]
-                    f = logits_u_w_i[1, :, :]  # TODO: visually debug these
+                    # e = logits_u_w_i[0, :, :]
+                    # f = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    g = logits_u_s[i, 0, :, :]
-                    h = logits_u_s[i, 1, :, :]
+                    # g = logits_u_s[i, 0, :, :]
+                    # h = logits_u_s[i, 1, :, :]
 
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
 
-                    cc = img_u_w[i, 4, :, :]
-                    dd = img_u_s[i, 4, :, :]
-                    print()
+                    # cc = img_u_w[i, 4, :, :]
+                    # dd = img_u_s[i, 4, :, :]
+                    # print()
                 logits_u_w = torch.from_numpy(tmp)
 
                 logits_u_w = logits_u_w.to(device)
@@ -687,8 +643,11 @@ def main(options):
                         "./lu.txt",
                         f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
                     )
-                print(Lu)
-                print(max_probs.max())
+                print("-" * 20)
+                print(f"Lx: {Lx}")
+                print(f"Lu: {Lu}")
+                print(f"Max prob: {max_probs.max()}")
+                print(f"n_pixels: {len(mask[mask == 1])}")
 
                 # Final loss
                 loss = Lx + options["lambda"] * Lu
@@ -701,7 +660,7 @@ def main(options):
                 optimizer.step()
 
                 # Write running loss
-                writer.add_scalar(
+                tb_writer.add_scalar(
                     "training loss",
                     loss,
                     (epoch - 1) * len(labeled_train_loader) + i_board,
@@ -780,12 +739,9 @@ def main(options):
                         str(epoch),
                     )
                     os.makedirs(model_dir, exist_ok=True)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(model_dir, "model.pth"),
-                    )
+                    save_model(model, os.path.join(model_dir, "model.pth"))
 
-                    writer.add_scalars(
+                    tb_writer.add_scalars(
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
@@ -796,32 +752,7 @@ def main(options):
                         },
                         epoch,
                     )
-
-                    writer.add_scalar(
-                        "Precision/val macroPrec", acc["macroPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val microPrec", acc["microPrec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Precision/val weightPrec", acc["weightPrec"], epoch
-                    )
-
-                    writer.add_scalar(
-                        "Recall/val macroRec", acc["macroRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val microRec", acc["microRec"], epoch
-                    )
-                    writer.add_scalar(
-                        "Recall/val weightRec", acc["weightRec"], epoch
-                    )
-
-                    writer.add_scalar("F1/val macroF1", acc["macroF1"], epoch)
-                    writer.add_scalar("F1/val microF1", acc["microF1"], epoch)
-                    writer.add_scalar("F1/val weightF1", acc["weightF1"], epoch)
-
-                    writer.add_scalar("IoU/val MacroIoU", acc["IoU"], epoch)
+                    tb_writer.add_eval_metrics(acc, epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(sum(test_loss) / test_batches)
@@ -877,167 +808,7 @@ def main(options):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    today_str = get_today_str()
-
-    # Options
-    parser.add_argument(
-        "--aggregate_classes",
-        choices=list(CategoryAggregation),
-        default=CategoryAggregation.MULTI.value,
-        type=str,
-        help="Aggregate classes into:\
-            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
-                binary (Marine Debris and Other); \
-                    no (keep the original 15 classes)",
-    )  # TODO: re-implement the option to keep the 15 original classes
-    parser.add_argument(
-        "--mode",
-        choices=list(TrainMode),
-        default=TrainMode.TRAIN_SSL.value,
-        help="Mode",
-    )
-    ###### SSL hyperparameters ######
-    parser.add_argument(
-        "--perc_labeled",
-        default=0.5,
-        help=(
-            "Percentage of labeled training set. This argument has "
-            "effect only when --mode=TrainMode.TRAIN_SSL.value. "
-            " The percentage of the unlabeled training set will be "
-            " 1 - perc_labeled."
-        ),
-        type=float,
-    )
-    parser.add_argument(
-        "--mu",
-        default=1,
-        help=("Unlabeled data ratio."),
-        type=float,
-    )
-    parser.add_argument(
-        "--threshold",
-        default=0.7,
-        help=("Confidence threshold for pseudo-labels."),
-        type=float,
-    )
-    parser.add_argument(
-        "--lambda",
-        default=1,
-        type=float,
-        help="Coefficient of unlabeled loss.",
-    )
-    ####################################
-    parser.add_argument(
-        "--epochs",
-        default=20000,
-        type=int,
-        help="Number of epochs to run",  # 45
-    )
-    parser.add_argument("--batch", default=2, type=int, help="Batch size")
-    parser.add_argument(
-        "--resume_from_epoch",
-        default=0,
-        type=int,
-        help="Load model from previous epoch",
-    )
-
-    parser.add_argument(
-        "--input_channels", default=11, type=int, help="Number of input bands"
-    )
-
-    parser.add_argument(
-        "--hidden_channels",
-        default=16,
-        type=int,
-        help="Number of hidden features",
-    )
-    parser.add_argument(
-        "--dataset_path", help="path of dataset", default="data"
-    )
-    # parser.add_argument(
-    #    "--weight_param",
-    #    default=1.03,
-    #    type=float,
-    #    help="Weighting parameter for Loss Function",
-    # )
-
-    # Optimization
-    parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
-    parser.add_argument(
-        "--decay", default=0, type=float, help="Learning rate decay"
-    )
-    parser.add_argument(
-        "--reduce_lr_on_plateau",
-        default=0,
-        type=int,
-        help="Reduce learning rate when no increase (0 or 1)",
-    )
-    parser.add_argument(
-        "--lr_steps",
-        default="[40]",
-        type=str,
-        help="Specify the steps that the lr will be reduced",
-    )
-
-    # Evaluation/Checkpointing
-    parser.add_argument(
-        "--checkpoint_path",
-        default=os.path.join(
-            "results",
-            "trained_models",
-        ),
-        help="Folder to save checkpoints into (empty = this folder)",
-    )
-    parser.add_argument(
-        "--eval_every",
-        default=1,
-        type=int,
-        help="How frequently to run evaluation (epochs)",
-    )
-
-    # misc
-    parser.add_argument(
-        "--num_workers",
-        default=1,
-        type=int,
-        help="How many cpus for loading data (0 is the main process)",
-    )
-    parser.add_argument(
-        "--pin_memory",
-        default=False,
-        type=bool,
-        help="Use pinned memory or not",
-    )
-    parser.add_argument(
-        "--prefetch_factor",
-        default=1,
-        type=int,
-        help="Number of sample loaded in advance by each worker",
-    )
-    parser.add_argument(
-        "--persistent_workers",
-        default=True,
-        type=bool,
-        help="This allows to maintain the workers Dataset instances alive.",
-    )
-    parser.add_argument(
-        "--tensorboard",
-        default="tsboard_segm",
-        type=str,
-        help="Name for tensorboard run",
-    )
-    parser.add_argument(
-        "--log_folder",
-        default="logs",
-        type=str,
-        help="Path of the log folder",
-    )
-
-    args = parser.parse_args()
-    args.today_str = today_str
-    # convert to ordinary dict
-    options = vars(args)
+    options = parse_args()
 
     if options["mode"] == TrainMode.TRAIN_SSL.value:
         options["checkpoint_path"] = os.path.join(

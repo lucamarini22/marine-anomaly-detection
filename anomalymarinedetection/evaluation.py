@@ -67,7 +67,7 @@ def main(options):
     test_loader = DataLoader(
         dataset_test, batch_size=options["batch"], shuffle=False
     )
-
+    # TODO: fix this global variable
     global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
     if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
