@@ -340,6 +340,9 @@ def main(options):
         [0.50, 0.125, 0.125, 0.125, 0.125]
     )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
+    if len(alphas) != output_channels:
+        raise Exception(f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}")
+    
     criterion = FocalLoss(
         alpha=alphas.to(device),
         gamma=2.0,
