@@ -71,7 +71,7 @@ labels_multi = [
     "Clouds",
     "Marine Water",
 ]
-
+"""
 num_labeled_pixels = {
     "Marine Debris": 3399,
     "Dense Sargassum": 2797,
@@ -102,11 +102,26 @@ num_labeled_pixels_multi = {
     "Clouds": 117400,
     "Marine Water": 704757,
 }
+"""
+
+num_labeled_pixels_train_multi = {
+    "Not labeled": 45052572,
+    "Ship": 3289,
+    "Marine Water": 356201,
+    "Marine Debris": 1943,
+    "Algae/Natural Organic Material": 2684,
+    "Clouds": 65295,
+}
+
+num_labeled_pixels_train_binary = {
+    "Not labeled": 45052572,
+    "Other": 427469,
+    "Marine Debris": 1943,
+}
 
 assert (
-    sum(num_labeled_pixels.values())
-    == sum(num_labeled_pixels_binary.values())
-    == sum(num_labeled_pixels_multi.values())
+    sum(num_labeled_pixels_train_binary.values())
+    == sum(num_labeled_pixels_train_multi.values())
 )
 
 roi_mapping = {

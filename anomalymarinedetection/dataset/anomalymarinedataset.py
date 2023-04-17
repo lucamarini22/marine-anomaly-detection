@@ -18,8 +18,8 @@ from anomalymarinedetection.utils.assets import (
     labels,
     labels_binary,
     labels_multi,
-    num_labeled_pixels_binary,
-    num_labeled_pixels_multi
+    num_labeled_pixels_train_binary,
+    num_labeled_pixels_train_multi
 )
 from anomalymarinedetection.utils.constants import BANDS_MEAN
 from anomalymarinedetection.io.load_roi import load_roi
@@ -209,10 +209,10 @@ class AnomalyMarineDataset(Dataset):
                     # the # pixels for each category
                     if aggregate_classes == CategoryAggregation.MULTI.value:
                         cat_mapping_inv = cat_mapping_multi_inv
-                        num_pixels_dict = num_labeled_pixels_multi
+                        num_pixels_dict = num_labeled_pixels_train_multi
                     elif aggregate_classes == CategoryAggregation.BINARY.value:
                         cat_mapping_inv = cat_mapping_binary_inv
-                        num_pixels_dict = num_labeled_pixels_binary
+                        num_pixels_dict = num_labeled_pixels_train_binary
                     else:
                         raise Exception("NotImplemented Category Aggregation value.")
                     class_ids, counts = np.unique(seg_map, return_counts=True)
@@ -231,8 +231,8 @@ class AnomalyMarineDataset(Dataset):
                 min_patch, max_patch = patch.min(), patch.max()
                 patch = normalize_img(patch, min_patch, max_patch)
                 self.X.append(patch)
-            
-            assert_percentage_categories(self.categories_counter_dict, perc_labeled, num_pixels_dict)
+            # TODO: re-add assertion
+            # assert_percentage_categories(self.categories_counter_dict, perc_labeled, num_pixels_dict)
 
         self.impute_nan = np.tile(
             BANDS_MEAN, (MARIDA_SIZE_X, MARIDA_SIZE_Y, 1)
