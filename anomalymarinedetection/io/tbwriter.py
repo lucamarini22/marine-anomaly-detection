@@ -3,6 +3,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class TBWriter:
+    """TensorBoard Writer."""
     def __init__(self, path_writer: str) -> None:
         self.writer = SummaryWriter(path_writer)
 
