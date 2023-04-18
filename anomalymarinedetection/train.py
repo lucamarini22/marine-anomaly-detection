@@ -6,6 +6,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from os.path import dirname as up
+import matplotlib.pyplot as plt
 
 import torch
 import torchvision.transforms as transforms
@@ -39,6 +40,8 @@ from anomalymarinedetection.utils.constants import (
     BANDS_MEAN,
     BANDS_STD,
     SEPARATOR,
+    IGNORE_INDEX,
+    PADDING_VAL,
 )
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
@@ -328,7 +331,7 @@ def main(options):
     # weight = gen_weights(class_distr, c=options["weight_param"])
 
     # criterion = torch.nn.CrossEntropyLoss(
-    #    ignore_index=-1, reduction="mean", weight=weight.to(device)
+    #    ignore_index=IGNORE_INDEX, reduction="mean", weight=weight.to(device)
     # )
 
     # TODO: modify class_distr when using ssl
@@ -343,14 +346,14 @@ def main(options):
         alpha=alphas.to(device),
         gamma=2.0,
         reduction="mean",
-        ignore_index=-1,
+        ignore_index=IGNORE_INDEX,
     )
 
     criterion_unsup = FocalLoss(
         alpha=alphas.to(device),
         gamma=2.0,
         reduction="none",
-        # ignore_index=-1
+        ignore_index=IGNORE_INDEX,
     )
 
     optimizer = torch.optim.Adam(
@@ -615,15 +618,56 @@ def main(options):
                     g = logits_u_s[i, 0, :, :]
                     h = logits_u_s[i, 1, :, :]
 
+                    ##trial = np.copy(
+                    # #   logits_u_s[i, 0, :, :].cpu().detach().numpy()
+                    # )
+                    # trial[
+                    #    np.where(
+                    #        logits_u_w[i, 0, :, :].cpu().detach().numpy() == 0
+                    #    )
+                    # ] = 0
+
+                    # t_1 = trial  # [i, 1, :, :]
+
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
 
-                    # cc = img_u_w[i, 4, :, :]
-                    # dd = img_u_s[i, 4, :, :]
-                    print()
-                logits_u_w = torch.from_numpy(tmp)
+                    cc = img_u_w[i, 4, :, :]
+                    dd = img_u_s[i, 4, :, :]
+                    # print()
 
+                logits_u_w = tmp  # torch.from_numpy(tmp)
+
+                # logits_u_w = logits_u_w.cpu().detach().numpy()
+
+                logits_u_s = logits_u_s.cpu().detach().numpy()
+
+                for i in range(logits_u_w.shape[0]):
+                    for j in range(logits_u_w.shape[1]):
+                        logits_u_w_i_j = logits_u_w[
+                            i, j, :, :
+                        ]  # .cpu().detach().numpy()
+                        logits_u_s_i_j = logits_u_s[
+                            i, j, :, :
+                        ]  # .cpu().detach().numpy()
+
+                        a = logits_u_w_i_j
+                        c = logits_u_s_i_j
+                        logits_u_s_i_j[
+                            np.where(logits_u_w_i_j == PADDING_VAL)
+                        ] = IGNORE_INDEX
+                        b = logits_u_s_i_j
+                        logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
+                        logits_u_s[i, j, :, :] = logits_u_s_i_j
+
+                        z = logits_u_s[i, j, :, :]
+                        # print()
+
+                logits_u_w = torch.from_numpy(logits_u_w)
                 logits_u_w = logits_u_w.to(device)
+
+                logits_u_s = torch.from_numpy(logits_u_s)
+                logits_u_s = logits_u_s.to(device)
 
                 pseudo_label = torch.softmax(
                     logits_u_w.detach(), dim=-1
@@ -635,10 +679,35 @@ def main(options):
                 )  # dim=-1)
                 # aaa = torch.max(logits_u_s, dim=classes_channel_idx)[1]
                 mask = max_probs.ge(options["threshold"]).float()
+                padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
+                mask[padding_mask] = 0
+                # targets_u[logits_u_s[:, 0, :, :] == IGNORE_INDEX] = IGNORE_INDEX
+
+                for i in range(logits_u_s.shape[0]):
+                    a = logits_u_s[i, 0, :, :]
+                    b = logits_u_s[i, 1, :, :]
+                    c = logits_u_s[i, 2, :, :]
+                    d = logits_u_s[i, 3, :, :]
+                    e = logits_u_s[i, 4, :, :]
+                    f = targets_u[i, :, :]
+                    # plt.imshow(f.cpu().detach().numpy())
+                    # plt.savefig("results/a.png")
+                    # f = torch.reshape(f, (f.shape[0], f.shape[1], 1))
+                    f[padding_mask[0, :, :]] = PADDING_VAL
+                    # print()
+
                 # Unsupervised loss
-                Lu = (
-                    criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
-                ).mean()
+                # Lu = (
+                #    criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
+                # ).mean()
+
+                loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(
+                    mask
+                )
+                if (loss_u).sum() == 0:
+                    Lu = 0
+                else:
+                    Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
                 if Lu > 0:
                     file_io.append(

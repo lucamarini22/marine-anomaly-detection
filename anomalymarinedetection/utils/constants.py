@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 
+IGNORE_INDEX = -1
+PADDING_VAL = 0
+
 MIN_ALL_BANDS = -0.0144022
 MAX_ALL_BANDS = 1.4251484
 
