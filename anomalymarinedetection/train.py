@@ -5,7 +5,6 @@ import random
 import logging
 import numpy as np
 from tqdm import tqdm
-from os.path import dirname as up
 import matplotlib.pyplot as plt
 
 import torch
@@ -54,7 +53,7 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
-from anomalymarinedetection.parse_args import parse_args
+from anomalymarinedetection.parse_args_train import parse_args_train
 from anomalymarinedetection.io.model_handler import (
     load_model,
     save_model,
@@ -858,7 +857,7 @@ def main(options):
 
 
 if __name__ == "__main__":
-    options = parse_args()
+    options = parse_args_train()
 
     if options["mode"] == TrainMode.TRAIN_SSL.value:
         options["checkpoint_path"] = os.path.join(

@@ -8,7 +8,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 from anomalymarinedetection.trainmode import TrainMode
 
 
-def parse_args():
+def parse_args_train():
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
