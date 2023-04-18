@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class TrainMode(Enum):
-    """Enumerate train modes."""
+    """Enumerates train modes."""
 
     TRAIN = "SUP"
     """Supervised training mode."""
