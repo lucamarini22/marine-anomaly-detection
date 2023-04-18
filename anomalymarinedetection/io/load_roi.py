@@ -8,6 +8,6 @@ def load_roi(path: str) -> np.ndarray:
         path (str): path of the .txt file.
 
     Returns:
-        np.ndarray: Region of interests.
+        np.ndarray: Names of the regions of interests.
     """
     return np.genfromtxt(path, dtype="str")
