@@ -27,8 +27,10 @@ def aggregate_classes_to_super_class(
         np.ndarray: updated image.
     """
     for class_name in classes_names_to_aggregate:
-        seg_map[seg_map == cat_mapping_old[class_name]] = cat_mapping_new[
-            super_class_name
-        ]
-        
+        # fmt: off
+        seg_map[
+            seg_map == cat_mapping_old[class_name]
+        ] = cat_mapping_new[super_class_name]
+        # fmt: on
+
     return seg_map
