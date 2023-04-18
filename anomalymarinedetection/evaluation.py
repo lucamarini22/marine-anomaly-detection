@@ -10,7 +10,7 @@ import rasterio
 import argparse
 import numpy as np
 from tqdm import tqdm
-from os.path import dirname as up
+from os.path import dirname
 
 import torch
 from torch.utils.data import DataLoader
@@ -34,7 +34,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.utils.seed import set_seed
 
-root_path = up(up(os.path.abspath(__file__)))
+root_path = dirname(dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
