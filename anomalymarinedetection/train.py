@@ -228,7 +228,7 @@ def main(options):
             generator=g,
         )
 
-    elif options["mode"] == TrainMode.TEST.value:
+    elif options["mode"] == TrainMode.EVAL.value:
         dataset_test = AnomalyMarineDataset(
             DataLoaderType.TEST.value,
             transform=transform_test,
@@ -810,7 +810,7 @@ def main(options):
 
                 model.train()
     # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == TrainMode.TEST.value:
+    elif options["mode"] == TrainMode.EVAL.value:
         model.eval()
 
         test_loss = []

@@ -2,7 +2,11 @@ from enum import Enum
 
 
 class TrainMode(Enum):
+    """Enumerate train modes."""
+
     TRAIN = "SUP"
+    """Supervised training mode."""
     TRAIN_SSL = "SSL"
-    VAL = "val"
-    TEST = "test"
+    """Semi-Supervised training mode."""
+    EVAL = "eval"
+    """Evaluation mode."""
