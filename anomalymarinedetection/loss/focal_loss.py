@@ -68,6 +68,7 @@ class FocalLoss(nn.Module):
             unignored_mask = y != self.ignore_index
             y = y[unignored_mask]
             if len(y) == 0:
+                # If all pixels are ignored, return loss = 0
                 return torch.tensor(0.0)
             x = x[unignored_mask]
 
