@@ -3,8 +3,6 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
-import torch
-import random
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -80,6 +78,8 @@ class AnomalyMarineDataset(Dataset):
             else:
                 # Semi-supervised learning case - training labeled data
                 self.ROIs = rois
+            # dict that will contain the number of labeled pixels for each 
+            # category
             self.categories_counter_dict = {}
 
         elif mode == DataLoaderType.TRAIN_SSL.value:
