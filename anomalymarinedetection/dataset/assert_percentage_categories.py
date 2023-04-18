@@ -13,7 +13,6 @@ def assert_percentage_categories(
           - key: category name.
           - value: number of labeled pixels of that category in the total set of the data.
     """
-    # TODO: perc_labeled of training set or perc_labeled of all data?
     for class_name in categories_counter_dict:
         if class_name != "Not labeled":
             assert (
