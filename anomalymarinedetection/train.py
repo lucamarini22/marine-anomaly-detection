@@ -59,33 +59,17 @@ from anomalymarinedetection.io.model_handler import (
     save_model,
     get_model_name,
 )
-
-
-def seed_all(seed):
-    # Pytorch Reproducibility
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-
-def seed_worker(worker_id):
-    # DataLoader Workers Reproducibility
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
+from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
 
 
 def main(options):
     file_io = FileIO()
+    
     # Reproducibility
-    # Limit the number of sources of nondeterministic behavior
-    seed_all(0)
+    seed = options["seed"]
+    set_seed(seed)
     g = torch.Generator()
-    g.manual_seed(0)
+    g.manual_seed(seed)
 
     model_name = get_model_name(
         options["resume_model"],
@@ -142,7 +126,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
 
@@ -154,7 +138,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
@@ -199,7 +183,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
             drop_last=True,
         )
@@ -211,7 +195,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
             drop_last=True,
         )
@@ -224,7 +208,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
 
@@ -245,7 +229,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
     else:

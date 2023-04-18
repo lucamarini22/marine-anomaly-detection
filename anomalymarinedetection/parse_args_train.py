@@ -14,6 +14,12 @@ def parse_args_train():
 
     # Options
     parser.add_argument(
+        "--seed",
+        default=0,
+        help=("Seed."),
+        type=int,
+    )
+    parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
         default=CategoryAggregation.MULTI.value,

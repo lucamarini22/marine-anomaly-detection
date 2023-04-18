@@ -39,10 +39,6 @@ from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 from anomalymarinedetection.utils.constants import MIN_ALL_BANDS, MAX_ALL_BANDS, MARIDA_SIZE_X, MARIDA_SIZE_Y
 from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
 
-random.seed(0)
-np.random.seed(0)
-torch.manual_seed(0)
-
 
 class AnomalyMarineDataset(Dataset):
     def __init__(

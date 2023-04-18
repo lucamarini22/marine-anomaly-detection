@@ -32,10 +32,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-
-random.seed(0)
-np.random.seed(0)
-torch.manual_seed(0)
+from anomalymarinedetection.utils.seed import set_seed
 
 root_path = up(up(os.path.abspath(__file__)))
 
@@ -49,6 +46,7 @@ logging.info("*" * 10)
 
 
 def main(options):
+    set_seed(options["seed"])
     # Transformations
 
     transform_test = transforms.Compose([transforms.ToTensor()])
@@ -217,6 +215,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Options
+    parser.add_argument(
+        "--seed",
+        default=0,
+        help=("Seed."),
+        type=int,
+    )
     parser.add_argument(
         "--aggregate_classes",
         choices=[
