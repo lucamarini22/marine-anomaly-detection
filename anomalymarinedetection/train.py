@@ -344,8 +344,10 @@ def main(options):
     )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
     # alphas = alphas / max(alphas)  # normalize
     if len(alphas) != output_channels:
-        raise Exception(f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}")
-    
+        raise Exception(
+            f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}"
+        )
+
     criterion = FocalLoss(
         alpha=alphas.to(device),
         gamma=2.0,
@@ -621,50 +623,28 @@ def main(options):
                     tmp[i, :, :, :] = logits_u_w_i
                     g = logits_u_s[i, 0, :, :]
                     h = logits_u_s[i, 1, :, :]
-
-                    ##trial = np.copy(
-                    # #   logits_u_s[i, 0, :, :].cpu().detach().numpy()
-                    # )
-                    # trial[
-                    #    np.where(
-                    #        logits_u_w[i, 0, :, :].cpu().detach().numpy() == 0
-                    #    )
-                    # ] = 0
-
-                    # t_1 = trial  # [i, 1, :, :]
-
                     # aa = img_x[i, 7, :, :]
                     # bb = seg_map[i, :, :].float()
-
                     cc = img_u_w[i, 4, :, :]
                     dd = img_u_s[i, 4, :, :]
                     # print()
 
-                logits_u_w = tmp  # torch.from_numpy(tmp)
-
-                # logits_u_w = logits_u_w.cpu().detach().numpy()
-
+                logits_u_w = tmp
                 logits_u_s = logits_u_s.cpu().detach().numpy()
 
                 for i in range(logits_u_w.shape[0]):
                     for j in range(logits_u_w.shape[1]):
-                        logits_u_w_i_j = logits_u_w[
-                            i, j, :, :
-                        ]  # .cpu().detach().numpy()
-                        logits_u_s_i_j = logits_u_s[
-                            i, j, :, :
-                        ]  # .cpu().detach().numpy()
-
-                        a = logits_u_w_i_j
-                        c = logits_u_s_i_j
+                        logits_u_w_i_j = logits_u_w[i, j, :, :]
+                        logits_u_s_i_j = logits_u_s[i, j, :, :]
+                        # a = logits_u_w_i_j
+                        # c = logits_u_s_i_j
                         logits_u_s_i_j[
                             np.where(logits_u_w_i_j == PADDING_VAL)
                         ] = IGNORE_INDEX
-                        b = logits_u_s_i_j
+                        # b = logits_u_s_i_j
                         logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
                         logits_u_s[i, j, :, :] = logits_u_s_i_j
-
-                        z = logits_u_s[i, j, :, :]
+                        # z = logits_u_s[i, j, :, :]
                         # print()
 
                 logits_u_w = torch.from_numpy(logits_u_w)
@@ -681,12 +661,12 @@ def main(options):
                 max_probs, targets_u = torch.max(
                     pseudo_label, dim=classes_channel_idx
                 )  # dim=-1)
-                # aaa = torch.max(logits_u_s, dim=classes_channel_idx)[1]
                 mask = max_probs.ge(options["threshold"]).float()
                 padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
                 mask[padding_mask] = 0
                 # targets_u[logits_u_s[:, 0, :, :] == IGNORE_INDEX] = IGNORE_INDEX
 
+                """ # Debug visually
                 for i in range(logits_u_s.shape[0]):
                     a = logits_u_s[i, 0, :, :]
                     b = logits_u_s[i, 1, :, :]
@@ -694,17 +674,13 @@ def main(options):
                     d = logits_u_s[i, 3, :, :]
                     e = logits_u_s[i, 4, :, :]
                     f = targets_u[i, :, :]
-                    # plt.imshow(f.cpu().detach().numpy())
-                    # plt.savefig("results/a.png")
-                    # f = torch.reshape(f, (f.shape[0], f.shape[1], 1))
+                    plt.imshow(f.cpu().detach().numpy())
+                    plt.savefig("results/a.png")
                     f[padding_mask[0, :, :]] = PADDING_VAL
-                    # print()
+                    print()
+                """
 
                 # Unsupervised loss
-                # Lu = (
-                #    criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
-                # ).mean()
-
                 loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(
                     mask
                 )
@@ -729,7 +705,6 @@ def main(options):
                 loss.backward()
 
                 # training_batches += logits_x.shape[0]  # TODO check
-
                 training_loss.append((loss.data).tolist())  # TODO
 
                 optimizer.step()
