@@ -1,7 +1,6 @@
 import os
 import ast
 import json
-import random
 import logging
 import numpy as np
 from tqdm import tqdm
@@ -9,7 +8,6 @@ import matplotlib.pyplot as plt
 
 import torch
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
 
 from anomalymarinedetection.utils.assets import (
     labels,
@@ -18,9 +16,12 @@ from anomalymarinedetection.utils.assets import (
 )
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.dataset.anomalymarinedataset import (
-    AnomalyMarineDataset,
+from anomalymarinedetection.dataset.get_dataloaders import (
+    get_dataloaders_supervised,
+    get_dataloaders_ssl,
+    get_dataloaders_eval,
 )
+
 from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
     WeakAugmentation,
 )
@@ -46,9 +47,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
-    get_labeled_and_unlabeled_rois,
-)
+
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
@@ -103,133 +102,54 @@ def main(options):
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN.value:
-        dataset_train = AnomalyMarineDataset(
-            DataLoaderType.TRAIN_SUP.value,
-            transform=transform_train,
+        train_loader, test_loader = get_dataloaders_supervised(
+            dataset_path=options["dataset_path"],
+            transform_train=transform_train,
+            transform_test=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
-            path=options["dataset_path"],
-        )
-        dataset_test = AnomalyMarineDataset(
-            DataLoaderType.VAL.value,
-            transform=transform_test,
-            standardization=standardization,
-            aggregate_classes=options["aggregate_classes"],
-            path=options["dataset_path"],
-        )
-
-        train_loader = DataLoader(
-            dataset_train,
-            batch_size=options["batch"],
-            shuffle=True,
+            batch=options["batch"],
             num_workers=options["num_workers"],
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
-            generator=g,
-        )
-
-        test_loader = DataLoader(
-            dataset_test,
-            batch_size=options["batch"],
-            shuffle=False,
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
+            seed_worker_fn=set_seed_worker,
             generator=g,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
-        # Split training data into labeled and unlabeled sets
-        ROIs, ROIs_u = get_labeled_and_unlabeled_rois(
-            perc_labeled=options["perc_labeled"], path=options["dataset_path"]
-        )
-
-        # TODO: update (e.g. transformations and other)
-        labeled_dataset_train = AnomalyMarineDataset(
-            DataLoaderType.TRAIN_SUP.value,
-            transform=transform_train,
+        (
+            labeled_train_loader,
+            unlabeled_train_loader,
+            test_loader,
+        ) = get_dataloaders_ssl(
+            dataset_path=options["dataset_path"],
+            transform_train=transform_train,
+            transform_test=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
-            rois=ROIs,
-            path=options["dataset_path"],
+            batch=options["batch"],
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            seed_worker_fn=set_seed_worker,
+            generator=g,
             perc_labeled=options["perc_labeled"],
-        )
-        unlabeled_dataset_train = AnomalyMarineDataset(
-            DataLoaderType.TRAIN_SSL.value,
-            transform=WeakAugmentation(
-                mean=None, std=None
-            ),  # WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
-            standardization=standardization,
-            aggregate_classes=options["aggregate_classes"],
-            rois=ROIs_u,
-            path=options["dataset_path"],
-        )
-        dataset_test = AnomalyMarineDataset(
-            DataLoaderType.VAL.value,
-            transform=transform_test,
-            standardization=standardization,
-            aggregate_classes=options["aggregate_classes"],
-            path=options["dataset_path"],
-        )
-        # TODO: fix batch size for labeled and unlabeled data loaders
-        labeled_train_loader = DataLoader(
-            labeled_dataset_train,
-            batch_size=options["batch"],
-            shuffle=True,
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
-            generator=g,
+            mu=options["mu"],
             drop_last=True,
         )
-        unlabeled_train_loader = DataLoader(
-            unlabeled_dataset_train,
-            batch_size=options["batch"] * options["mu"],
-            shuffle=True,
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
-            generator=g,
-            drop_last=True,
-        )
-
-        test_loader = DataLoader(
-            dataset_test,
-            batch_size=options["batch"],
-            shuffle=False,
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
-            generator=g,
-        )
-
     elif options["mode"] == TrainMode.EVAL.value:
-        dataset_test = AnomalyMarineDataset(
-            DataLoaderType.TEST.value,
-            transform=transform_test,
+        test_loader = get_dataloaders_eval(
+            dataset_path=options["dataset_path"],
+            transform_test=transform_test,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
-            path=options["dataset_path"],
-        )
-
-        test_loader = DataLoader(
-            dataset_test,
-            batch_size=options["batch"],
-            shuffle=False,
+            batch=options["batch"],
             num_workers=options["num_workers"],
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=set_seed_worker,
+            seed_worker_fn=set_seed_worker,
             generator=g,
         )
     else:
