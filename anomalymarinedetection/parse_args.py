@@ -49,7 +49,7 @@ def parse_args():
     )
     parser.add_argument(
         "--threshold",
-        default=0.0,
+        default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -69,7 +69,7 @@ def parse_args():
     parser.add_argument("--batch", default=2, type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
-        default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_12_H_20_37_38_SSL_multi/103/model.pth",
+        default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
         type=str,
         help="Load model from previous epoch. Specify path to the checkpoint.",
     )
