@@ -5,25 +5,16 @@ import logging
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
 import torch
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.utils.assets import (
-    labels,
-    labels_binary,
-    labels_multi,
-)
+from anomalymarinedetection.utils.assets import labels_binary, labels_multi
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl,
     get_dataloaders_eval,
-)
-
-from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
-    WeakAugmentation,
 )
 from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
@@ -47,7 +38,6 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
@@ -58,6 +48,7 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
+from anomalymarinedetection.utils.check_num_alphas import check_num_alphas
 from anomalymarinedetection.dataset.update_class_distribution import (
     update_class_distribution,
 )
@@ -195,32 +186,28 @@ def main(options):
         class_distr = update_class_distribution(
             options["aggregate_classes"], class_distr
         )
-
+    # Coefficients of Focal loss
     alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])  # 1 / class_distr
-
-    if len(alphas) != output_channels:
-        raise Exception(
-            f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}"
-        )
-
+    check_num_alphas(alphas, output_channels)
+    # Init of supervised loss
     criterion = FocalLoss(
         alpha=alphas.to(device),
         gamma=2.0,
         reduction="mean",
         ignore_index=IGNORE_INDEX,
     )
-
-    criterion_unsup = FocalLoss(
-        alpha=alphas.to(device),
-        gamma=2.0,
-        reduction="none",
-        ignore_index=IGNORE_INDEX,
-    )
-
+    if options["mode"] == TrainMode.TRAIN_SSL.value:
+        # Init of unsupervised loss
+        criterion_unsup = FocalLoss(
+            alpha=alphas.to(device),
+            gamma=2.0,
+            reduction="none",
+            ignore_index=IGNORE_INDEX,
+        )
+    # Optimizer
     optimizer = torch.optim.Adam(
         model.parameters(), lr=options["lr"], weight_decay=options["decay"]
     )
-
     # Learning Rate scheduler
     if options["reduce_lr_on_plateau"] == 1:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -230,15 +217,14 @@ def main(options):
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer, options["lr_steps"], gamma=0.1, verbose=True
         )
-
     # Start training
     epochs = options["epochs"]
     eval_every = options["eval_every"]
 
-    # Write model-graph to Tensorboard
     if options["mode"] == TrainMode.TRAIN.value:
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
+        # Write model-graph to Tensorboard
         tb_writer.add_graph(model, image_temp.to(device))
 
         ###############################################################
@@ -283,10 +269,7 @@ def main(options):
                 + str(sum(training_loss) / training_batches)
             )
 
-            ###############################################################
-            # Start Evaluation                                            #
-            ###############################################################
-
+            # Evaluation
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
@@ -328,11 +311,7 @@ def main(options):
 
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
-
-                    ####################################################################
-                    # Save Scores to the .log file and visualize also with tensorboard #
-                    ####################################################################
-
+                    # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
                     logging.info(
@@ -577,10 +556,7 @@ def main(options):
             #    + str(sum(training_loss) / training_batches)
             # )
 
-            ###############################################################
-            # Start Evaluation                                            #
-            ###############################################################
-
+            # Evaluation
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
@@ -622,11 +598,7 @@ def main(options):
 
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
-
-                    ####################################################################
-                    # Save Scores to the .log file and visualize also with tensorboard #
-                    ####################################################################
-
+                    # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
                     logging.info(
@@ -701,10 +673,7 @@ def main(options):
 
             y_predicted = np.asarray(y_predicted)
             y_true = np.asarray(y_true)
-
-            ####################################################################
-            # Save Scores to the .log file                                     #
-            ####################################################################
+            # Save Scores to the .log file
             acc = Evaluation(y_predicted, y_true)
             logging.info("\n")
             logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
