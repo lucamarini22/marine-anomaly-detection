@@ -3,7 +3,6 @@ from torch.utils.data import DataLoader
 from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
 )
-from anomalymarinedetection.trainmode import TrainMode
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
     WeakAugmentation,
