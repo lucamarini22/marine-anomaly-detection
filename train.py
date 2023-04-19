@@ -46,7 +46,6 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.utils.gen_weights import gen_weights
 from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
@@ -60,11 +59,14 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.dataset.update_class_distribution import update_class_distribution
+from anomalymarinedetection.dataset.update_class_distribution import (
+    update_class_distribution,
+)
+
 
 def main(options):
     file_io = FileIO()
-    
+
     # Reproducibility
     seed = options["seed"]
     set_seed(seed)
@@ -98,7 +100,10 @@ def main(options):
     )
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    class_distr = None #CLASS_DISTR
+    # TODO: modify class_distr when using ssl
+    # (because you take a percentage of labels so the class distr of pixels
+    # will change)
+    class_distr = None  # CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
@@ -243,7 +248,6 @@ def main(options):
         raise Exception(
             "The aggregated_classes option should be binary or multi"
         )
-
     # Use gpu or cpu
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -257,7 +261,6 @@ def main(options):
     )
 
     model.to(device)
-
     # Load model from specific epoch to continue the training or start the
     # evaluation
     if options["resume_model"] is not None:
@@ -273,25 +276,14 @@ def main(options):
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
         start = 1
-    
+
     if class_distr is not None:
-        class_distr = update_class_distribution(options["aggregate_classes"], class_distr)
+        class_distr = update_class_distribution(
+            options["aggregate_classes"], class_distr
+        )
 
-    # Weighted Cross Entropy Loss
-    # weight = gen_weights(class_distr, c=options["weight_param"])
+    alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])  # 1 / class_distr
 
-    # criterion = torch.nn.CrossEntropyLoss(
-    #    ignore_index=IGNORE_INDEX, reduction="mean", weight=weight.to(device)
-    # )
-
-    # TODO: modify class_distr when using ssl
-    # (because you take a percentage of labels so the class distr of pixels
-    # will change)
-    # alphas = 1 - class_distr
-    alphas = torch.Tensor(
-        [0.50, 0.125, 0.125, 0.125, 0.125]
-    )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
-    # alphas = alphas / max(alphas)  # normalize
     if len(alphas) != output_channels:
         raise Exception(
             f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}"

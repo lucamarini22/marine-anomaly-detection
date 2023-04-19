@@ -93,13 +93,6 @@ def parse_args_train():
     parser.add_argument(
         "--dataset_path", help="path of dataset", default="data"
     )
-    # parser.add_argument(
-    #    "--weight_param",
-    #    default=1.03,
-    #    type=float,
-    #    help="Weighting parameter for Loss Function",
-    # )
-
     # Optimization
     parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
     parser.add_argument(
