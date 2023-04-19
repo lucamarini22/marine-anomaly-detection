@@ -16,6 +16,7 @@ def load_model(model, path_model_to_load: str, device) -> None:
     """
     checkpoint = torch.load(path_model_to_load, map_location=device)
     model.load_state_dict(checkpoint)
+    del checkpoint
 
 
 def save_model(model, model_path: str) -> None:
