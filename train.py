@@ -92,7 +92,7 @@ def main(options):
     class_distr = None  # CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
     # Construct Data loader
-    if options["mode"] == TrainMode.TRAIN.value:
+    if options["mode"] == TrainMode.TRAIN:
         train_loader, test_loader = get_dataloaders_supervised(
             dataset_path=options["dataset_path"],
             transform_train=transform_train,
@@ -107,7 +107,7 @@ def main(options):
             seed_worker_fn=set_seed_worker,
             generator=g,
         )
-    elif options["mode"] == TrainMode.TRAIN_SSL.value:
+    elif options["mode"] == TrainMode.TRAIN_SSL:
         (
             labeled_train_loader,
             unlabeled_train_loader,
@@ -129,7 +129,7 @@ def main(options):
             mu=options["mu"],
             drop_last=True,
         )
-    elif options["mode"] == TrainMode.EVAL.value:
+    elif options["mode"] == TrainMode.EVAL:
         test_loader = get_dataloaders_eval(
             dataset_path=options["dataset_path"],
             transform_test=transform_test,
@@ -146,9 +146,9 @@ def main(options):
     else:
         raise Exception("The mode option should be train, train_ssl, or test")
 
-    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
+    if options["aggregate_classes"] == CategoryAggregation.MULTI:
         output_channels = len(labels_multi)
-    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
+    elif options["aggregate_classes"] == CategoryAggregation.BINARY:
         output_channels = len(labels_binary)
     else:
         raise Exception(
@@ -196,7 +196,7 @@ def main(options):
         reduction="mean",
         ignore_index=IGNORE_INDEX,
     )
-    if options["mode"] == TrainMode.TRAIN_SSL.value:
+    if options["mode"] == TrainMode.TRAIN_SSL:
         # Init of unsupervised loss
         criterion_unsup = FocalLoss(
             alpha=alphas.to(device),
@@ -221,7 +221,7 @@ def main(options):
     epochs = options["epochs"]
     eval_every = options["eval_every"]
 
-    if options["mode"] == TrainMode.TRAIN.value:
+    if options["mode"] == TrainMode.TRAIN:
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
         # Write model-graph to Tensorboard
@@ -348,7 +348,7 @@ def main(options):
 
                 model.train()
 
-    elif options["mode"] == TrainMode.TRAIN_SSL.value:
+    elif options["mode"] == TrainMode.TRAIN_SSL:
         classes_channel_idx = 1
 
         labeled_iter = iter(labeled_train_loader)
@@ -638,7 +638,7 @@ def main(options):
 
                 model.train()
     # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == TrainMode.EVAL.value:
+    elif options["mode"] == TrainMode.EVAL:
         model.eval()
 
         test_loss = []
@@ -684,11 +684,11 @@ def main(options):
 if __name__ == "__main__":
     options = parse_args_train()
 
-    if options["mode"] == TrainMode.TRAIN_SSL.value:
+    if options["mode"] == TrainMode.TRAIN_SSL:
         options["checkpoint_path"] = os.path.join(
             options["checkpoint_path"], "semi-supervised"
         )
-    elif options["mode"] == TrainMode.TRAIN.value:
+    elif options["mode"] == TrainMode.TRAIN:
         options["checkpoint_path"] = os.path.join(
             options["checkpoint_path"], "supervised"
         )

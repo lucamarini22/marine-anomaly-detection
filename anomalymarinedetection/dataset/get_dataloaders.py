@@ -27,14 +27,14 @@ def get_dataloaders_supervised(
     generator,
 ):
     dataset_train = AnomalyMarineDataset(
-        DataLoaderType.TRAIN_SUP.value,
+        DataLoaderType.TRAIN_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
     )
     dataset_test = AnomalyMarineDataset(
-        DataLoaderType.VAL.value,
+        DataLoaderType.VAL,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -91,7 +91,7 @@ def get_dataloaders_ssl(
 
     # TODO: update (e.g. transformations and other)
     labeled_dataset_train = AnomalyMarineDataset(
-        DataLoaderType.TRAIN_SUP.value,
+        DataLoaderType.TRAIN_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -100,7 +100,7 @@ def get_dataloaders_ssl(
         perc_labeled=perc_labeled,
     )
     unlabeled_dataset_train = AnomalyMarineDataset(
-        DataLoaderType.TRAIN_SSL.value,
+        DataLoaderType.TRAIN_SSL,
         transform=WeakAugmentation(
             mean=None, std=None
         ),  # WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
@@ -110,7 +110,7 @@ def get_dataloaders_ssl(
         path=dataset_path,
     )
     dataset_test = AnomalyMarineDataset(
-        DataLoaderType.VAL.value,
+        DataLoaderType.VAL,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -170,7 +170,7 @@ def get_dataloaders_eval(
     generator,
 ):
     dataset_test = AnomalyMarineDataset(
-        DataLoaderType.TEST.value,
+        DataLoaderType.TEST,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=aggregate_classes,

@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class CategoryAggregation(Enum):
+class CategoryAggregation(IntEnum):
     """Enumerates the different types of aggregation of categories."""
 
-    BINARY = "binary"
+    BINARY = 1
     """Binary category aggregation: 'Marine Debris', 'Other'."""
-    MULTI = "multi"
+    MULTI = 2
     """Multi category aggregation,: 'Marine Debris', 
     'Algae/Natural Organic Material', 'Ship', 'Clouds', 'Marine Water'."""

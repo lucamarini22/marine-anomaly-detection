@@ -13,7 +13,7 @@ from anomalymarinedetection.utils.assets import (
 def update_class_distribution(
     aggregate_classes: CategoryAggregation, class_distr: torch.Tensor
 ):
-    if aggregate_classes == CategoryAggregation.MULTI.value:
+    if aggregate_classes == CategoryAggregation.MULTI:
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()
         # Aggregate Distributions:
@@ -40,7 +40,7 @@ def update_class_distribution(
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[: len(labels_multi)]
 
-    elif aggregate_classes == CategoryAggregation.BINARY.value:
+    elif aggregate_classes == CategoryAggregation.BINARY:
         # Aggregate Distribution of all classes (except Marine Debris) with
         # 'Others'
         agg_distr = sum(class_distr[1:])

@@ -41,11 +41,11 @@ from anomalymarinedetection.dataset.assert_percentage_categories import assert_p
 class AnomalyMarineDataset(Dataset):
     def __init__(
         self,
-        mode: DataLoaderType = DataLoaderType.TRAIN_SUP.value,
+        mode: DataLoaderType = DataLoaderType.TRAIN_SUP,
         transform=None,
         standardization=None,
         path: str = None,
-        aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI.value,
+        aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
         perc_labeled: float = None
     ):
@@ -53,7 +53,7 @@ class AnomalyMarineDataset(Dataset):
 
         Args:
             mode (DataLoaderType, optional): data loader mode.
-              Defaults to DataLoaderType.TRAIN_SUP.value.
+              Defaults to DataLoaderType.TRAIN_SUP.
             transform (_type_, optional): transformation to apply to dataset.
               Defaults to None.
             standardization (_type_, optional): standardization.
@@ -61,7 +61,7 @@ class AnomalyMarineDataset(Dataset):
             path (str, optional): dataset path.
             aggregate_classes (CategoryAggregation, optional): type
               of aggragation of categories.
-              Defaults to CategoryAggregation.MULTI.value.
+              Defaults to CategoryAggregation.MULTI.
             rois (list[str], optional): list of region of interest names to
               consider. Defaults to None.
 
@@ -69,7 +69,7 @@ class AnomalyMarineDataset(Dataset):
             Exception: raises an exception if the specified mode does not
               exist.
         """
-        if mode == DataLoaderType.TRAIN_SUP.value:
+        if mode == DataLoaderType.TRAIN_SUP:
             if rois is None:
                 # Supervised learning case - training labeled data
                 self.ROIs = load_roi(
@@ -82,20 +82,20 @@ class AnomalyMarineDataset(Dataset):
             # category
             self.categories_counter_dict = {}
 
-        elif mode == DataLoaderType.TRAIN_SSL.value:
+        elif mode == DataLoaderType.TRAIN_SSL:
             # Semi-supervised learning case - training unlabeled data
             self.ROIs = rois
-        elif mode == DataLoaderType.TEST.value:
+        elif mode == DataLoaderType.TEST:
             self.ROIs = load_roi(os.path.join(path, "splits", "test_X.txt"))
 
-        elif mode == DataLoaderType.VAL.value:
+        elif mode == DataLoaderType.VAL:
             self.ROIs = load_roi(os.path.join(path, "splits", "val_X.txt"))
 
         else:
             raise Exception("Bad mode.")
 
         # Unlabeled dataloader (only when using semi-supervised learning mode)
-        if mode == DataLoaderType.TRAIN_SSL.value:
+        if mode == DataLoaderType.TRAIN_SSL:
             self.X_u = []
 
             for roi in tqdm(
@@ -113,7 +113,7 @@ class AnomalyMarineDataset(Dataset):
             self.y = []  # Loaded Output masks
 
             for roi in tqdm(
-                self.ROIs, desc="Load labeled " + mode + " set to memory"
+                self.ROIs, desc="Load labeled " + mode.name + " set to memory"
             ):
                 # Gets patch path and its semantic segmentation map path
                 roi_file_path, roi_file_cl_path = get_roi_tokens(path, roi)
@@ -121,7 +121,7 @@ class AnomalyMarineDataset(Dataset):
                 seg_map = load_segmentation_map(roi_file_cl_path)
 
                 # Aggregation
-                if aggregate_classes == CategoryAggregation.MULTI.value:
+                if aggregate_classes == CategoryAggregation.MULTI:
                     # Keep classes: Marine Water, Cloud, Ship, Marine Debris,
                     # Algae/Organic Material.
                     # Note: make sure you aggregate classes according to the
@@ -180,7 +180,7 @@ class AnomalyMarineDataset(Dataset):
                         cat_mapping_multi,
                     )
 
-                elif aggregate_classes == CategoryAggregation.BINARY.value:
+                elif aggregate_classes == CategoryAggregation.BINARY:
                     # Keep classes: Marine Debris and Other
                     # Aggregate all classes (except Marine Debris) to Marine
                     # Water Class
@@ -203,10 +203,10 @@ class AnomalyMarineDataset(Dataset):
                     
                     # Semi-supervised learning case - keeping track of 
                     # the # pixels for each category
-                    if aggregate_classes == CategoryAggregation.MULTI.value:
+                    if aggregate_classes == CategoryAggregation.MULTI:
                         cat_mapping_inv = cat_mapping_multi_inv
                         num_pixels_dict = num_labeled_pixels_train_multi
-                    elif aggregate_classes == CategoryAggregation.BINARY.value:
+                    elif aggregate_classes == CategoryAggregation.BINARY:
                         cat_mapping_inv = cat_mapping_binary_inv
                         num_pixels_dict = num_labeled_pixels_train_binary
                     else:
@@ -236,7 +236,7 @@ class AnomalyMarineDataset(Dataset):
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
-        if mode == DataLoaderType.TRAIN_SSL.value:
+        if mode == DataLoaderType.TRAIN_SSL:
             self.length = len(self.X_u)
         else:
             self.length = len(self.y)
@@ -251,7 +251,7 @@ class AnomalyMarineDataset(Dataset):
 
     def __getitem__(self, index):
         # Unlabeled dataloader
-        if self.mode == DataLoaderType.TRAIN_SSL.value:
+        if self.mode == DataLoaderType.TRAIN_SSL:
             img = self.X_u[index]
             # CxWxH to WxHxC
             img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")

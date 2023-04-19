@@ -22,7 +22,7 @@ def parse_args_train():
     parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
-        default=CategoryAggregation.MULTI.value,
+        default=CategoryAggregation.MULTI,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -32,7 +32,7 @@ def parse_args_train():
     parser.add_argument(
         "--mode",
         choices=list(TrainMode),
-        default=TrainMode.TRAIN_SSL.value,
+        default=TrainMode.TRAIN_SSL,
         help="Mode",
     )
     ###### SSL hyperparameters ######
@@ -41,7 +41,7 @@ def parse_args_train():
         default=0.8,
         help=(
             "Percentage of labeled training set. This argument has "
-            "effect only when --mode=TrainMode.TRAIN_SSL.value. "
+            "effect only when --mode=TrainMode.TRAIN_SSL. "
             " The percentage of the unlabeled training set will be "
             " 1 - perc_labeled."
         ),
@@ -55,7 +55,7 @@ def parse_args_train():
     )
     parser.add_argument(
         "--threshold",
-        default=0.9,
+        default=0.0,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -65,7 +65,6 @@ def parse_args_train():
         type=float,
         help="Coefficient of unlabeled loss.",
     )
-    ####################################
     parser.add_argument(
         "--epochs",
         default=20000,

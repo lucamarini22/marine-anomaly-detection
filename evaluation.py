@@ -52,7 +52,7 @@ def main(options):
     # Construct Data loader
 
     dataset_test = AnomalyMarineDataset(
-        DataLoaderType.TEST.value,
+        DataLoaderType.TEST,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
@@ -63,11 +63,11 @@ def main(options):
         dataset_test, batch_size=options["batch"], shuffle=False
     )
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
-    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
+    if options["aggregate_classes"] == CategoryAggregation.MULTI:
         # Keep Marine Debris, Algae/Natural Organic Material, Ship, Clouds, Marine Water classes
         labels = labels_multi
         output_channels = len(labels_multi)
-    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
+    elif options["aggregate_classes"] == CategoryAggregation.BINARY:
         # Keep only Marine Debris and Others classes
         labels = labels_binary
         output_channels = len(labels_binary)
@@ -218,12 +218,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--aggregate_classes",
-        choices=[
-            CategoryAggregation.MULTI.value,
-            CategoryAggregation.BINARY.value,
-            "no",
-        ],
-        default=CategoryAggregation.MULTI.value,
+        choices=list(CategoryAggregation),
+        default=CategoryAggregation.MULTI,
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
@@ -256,8 +252,8 @@ if __name__ == "__main__":
             "results",
             "trained_models",
             "semi-supervised",
-            "2023_04_18_H_09_29_38_SSL_multi",
-            "743",
+            "2023_04_19_H_10_00_23_SSL_multi",
+            "1",
             "model.pth",
         ),
         help="Path to Unet pytorch model",

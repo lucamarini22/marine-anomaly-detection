@@ -1,12 +1,12 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class TrainMode(Enum):
+class TrainMode(IntEnum):
     """Enumerates train modes."""
 
-    TRAIN = "SUP"
+    TRAIN = 1
     """Supervised training mode."""
-    TRAIN_SSL = "SSL"
+    TRAIN_SSL = 2
     """Semi-Supervised training mode."""
-    EVAL = "eval"
+    EVAL = 3
     """Evaluation mode."""

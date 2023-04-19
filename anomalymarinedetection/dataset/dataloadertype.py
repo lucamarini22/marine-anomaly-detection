@@ -1,13 +1,14 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class DataLoaderType(Enum):
+class DataLoaderType(IntEnum):
     """Enumerates the dataloader types."""
-    TRAIN_SUP = "train_sup"
+
+    TRAIN_SUP = 1
     """Dataloader for labeled training data."""
-    TRAIN_SSL = "train_ssl"
+    TRAIN_SSL = 2
     """Dataloader for unlabeled training data."""
-    VAL = "val"
+    VAL = 3
     """Dataloader for labeled validation data."""
-    TEST = "test"
+    TEST = 4
     """Dataloader for labeled test data."""

@@ -51,5 +51,7 @@ def get_model_name(
     if model_to_load is not None:
         model_name = model_to_load.split("/")[-3]
     else:
-        model_name = (today_str + separator + mode + separator + category_agg)
+        model_name = (
+            today_str + separator + mode.name + separator + category_agg.name
+        )
     return model_name
