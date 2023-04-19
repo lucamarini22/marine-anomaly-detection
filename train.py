@@ -66,7 +66,6 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 
 def main(options):
     file_io = FileIO()
-
     # Reproducibility
     seed = options["seed"]
     set_seed(seed)
@@ -80,7 +79,6 @@ def main(options):
         options["today_str"],
         SEPARATOR,
     )
-
     # Tensorboard
     tb_writer = TBWriter(
         os.path.join(
@@ -89,7 +87,6 @@ def main(options):
             model_name,
         )
     )
-
     # Transformations
     transform_train = transforms.Compose(
         [
@@ -98,14 +95,12 @@ def main(options):
             transforms.RandomHorizontalFlip(),
         ]
     )
-
     transform_test = transforms.Compose([transforms.ToTensor()])
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
     class_distr = None  # CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
-
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN.value:
         dataset_train = AnomalyMarineDataset(
