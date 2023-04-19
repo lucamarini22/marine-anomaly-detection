@@ -3,8 +3,6 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
-import sys
-import random
 import logging
 import rasterio
 import argparse
@@ -24,7 +22,6 @@ from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 from anomalymarinedetection.io.load_roi import load_roi
 from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
 from anomalymarinedetection.utils.assets import (
-    labels,
     labels_binary,
     labels_multi,
 )
@@ -34,7 +31,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.utils.seed import set_seed
 
-root_path = dirname(dirname(os.path.abspath(__file__)))
+root_path = dirname(os.path.abspath(__file__))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
