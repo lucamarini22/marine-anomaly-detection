@@ -3,8 +3,6 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
-import torch
-import random
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -38,10 +36,6 @@ from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
 from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 from anomalymarinedetection.utils.constants import MIN_ALL_BANDS, MAX_ALL_BANDS, MARIDA_SIZE_X, MARIDA_SIZE_Y
 from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
-
-random.seed(0)
-np.random.seed(0)
-torch.manual_seed(0)
 
 
 class AnomalyMarineDataset(Dataset):
@@ -84,6 +78,8 @@ class AnomalyMarineDataset(Dataset):
             else:
                 # Semi-supervised learning case - training labeled data
                 self.ROIs = rois
+            # dict that will contain the number of labeled pixels for each 
+            # category
             self.categories_counter_dict = {}
 
         elif mode == DataLoaderType.TRAIN_SSL.value:

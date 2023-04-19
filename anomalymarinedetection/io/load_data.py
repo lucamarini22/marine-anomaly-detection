@@ -11,7 +11,6 @@ def load_patch(patch_path: str) -> np.ndarray:
     Returns:
         np.ndarray: the patch stored in a numpy array.
     """
-    ds = None
     ds = gdal.Open(patch_path)
     patch = np.copy(ds.ReadAsArray())
     ds = None
@@ -28,7 +27,6 @@ def load_segmentation_map(seg_map_path: str) -> np.ndarray:
     Returns:
         np.ndarray: segmentation map of the patch stored in a numpy array.
     """
-    ds = None
     ds = gdal.Open(seg_map_path)
     seg_map = np.copy(ds.ReadAsArray().astype(np.int64))
     ds = None

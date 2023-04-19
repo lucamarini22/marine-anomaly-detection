@@ -4,13 +4,7 @@ Modified implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import torch
-import numpy as np
 from torch import nn
-import random
-
-random.seed(0)
-np.random.seed(0)
-torch.manual_seed(0)
 
 
 class Down(nn.Module):
@@ -38,7 +32,9 @@ class Up(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+        self.up = nn.Upsample(
+            scale_factor=2, mode="bilinear", align_corners=True
+        )
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
@@ -49,7 +45,6 @@ class Up(nn.Module):
         )
 
     def forward(self, x1, x2):
-
         x1 = self.up(x1)
         x = torch.cat([x2, x1], dim=1)
 
@@ -65,7 +60,9 @@ class UNet(nn.Module):
             nn.Conv2d(input_bands, hidden_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(hidden_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, padding=1),
+            nn.Conv2d(
+                hidden_channels, hidden_channels, kernel_size=3, padding=1
+            ),
             nn.BatchNorm2d(hidden_channels),
             nn.ReLU(inplace=True),
         )

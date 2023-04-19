@@ -22,7 +22,7 @@ class FocalLoss(nn.Module):
         alpha: Optional[Tensor] = None,
         gamma: float = 0.0,
         reduction: str = "mean",
-        ignore_index: int = -100,
+        ignore_index: int = None,
     ):
         """Constructor.
         Args:
@@ -32,12 +32,10 @@ class FocalLoss(nn.Module):
             reduction (str, optional): 'mean', 'sum' or 'none'.
                 Defaults to 'mean'.
             ignore_index (int, optional): class label to ignore.
-                Defaults to -100.
+                Defaults to None.
         """
         if reduction not in ("mean", "sum", "none"):
-            raise ValueError(
-                'Reduction must be one of: "mean", "sum", "none".'
-            )
+            raise ValueError('Reduction must be one of: "mean", "sum", "none".')
 
         super().__init__()
         self.alpha = alpha
@@ -63,11 +61,12 @@ class FocalLoss(nn.Module):
             x = x.permute(0, *range(2, x.ndim), 1).reshape(-1, c)
             # (N, d1, d2, ..., dK) --> (N * d1 * ... * dK,)
             y = y.view(-1)
-        if self.ignore_index != -100:
+        if self.ignore_index != None:
             # consider the parameter ignore_index only when it is different from default
             unignored_mask = y != self.ignore_index
             y = y[unignored_mask]
             if len(y) == 0:
+                # If all pixels are ignored, return loss = 0
                 return torch.tensor(0.0)
             x = x[unignored_mask]
 
@@ -99,7 +98,7 @@ def focal_loss(
     alpha: Optional[Sequence] = None,
     gamma: float = 0.0,
     reduction: str = "mean",
-    ignore_index: int = -100,
+    ignore_index: int = None,
     device="cpu",
     dtype=torch.float32,
 ) -> FocalLoss:
@@ -112,7 +111,7 @@ def focal_loss(
         reduction (str, optional): 'mean', 'sum' or 'none'.
             Defaults to 'mean'.
         ignore_index (int, optional): class label to ignore.
-            Defaults to -100.
+            Defaults to None.
         device (str, optional): Device to move alpha to. Defaults to 'cpu'.
         dtype (torch.dtype, optional): dtype to cast alpha to.
             Defaults to torch.float32.

@@ -5,7 +5,6 @@ import random
 import logging
 import numpy as np
 from tqdm import tqdm
-from os.path import dirname as up
 import matplotlib.pyplot as plt
 
 import torch
@@ -47,46 +46,31 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.utils.gen_weights import gen_weights
 from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
-from anomalymarinedetection.parse_args import parse_args
+from anomalymarinedetection.parse_args_train import parse_args_train
 from anomalymarinedetection.io.model_handler import (
     load_model,
     save_model,
     get_model_name,
 )
-
-
-def seed_all(seed):
-    # Pytorch Reproducibility
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-
-def seed_worker(worker_id):
-    # DataLoader Workers Reproducibility
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
+from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
+from anomalymarinedetection.dataset.update_class_distribution import (
+    update_class_distribution,
+)
 
 
 def main(options):
     file_io = FileIO()
     # Reproducibility
-    # Limit the number of sources of nondeterministic behavior
-    seed_all(0)
+    seed = options["seed"]
+    set_seed(seed)
     g = torch.Generator()
-    g.manual_seed(0)
+    g.manual_seed(seed)
 
     model_name = get_model_name(
         options["resume_model"],
@@ -95,7 +79,6 @@ def main(options):
         options["today_str"],
         SEPARATOR,
     )
-
     # Tensorboard
     tb_writer = TBWriter(
         os.path.join(
@@ -104,7 +87,6 @@ def main(options):
             model_name,
         )
     )
-
     # Transformations
     transform_train = transforms.Compose(
         [
@@ -113,11 +95,12 @@ def main(options):
             transforms.RandomHorizontalFlip(),
         ]
     )
-
     transform_test = transforms.Compose([transforms.ToTensor()])
-    # class_distr = CLASS_DISTR
+    # TODO: modify class_distr when using ssl
+    # (because you take a percentage of labels so the class distr of pixels
+    # will change)
+    class_distr = None  # CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
-
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN.value:
         dataset_train = AnomalyMarineDataset(
@@ -143,7 +126,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
 
@@ -155,7 +138,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL.value:
@@ -200,7 +183,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
             drop_last=True,
         )
@@ -212,7 +195,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
             drop_last=True,
         )
@@ -225,11 +208,11 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
 
-    elif options["mode"] == TrainMode.TEST.value:
+    elif options["mode"] == TrainMode.EVAL.value:
         dataset_test = AnomalyMarineDataset(
             DataLoaderType.TEST.value,
             transform=transform_test,
@@ -246,7 +229,7 @@ def main(options):
             pin_memory=options["pin_memory"],
             prefetch_factor=options["prefetch_factor"],
             persistent_workers=options["persistent_workers"],
-            worker_init_fn=seed_worker,
+            worker_init_fn=set_seed_worker,
             generator=g,
         )
     else:
@@ -260,7 +243,6 @@ def main(options):
         raise Exception(
             "The aggregated_classes option should be binary or multi"
         )
-
     # Use gpu or cpu
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -274,7 +256,6 @@ def main(options):
     )
 
     model.to(device)
-
     # Load model from specific epoch to continue the training or start the
     # evaluation
     if options["resume_model"] is not None:
@@ -289,59 +270,14 @@ def main(options):
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
         start = 1
-    """ # Commented because I'm not using class_distr atm
-    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
-        # clone class_distrib tensor
-        class_distr_tmp = class_distr.detach().clone()
-        # Aggregate Distributions:
-        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water',
-        #   'Waves', 'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
-        agg_distr_water = sum(class_distr_tmp[-9:])
 
-        # Aggregate Distributions:
-        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic
-        #    Material'
-        agg_distr_algae_nom = sum(class_distr_tmp[1:4])
+    if class_distr is not None:
+        class_distr = update_class_distribution(
+            options["aggregate_classes"], class_distr
+        )
 
-        agg_distr_ship = class_distr_tmp[labels.index("Ship")]
-        agg_distr_cloud = class_distr_tmp[labels.index("Clouds")]
+    alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])  # 1 / class_distr
 
-        class_distr[
-            labels_multi.index("Algae/Natural Organic Material")
-        ] = agg_distr_algae_nom
-        class_distr[labels_multi.index("Marine Water")] = agg_distr_water
-
-        class_distr[labels_multi.index("Ship")] = agg_distr_ship
-        class_distr[labels_multi.index("Clouds")] = agg_distr_cloud
-
-        # Drop class distribution of the aggregated classes
-        class_distr = class_distr[: len(labels_multi)]
-
-    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
-        # Aggregate Distribution of all classes (except Marine Debris) with
-        # 'Others'
-        agg_distr = sum(class_distr[1:])
-        # Move the class distrib of Other to the 2nd position
-        class_distr[labels_binary.index("Other")] = agg_distr
-        # Drop class distribution of the aggregated classes
-        class_distr = class_distr[: len(labels_binary)]
-    """
-
-    # Weighted Cross Entropy Loss & adam optimizer
-    # weight = gen_weights(class_distr, c=options["weight_param"])
-
-    # criterion = torch.nn.CrossEntropyLoss(
-    #    ignore_index=IGNORE_INDEX, reduction="mean", weight=weight.to(device)
-    # )
-
-    # TODO: modify class_distr when using ssl
-    # (because you take a percentage of labels so the class distr of pixels
-    # will change)
-    # alphas = 1 - class_distr
-    alphas = torch.Tensor(
-        [0.50, 0.125, 0.125, 0.125, 0.125]
-    )  # 0.25 * torch.ones_like(class_distr)  # 1 / class_distr
-    # alphas = alphas / max(alphas)  # normalize
     if len(alphas) != output_channels:
         raise Exception(
             f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}"
@@ -810,7 +746,7 @@ def main(options):
 
                 model.train()
     # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == TrainMode.TEST.value:
+    elif options["mode"] == TrainMode.EVAL.value:
         model.eval()
 
         test_loss = []
@@ -857,7 +793,7 @@ def main(options):
 
 
 if __name__ == "__main__":
-    options = parse_args()
+    options = parse_args_train()
 
     if options["mode"] == TrainMode.TRAIN_SSL.value:
         options["checkpoint_path"] = os.path.join(

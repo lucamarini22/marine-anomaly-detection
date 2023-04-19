@@ -3,14 +3,12 @@ Initial Implementation: Ioannis Kakogeorgiou
 This modified implementation: Luca Marini
 """
 import os
-import sys
-import random
 import logging
 import rasterio
 import argparse
 import numpy as np
 from tqdm import tqdm
-from os.path import dirname as up
+from os.path import dirname
 
 import torch
 from torch.utils.data import DataLoader
@@ -24,7 +22,6 @@ from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
 from anomalymarinedetection.io.load_roi import load_roi
 from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
 from anomalymarinedetection.utils.assets import (
-    labels,
     labels_binary,
     labels_multi,
 )
@@ -32,12 +29,9 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
+from anomalymarinedetection.utils.seed import set_seed
 
-random.seed(0)
-np.random.seed(0)
-torch.manual_seed(0)
-
-root_path = up(up(os.path.abspath(__file__)))
+root_path = dirname(os.path.abspath(__file__))
 
 logging.basicConfig(
     filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
@@ -49,6 +43,7 @@ logging.info("*" * 10)
 
 
 def main(options):
+    set_seed(options["seed"])
     # Transformations
 
     transform_test = transforms.Compose([transforms.ToTensor()])
@@ -67,8 +62,6 @@ def main(options):
     test_loader = DataLoader(
         dataset_test, batch_size=options["batch"], shuffle=False
     )
-    # TODO: fix this global variable
-    global labels
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
     if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
         # Keep Marine Debris, Algae/Natural Organic Material, Ship, Clouds, Marine Water classes
@@ -217,6 +210,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Options
+    parser.add_argument(
+        "--seed",
+        default=0,
+        help=("Seed."),
+        type=int,
+    )
     parser.add_argument(
         "--aggregate_classes",
         choices=[
