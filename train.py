@@ -60,7 +60,7 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-
+from anomalymarinedetection.dataset.update_class_distribution import update_class_distribution
 
 def main(options):
     file_io = FileIO()
@@ -98,7 +98,7 @@ def main(options):
     )
 
     transform_test = transforms.Compose([transforms.ToTensor()])
-    # class_distr = CLASS_DISTR
+    class_distr = None #CLASS_DISTR
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
 
     # Construct Data loader
@@ -273,45 +273,11 @@ def main(options):
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
         start = 1
-    """ # Commented because I'm not using class_distr atm
-    if options["aggregate_classes"] == CategoryAggregation.MULTI.value:
-        # clone class_distrib tensor
-        class_distr_tmp = class_distr.detach().clone()
-        # Aggregate Distributions:
-        # - 'Sediment-Laden Water', 'Foam','Turbid Water', 'Shallow Water',
-        #   'Waves', 'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
-        agg_distr_water = sum(class_distr_tmp[-9:])
+    
+    if class_distr is not None:
+        class_distr = update_class_distribution(options["aggregate_classes"], class_distr)
 
-        # Aggregate Distributions:
-        # - 'Dense Sargassum','Sparse Sargassum' with 'Natural Organic
-        #    Material'
-        agg_distr_algae_nom = sum(class_distr_tmp[1:4])
-
-        agg_distr_ship = class_distr_tmp[labels.index("Ship")]
-        agg_distr_cloud = class_distr_tmp[labels.index("Clouds")]
-
-        class_distr[
-            labels_multi.index("Algae/Natural Organic Material")
-        ] = agg_distr_algae_nom
-        class_distr[labels_multi.index("Marine Water")] = agg_distr_water
-
-        class_distr[labels_multi.index("Ship")] = agg_distr_ship
-        class_distr[labels_multi.index("Clouds")] = agg_distr_cloud
-
-        # Drop class distribution of the aggregated classes
-        class_distr = class_distr[: len(labels_multi)]
-
-    elif options["aggregate_classes"] == CategoryAggregation.BINARY.value:
-        # Aggregate Distribution of all classes (except Marine Debris) with
-        # 'Others'
-        agg_distr = sum(class_distr[1:])
-        # Move the class distrib of Other to the 2nd position
-        class_distr[labels_binary.index("Other")] = agg_distr
-        # Drop class distribution of the aggregated classes
-        class_distr = class_distr[: len(labels_binary)]
-    """
-
-    # Weighted Cross Entropy Loss & adam optimizer
+    # Weighted Cross Entropy Loss
     # weight = gen_weights(class_distr, c=options["weight_param"])
 
     # criterion = torch.nn.CrossEntropyLoss(
