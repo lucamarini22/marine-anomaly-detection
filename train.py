@@ -4,7 +4,6 @@ import json
 import logging
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
 
@@ -32,9 +31,6 @@ from anomalymarinedetection.utils.constants import (
     SEPARATOR,
     IGNORE_INDEX,
     PADDING_VAL,
-)
-from anomalymarinedetection.dataset.categoryaggregation import (
-    CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.io.file_io import FileIO
