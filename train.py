@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.utils.assets import labels_binary, labels_multi
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.get_dataloaders import (
@@ -48,9 +47,12 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.utils.check_num_alphas import check_num_alphas
+from anomalymarinedetection.train_utils.check_num_alphas import check_num_alphas
 from anomalymarinedetection.dataset.update_class_distribution import (
     update_class_distribution,
+)
+from anomalymarinedetection.train_utils.get_output_channels import (
+    get_output_channels,
 )
 
 
@@ -146,14 +148,8 @@ def main(options):
     else:
         raise Exception("The mode option should be train, train_ssl, or test")
 
-    if options["aggregate_classes"] == CategoryAggregation.MULTI:
-        output_channels = len(labels_multi)
-    elif options["aggregate_classes"] == CategoryAggregation.BINARY:
-        output_channels = len(labels_binary)
-    else:
-        raise Exception(
-            "The aggregated_classes option should be binary or multi"
-        )
+    output_channels = get_output_channels(options["aggregate_classes"])
+
     # Use gpu or cpu
     if torch.cuda.is_available():
         device = torch.device("cuda")
