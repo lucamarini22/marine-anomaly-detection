@@ -353,7 +353,6 @@ def main(options):
 
         labeled_iter = iter(labeled_train_loader)
         unlabeled_iter = iter(unlabeled_train_loader)
-
         ###############################################################
         # Start SEMI-SUPERVISED LEARNING Training                     #
         ###############################################################
@@ -367,11 +366,13 @@ def main(options):
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
                 try:
+                    # Load labeled batch
                     img_x, seg_map = next(labeled_iter)
                 except:
                     labeled_iter = iter(labeled_train_loader)
                     img_x, seg_map = next(labeled_iter)
                 try:
+                    # Load unlabeled batch of weakly augmented images
                     img_u_w = next(unlabeled_iter)
                 except:
                     unlabeled_iter = iter(unlabeled_train_loader)
@@ -392,14 +393,10 @@ def main(options):
                     img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
                     # Strongly-augmented image
                     img_u_s_i = strong_transform(img_u_w_i)
-                    # a = img_u_w_i[:, :, 10]
-                    # b = img_u_w_i[:, :, 9]
-
-                    # c = img_u_s_i[10, :, :]
-                    # d = img_u_s_i[9, :, :]
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 seg_map = seg_map.to(device)
+
                 """ DEBUGGING
                 for i in range(img_x.shape[0]):
                     a = img_x[i, 8, :, :]
@@ -437,49 +434,30 @@ def main(options):
                 # Applies strong augmentation to pseudo label map
                 tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
                 for i in range(logits_u_w.shape[0]):
+                    # When you debug visually: check that the strongly augmented 
+                    # weak images correspond to the strongly augmented images 
+                    # (e.g. the same ship should be at the same position in both 
+                    # images).
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    # a = logits_u_w_i[:, :, 0]
-                    # b = logits_u_w_i[:, :, 1]
-                    # min_logits_u_w_i, max_logits_u_w_i = (
-                    #    logits_u_w_i.min(),
-                    #    logits_u_w_i.max(),
-                    # )
-                    # logits_u_w_i = normalize_img(
-                    #    logits_u_w_i, min_logits_u_w_i, max_logits_u_w_i
-                    # )
-                    # c = logits_u_w_i[:, :, 0]
-                    # d = logits_u_w_i[:, :, 1]
                     logits_u_w_i = strong_transform(logits_u_w_i)
-                    # e = logits_u_w_i[0, :, :]
-                    # f = logits_u_w_i[1, :, :]  # TODO: visually debug these
                     tmp[i, :, :, :] = logits_u_w_i
-                    # g = logits_u_s[i, 0, :, :]
-                    # h = logits_u_s[i, 1, :, :]
-                    # aa = img_x[i, 7, :, :]
-                    # bb = seg_map[i, :, :].float()
-                    # cc = img_u_w[i, 4, :, :]
-                    # dd = img_u_s[i, 4, :, :]
-                    # print()
 
                 logits_u_w = tmp
                 logits_u_s = logits_u_s.cpu().detach().numpy()
 
+                # Sets all pixels that were added due to padding to a
+                # constant value to later ignore them when computing the loss
                 for i in range(logits_u_w.shape[0]):
                     for j in range(logits_u_w.shape[1]):
                         logits_u_w_i_j = logits_u_w[i, j, :, :]
                         logits_u_s_i_j = logits_u_s[i, j, :, :]
-                        # a = logits_u_w_i_j
-                        # c = logits_u_s_i_j
                         logits_u_s_i_j[
                             np.where(logits_u_w_i_j == PADDING_VAL)
                         ] = IGNORE_INDEX
-                        # b = logits_u_s_i_j
                         logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
                         logits_u_s[i, j, :, :] = logits_u_s_i_j
-                        # z = logits_u_s[i, j, :, :]
-                        # print()
 
                 logits_u_w = torch.from_numpy(logits_u_w)
                 logits_u_w = logits_u_w.to(device)
@@ -487,20 +465,22 @@ def main(options):
                 logits_u_s = torch.from_numpy(logits_u_s)
                 logits_u_s = logits_u_s.to(device)
 
-                pseudo_label = torch.softmax(
-                    logits_u_w.detach(), dim=-1
-                )  # / args.T, dim=-1) -> to add temperature
-                # target_u contains the idx of the class having the highest
-                # probability (for all pixels and for all images in the batch)
+                pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
+                # target_u is the segmentation map containing the idx of the
+                # class having the highest probability (for all pixels and for
+                # all images in the batch)
                 max_probs, targets_u = torch.max(
                     pseudo_label, dim=classes_channel_idx
-                )  # dim=-1)
+                )
+                # Mask to ignore all pixels whose "confidence" is lower than
+                # the specified threshold
                 mask = max_probs.ge(options["threshold"]).float()
+                # Mask to ignore all padding pixels
                 padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
+                # Merge the two masks
                 mask[padding_mask] = 0
-                # targets_u[logits_u_s[:, 0, :, :] == IGNORE_INDEX] = IGNORE_INDEX
 
-                """ # Debug visually
+                # Debug visually
                 for i in range(logits_u_s.shape[0]):
                     a = logits_u_s[i, 0, :, :]
                     b = logits_u_s[i, 1, :, :]
@@ -508,13 +488,15 @@ def main(options):
                     d = logits_u_s[i, 3, :, :]
                     e = logits_u_s[i, 4, :, :]
                     f = targets_u[i, :, :]
+                    f[padding_mask[0, :, :]] = PADDING_VAL
+                    zzz = padding_mask.float()[0, :, :]
+                    final_mask = mask[0, :, :]
                     plt.imshow(f.cpu().detach().numpy())
                     plt.savefig("results/a.png")
-                    f[padding_mask[0, :, :]] = PADDING_VAL
                     print()
-                """
 
                 # Unsupervised loss
+                # Multiplies the loss by the mask to ignore pixels
                 loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(
                     mask
                 )
