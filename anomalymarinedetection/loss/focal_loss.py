@@ -61,7 +61,7 @@ class FocalLoss(nn.Module):
             x = x.permute(0, *range(2, x.ndim), 1).reshape(-1, c)
             # (N, d1, d2, ..., dK) --> (N * d1 * ... * dK,)
             y = y.view(-1)
-        if self.ignore_index != None:
+        if self.ignore_index is not None:
             # consider the parameter ignore_index only when it is different from default
             unignored_mask = y != self.ignore_index
             y = y[unignored_mask]
