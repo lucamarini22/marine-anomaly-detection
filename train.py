@@ -183,7 +183,7 @@ def main(options):
             options["aggregate_classes"], class_distr
         )
     # Coefficients of Focal loss
-    alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])  # 1 / class_distr
+    alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])
     check_num_alphas(alphas, output_channels)
     # Init of supervised loss
     criterion = FocalLoss(
@@ -391,7 +391,6 @@ def main(options):
                     img_u_s_i = strong_transform(img_u_w_i)
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
-                seg_map = seg_map.to(device)
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -403,7 +402,7 @@ def main(options):
                 # img_u_s = img_u_s.to(device)
 
                 inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
-
+                seg_map = seg_map.to(device)
                 optimizer.zero_grad()
 
                 logits = model(inputs)
