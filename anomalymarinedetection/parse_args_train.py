@@ -19,6 +19,7 @@ def parse_args_train():
         help=("Seed."),
         type=int,
     )
+    # Aggregation of categories
     parser.add_argument(
         "--aggregate_classes",
         choices=list(CategoryAggregation),
@@ -28,14 +29,15 @@ def parse_args_train():
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
                 binary (Marine Debris and Other); \
                     no (keep the original 15 classes)",
-    )  # TODO: re-implement the option to keep the 15 original classes
+    )
+    # Training mode
     parser.add_argument(
         "--mode",
         choices=list(TrainMode),
         default=TrainMode.TRAIN_SSL,
         help="Mode",
     )
-    ###### SSL hyperparameters ######
+    # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
         default=0.8,
@@ -49,13 +51,13 @@ def parse_args_train():
     )
     parser.add_argument(
         "--mu",
-        default=9,
+        default=5,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        default=0.7,
+        default=0.0,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -65,24 +67,23 @@ def parse_args_train():
         type=float,
         help="Coefficient of unlabeled loss.",
     )
+    # Training hyperparameters
     parser.add_argument(
         "--epochs",
         default=20000,
         type=int,
-        help="Number of epochs to run",  # 45
+        help="Number of epochs to run",
     )
-    parser.add_argument("--batch", default=5, type=int, help="Batch size")
+    parser.add_argument("--batch", default=2, type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
         type=str,
         help="Load model from previous epoch. Specify path to the checkpoint.",
     )
-
     parser.add_argument(
         "--input_channels", default=11, type=int, help="Number of input bands"
     )
-
     parser.add_argument(
         "--hidden_channels",
         default=16,

@@ -488,10 +488,7 @@ def main(options):
                 )
                 i_board += 1
 
-            # logging.info(
-            #    "Training loss was: "
-            #    + str(sum(training_loss) / training_batches)
-            # )
+            logging.info("Training loss was: " + str(np.mean(training_loss)))
 
             # Evaluation
             if epoch % eval_every == 0 or epoch == 1:
@@ -559,10 +556,7 @@ def main(options):
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
-                            "Train loss": np.mean(
-                                training_loss
-                            ),  # sum(training_loss)
-                            #        / training_batches,
+                            "Train loss": np.mean(training_loss),
                         },
                         epoch,
                     )
