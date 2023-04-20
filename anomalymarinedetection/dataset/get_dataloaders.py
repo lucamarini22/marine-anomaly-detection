@@ -103,7 +103,7 @@ def get_dataloaders_ssl(
         DataLoaderType.TRAIN_SSL,
         transform=WeakAugmentation(
             mean=None, std=None
-        ),  # WeakAugmentation(mean=BANDS_MEAN, std=BANDS_STD),
+        ),
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs_u,

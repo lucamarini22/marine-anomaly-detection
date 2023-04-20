@@ -17,24 +17,17 @@ class WeakAugmentation(object):
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
                 DiscreteRandomRotation([-90, 90])
-                # transforms.RandomCrop(
-                #    size=(
-                #        MARIDA_SIZE_X,
-                #        MARIDA_SIZE_Y,
-                #    ),
-                #    padding=int(MARIDA_SIZE_X * 0.125),
-                #    padding_mode="reflect",
-                # ),
             ]
         )
         if mean is not None and std is not None:
             self.normalize = transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=mean, std=std),
+                ]
             )
         else:
-            self.normalize = transforms.Compose(
-                [transforms.ToTensor()]
-            )
+            self.normalize = transforms.Compose([transforms.ToTensor()])
 
     def __call__(self, x):
         weak = self.weak(x)

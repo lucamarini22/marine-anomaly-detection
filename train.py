@@ -382,7 +382,8 @@ def main(options):
                 randaugment = RandAugmentMC(n=2, m=10)
                 # Get strong transform to apply to both pseudo-label map and
                 # weakly augmented image
-                strong_transform = StrongAugmentation(randaugment=randaugment)
+                strong_transform = StrongAugmentation(randaugment=randaugment, 
+                                                      mean=None, std=None)
                 # mean=BANDS_MEAN, std=BANDS_STD, randaugment=randaugment)
                 # Applies strong augmentation on weakly augmented images
                 img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
