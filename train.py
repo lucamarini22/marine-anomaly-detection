@@ -378,7 +378,7 @@ def main(options):
                     unlabeled_iter = iter(unlabeled_train_loader)
                     img_u_w = next(unlabeled_iter)
 
-                # Initialize RandAugment with n random augmentations.
+                # Initializes RandAugment with n random augmentations.
                 # So, every batch will have different random augmentations.
                 randaugment = RandAugmentMC(n=2, m=10)
                 # Get strong transform to apply to both pseudo-label map and
@@ -396,16 +396,6 @@ def main(options):
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
                 seg_map = seg_map.to(device)
-
-                """ DEBUGGING
-                for i in range(img_x.shape[0]):
-                    a = img_x[i, 8, :, :]
-                    b = seg_map[i, :, :].float()
-
-                    c = img_u_w[i, 8, :, :]
-                    d = img_u_s[i, 8, :, :]
-                    print()
-                """
 
                 # TODO: when deploying code to satellite hw, see if it's
                 # faster to put everything to device and make one single
@@ -434,9 +424,9 @@ def main(options):
                 # Applies strong augmentation to pseudo label map
                 tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
                 for i in range(logits_u_w.shape[0]):
-                    # When you debug visually: check that the strongly augmented 
-                    # weak images correspond to the strongly augmented images 
-                    # (e.g. the same ship should be at the same position in both 
+                    # When you debug visually: check that the strongly augmented
+                    # weak images correspond to the strongly augmented images
+                    # (e.g. the same ship should be at the same position in both
                     # images).
                     logits_u_w_i = logits_u_w[i, :, :, :]
                     logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
@@ -479,21 +469,6 @@ def main(options):
                 padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
                 # Merge the two masks
                 mask[padding_mask] = 0
-
-                # Debug visually
-                for i in range(logits_u_s.shape[0]):
-                    a = logits_u_s[i, 0, :, :]
-                    b = logits_u_s[i, 1, :, :]
-                    c = logits_u_s[i, 2, :, :]
-                    d = logits_u_s[i, 3, :, :]
-                    e = logits_u_s[i, 4, :, :]
-                    f = targets_u[i, :, :]
-                    f[padding_mask[0, :, :]] = PADDING_VAL
-                    zzz = padding_mask.float()[0, :, :]
-                    final_mask = mask[0, :, :]
-                    plt.imshow(f.cpu().detach().numpy())
-                    plt.savefig("results/a.png")
-                    print()
 
                 # Unsupervised loss
                 # Multiplies the loss by the mask to ignore pixels
