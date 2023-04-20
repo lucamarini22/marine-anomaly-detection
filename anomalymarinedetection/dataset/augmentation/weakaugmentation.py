@@ -8,7 +8,6 @@ from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 
 
-# TODO: add other transformations?
 class WeakAugmentation(object):
     def __init__(self, mean, std):
         self.weak = transforms.Compose(
@@ -16,7 +15,7 @@ class WeakAugmentation(object):
                 transforms.ToTensor(),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
-                DiscreteRandomRotation([-90, 90])
+                DiscreteRandomRotation([-90, 90]),
             ]
         )
         if mean is not None and std is not None:
