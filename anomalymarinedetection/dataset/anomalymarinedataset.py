@@ -1,7 +1,3 @@
-"""
-Initial Implementation: Ioannis Kakogeorgiou
-This modified implementation: Luca Marini
-"""
 import os
 import numpy as np
 from tqdm import tqdm
