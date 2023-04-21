@@ -15,7 +15,16 @@ def assert_percentage_categories(
     """
     for class_name in categories_counter_dict:
         if class_name != "Not labeled":
-            assert (
-                categories_counter_dict[class_name]
-                >= perc_labeled * num_pixels_dict[class_name]
+            min_perc_labeled_category = (
+                perc_labeled * num_pixels_dict[class_name]
             )
+            if not (
+                categories_counter_dict[class_name] >= min_perc_labeled_category
+            ):
+                raise AssertionError(
+                    f"Category: {class_name} has {categories_counter_dict[class_name]} labeled pixels, "
+                    + f"but it should have {min_perc_labeled_category} labeled pixels, which corresponds "
+                    + f"to the {perc_labeled * 100}% of {num_pixels_dict[class_name]}, which is the total "
+                    + "number of labeled pixels of that category. "
+                    + f"Try to change the split of the training, validation, and test sets."
+                )
