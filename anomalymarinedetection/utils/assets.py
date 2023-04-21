@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Initial Pytorch Implementation: Ioannis Kakogeorgiou (https://github.com/marine-debris/marine-debris.github.io)
-Modified implementation: Luca Marini
-Description: assets.py includes the appropriate mappings.
-"""
-import numpy as np
-
 cat_mapping = {
     "Marine Debris": 1,
     "Dense Sargassum": 2,
@@ -71,38 +63,6 @@ labels_multi = [
     "Clouds",
     "Marine Water",
 ]
-"""
-num_labeled_pixels = {
-    "Marine Debris": 3399,
-    "Dense Sargassum": 2797,
-    "Sparse Sargassum": 2357,
-    "Natural Organic Material": 864,
-    "Ship": 5803,
-    "Clouds": 117400,
-    "Marine Water": 129159,
-    "Sediment-Laden Water": 372937,
-    "Foam": 1225,
-    "Turbid Water": 157612,
-    "Shallow Water": 17369,
-    "Waves": 5827,
-    "Cloud Shadows": 11728,
-    "Wakes": 8490,
-    "Mixed Water": 410,
-}
-
-num_labeled_pixels_binary = {
-    "Marine Debris": 3399,
-    "Other": 833978,
-}
-
-num_labeled_pixels_multi = {
-    "Marine Debris": 3399,
-    "Algae/Natural Organic Material": 6018,
-    "Ship": 5803,
-    "Clouds": 117400,
-    "Marine Water": 704757,
-}
-"""
 
 num_labeled_pixels_train_multi = {
     "Not labeled": 45052572,
@@ -159,37 +119,3 @@ s2_mapping = {
     "Confidence": 11,
     "Class": 12,
 }
-
-indexes_mapping = {
-    "NDVI": 0,
-    "FAI": 1,
-    "FDI": 2,
-    "SI": 3,
-    "NDWI": 4,
-    "NRD": 5,
-    "NDMI": 6,
-    "BSI": 7,
-    "Confidence": 8,
-    "Class": 9,
-}
-
-texture_mapping = {
-    "CON": 0,
-    "DIS": 1,
-    "HOMO": 2,
-    "ENER": 3,
-    "COR": 4,
-    "ASM": 5,
-    "Confidence": 6,
-    "Class": 7,
-}
-
-# Confidence level of annotation
-conf_mapping = {"High": 1, "Moderate": 2, "Low": 3}
-
-
-def cat_map(x):
-    return cat_mapping[x]
-
-
-cat_mapping_vec = np.vectorize(cat_map)
