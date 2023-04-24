@@ -49,13 +49,13 @@ def parse_args_train():
     )
     parser.add_argument(
         "--mu",
-        default=9,
+        default=5,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        default=0.7,
+        default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -71,7 +71,7 @@ def parse_args_train():
         type=int,
         help="Number of epochs to run",  # 45
     )
-    parser.add_argument("--batch", default=5, type=int, help="Batch size")
+    parser.add_argument("--batch", default=2, type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
