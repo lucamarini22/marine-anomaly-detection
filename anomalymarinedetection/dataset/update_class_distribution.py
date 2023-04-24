@@ -12,7 +12,17 @@ from anomalymarinedetection.utils.assets import (
 
 def update_class_distribution(
     aggregate_classes: CategoryAggregation, class_distr: torch.Tensor
-):
+) -> list[float]:
+    """Updates the distribution of classes after aggregating them in new
+    groups.
+
+    Args:
+        aggregate_classes (CategoryAggregation): type of classes aggregation.
+        class_distr (torch.Tensor): old distribution of classes.
+
+    Returns:
+        list[float]: updated distribution of classes.
+    """
     if aggregate_classes == CategoryAggregation.MULTI:
         # clone class_distrib tensor
         class_distr_tmp = class_distr.detach().clone()

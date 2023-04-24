@@ -1,7 +1,3 @@
-"""
-Initial Implementation: Ioannis Kakogeorgiou
-This modified implementation: Luca Marini
-"""
 import os
 import numpy as np
 from tqdm import tqdm
@@ -109,8 +105,10 @@ class AnomalyMarineDataset(Dataset):
 
         # Labeled dataloader
         else:
-            self.X = []  # Loaded Images
-            self.y = []  # Loaded Output masks
+            # Loaded Images
+            self.X = []
+            # Loaded Output masks  
+            self.y = []
 
             for roi in tqdm(
                 self.ROIs, desc="Load labeled " + mode.name + " set to memory"

@@ -4,7 +4,6 @@ import json
 import logging
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
 
@@ -32,9 +31,6 @@ from anomalymarinedetection.utils.constants import (
     SEPARATOR,
     IGNORE_INDEX,
     PADDING_VAL,
-)
-from anomalymarinedetection.dataset.categoryaggregation import (
-    CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.io.file_io import FileIO
@@ -382,7 +378,6 @@ def main(options):
                 strong_transform = StrongAugmentation(
                     randaugment=randaugment, mean=None, std=None
                 )
-                # mean=BANDS_MEAN, std=BANDS_STD, randaugment=randaugment)
                 # Applies strong augmentation on weakly augmented images
                 img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
                 for i in range(img_u_w.shape[0]):
@@ -393,25 +388,15 @@ def main(options):
                     img_u_s_i = strong_transform(img_u_w_i)
                     img_u_s[i, :, :, :] = img_u_s_i
                 img_u_s = torch.from_numpy(img_u_s)
-
-                # TODO: when deploying code to satellite hw, see if it's
-                # faster to put everything to device and make one single
-                # inference or to put one thing to device at a time and
-                # make inference singularly
-                # img = img.to(device)
-                # seg_map = seg_map.to(device)
-                # img_u_w = img_u_w.to(device)
-                # img_u_s = img_u_s.to(device)
-
+                # Moves data to device
                 inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
                 seg_map = seg_map.to(device)
                 optimizer.zero_grad()
-
+                # Computes logits
                 logits = model(inputs)
                 logits_x = logits[: options["batch"]]
                 logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
                 del logits
-
                 # Supervised loss
                 Lx = criterion(logits_x, seg_map)
                 # Do not apply CutOut to the labels because the model has to
@@ -430,10 +415,8 @@ def main(options):
                     logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
                     logits_u_w_i = strong_transform(logits_u_w_i)
                     tmp[i, :, :, :] = logits_u_w_i
-
                 logits_u_w = tmp
                 logits_u_s = logits_u_s.cpu().detach().numpy()
-
                 # Sets all pixels that were added due to padding to a
                 # constant value to later ignore them when computing the loss
                 for i in range(logits_u_w.shape[0]):
@@ -445,13 +428,14 @@ def main(options):
                         ] = IGNORE_INDEX
                         logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
                         logits_u_s[i, j, :, :] = logits_u_s_i_j
-
+                # Moves new logits to device
+                # Weak-aug ones
                 logits_u_w = torch.from_numpy(logits_u_w)
                 logits_u_w = logits_u_w.to(device)
-
+                # Strong-aug ones
                 logits_u_s = torch.from_numpy(logits_u_s)
                 logits_u_s = logits_u_s.to(device)
-
+                # Applies softmax
                 pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
                 # target_u is the segmentation map containing the idx of the
                 # class having the highest probability (for all pixels and for
@@ -466,7 +450,6 @@ def main(options):
                 padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
                 # Merge the two masks
                 mask[padding_mask] = 0
-
                 # Unsupervised loss
                 # Multiplies the loss by the mask to ignore pixels
                 loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(
@@ -493,7 +476,7 @@ def main(options):
                 loss.backward()
 
                 # training_batches += logits_x.shape[0]  # TODO check
-                training_loss.append((loss.data).tolist())  # TODO
+                training_loss.append((loss.data).tolist())
 
                 optimizer.step()
 
@@ -505,10 +488,7 @@ def main(options):
                 )
                 i_board += 1
 
-            # logging.info(
-            #    "Training loss was: "
-            #    + str(sum(training_loss) / training_batches)
-            # )
+            logging.info("Training loss was: " + str(np.mean(training_loss)))
 
             # Evaluation
             if epoch % eval_every == 0 or epoch == 1:
@@ -576,10 +556,7 @@ def main(options):
                         "Loss per epoch",
                         {
                             "Val loss": sum(test_loss) / test_batches,
-                            "Train loss": np.mean(
-                                training_loss
-                            ),  # sum(training_loss)
-                            #        / training_batches,
+                            "Train loss": np.mean(training_loss),
                         },
                         epoch,
                     )

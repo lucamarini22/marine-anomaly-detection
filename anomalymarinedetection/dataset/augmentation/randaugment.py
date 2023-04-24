@@ -15,7 +15,7 @@ from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, PADDING_VAL
 
 logger = logging.getLogger(__name__)
 
-CVAL = PADDING_VAL #-(10**5)  # 0  # cval=-1, np.power(-10, 13)
+CVAL = PADDING_VAL
 NUM_TIMES_CUTOUT = 3
 MIN_PERC_CUTOUT = 0.05
 MAX_PERC_CUTOUT = 0.15
@@ -88,8 +88,6 @@ def Identity(img, **kwarg):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     aug = img
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -108,11 +106,7 @@ def Rotate(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
-    a = img[:, :, 4]
-    aug = A.rotate(
-        img, v, border_mode=0, value=0  # np.power(-10, 13)
-    )  # , value=-1)
-    b = aug[:, :, 4]
+    aug = A.rotate(img, v, border_mode=0, value=CVAL)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -122,8 +116,6 @@ def Sharpness(img, v):
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
     aug = A.Sharpen(alpha=v, always_apply=True)(image=img)["image"]
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -133,8 +125,6 @@ def ShearX(img, v):
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
     aug = iaaa.ShearX(shear=v, cval=CVAL)(image=img)
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -144,8 +134,6 @@ def ShearY(img, v):
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
     aug = iaaa.ShearY(shear=v, cval=CVAL)(image=img)
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -155,8 +143,6 @@ def Solarize(img, v):
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
     aug = A.solarize(img, v)
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -166,8 +152,6 @@ def TranslateX(img, v):
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
     aug = iaaa.TranslateX(percent=v, cval=CVAL)(image=img)
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -177,8 +161,6 @@ def TranslateY(img, v):
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
     aug = iaaa.TranslateY(percent=v, cval=CVAL)(image=img)
-    a = img[:, :, 4]
-    b = aug[:, :, 4]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -247,13 +229,12 @@ def _truncate_float(v: float, num_decimals: int = 2) -> float:
 
 def _fixmatch_augment_pool():
     augs = [
-        # The below four don't work with multispectral images
         # (AutoContrast, 2, 20), # no
-        # The following three do not work when having too many channels
-        ##(Brightness, 0.5, 1.5),
-        ##(Color, 0.0, 3.0),
-        ##(Contrast, 0.5, 1.5),
-        # (Equalize, None, None),
+        # The three below don't work with multispectral images
+        # (Brightness, 0.5, 1.5), # no
+        # (Color, 0.0, 3.0), # no
+        # (Contrast, 0.5, 1.5), # no
+        # (Equalize, None, None), # too drastic changes
         (Identity, None, None),
         # (Posterize, 4, 6), # no
         (Rotate, 0, 30),  # ok
@@ -322,11 +303,6 @@ class RandAugmentMC(object):
                     # negative values and if prob of inverting the sign is < 0.5.
                     v = -v
             img_np = img.cpu().detach().numpy()
-            # if img_np.min() == 0.0 and img_np.max() == 1.0:
-            #    # float32_to_uint8(img_np)
-            #    img_np *= 255
-            #    img_np = img_np.astype(np.uint8)
-
             # Applies the selected augmentation.
             img_np = op(img_np, v=v)
             img = torch.from_numpy(img_np)
