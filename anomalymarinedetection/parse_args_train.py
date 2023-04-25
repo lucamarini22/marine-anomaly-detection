@@ -40,7 +40,7 @@ def parse_args_train():
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.8,
+        default=0.1,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -51,13 +51,13 @@ def parse_args_train():
     )
     parser.add_argument(
         "--mu",
-        default=5,
+        default=9,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        default=0.0,
+        default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -74,7 +74,7 @@ def parse_args_train():
         type=int,
         help="Number of epochs to run",
     )
-    parser.add_argument("--batch", default=2, type=int, help="Batch size")
+    parser.add_argument("--batch", default=5, type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
@@ -106,7 +106,7 @@ def parse_args_train():
     )
     parser.add_argument(
         "--lr_steps",
-        default="[40]",
+        default="[10000]",
         type=str,
         help="Specify the steps that the lr will be reduced",
     )
