@@ -1,3 +1,8 @@
+from anomalymarinedetection.utils.assets import (
+    categories_to_ignore_perc_labeled,
+)
+
+
 def assert_percentage_categories(
     categories_counter_dict: dict, perc_labeled: float, num_pixels_dict: dict
 ) -> None:
@@ -14,7 +19,7 @@ def assert_percentage_categories(
           - value: number of labeled pixels of that category in the total set of the data.
     """
     for class_name in categories_counter_dict:
-        if class_name != "Not labeled":
+        if class_name not in categories_to_ignore_perc_labeled:
             min_perc_labeled_category = (
                 perc_labeled * num_pixels_dict[class_name]
             )

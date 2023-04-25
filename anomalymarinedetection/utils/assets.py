@@ -79,10 +79,16 @@ num_labeled_pixels_train_binary = {
     "Marine Debris": 1943,
 }
 
-assert (
-    sum(num_labeled_pixels_train_binary.values())
-    == sum(num_labeled_pixels_train_multi.values())
+assert sum(num_labeled_pixels_train_binary.values()) == sum(
+    num_labeled_pixels_train_multi.values()
 )
+
+categories_to_ignore_perc_labeled = [
+    "Not labeled",
+    "Marine Water",
+    "Algae/Natural Organic Material",
+    "Ship",
+]
 
 roi_mapping = {
     "16PCC": "Motagua (16PCC)",
