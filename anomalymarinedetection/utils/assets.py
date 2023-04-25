@@ -83,6 +83,7 @@ assert sum(num_labeled_pixels_train_binary.values()) == sum(
     num_labeled_pixels_train_multi.values()
 )
 
+# TODO: set precisely the classes to ignore
 categories_to_ignore_perc_labeled = [
     "Not labeled",
     "Marine Water",
