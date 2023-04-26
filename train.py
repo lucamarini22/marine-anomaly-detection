@@ -1,5 +1,4 @@
 import os
-import ast
 import json
 import logging
 import numpy as np
@@ -12,7 +11,6 @@ from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl,
-    get_dataloaders_eval,
 )
 from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
