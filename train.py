@@ -51,9 +51,16 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 from anomalymarinedetection.train_utils.get_output_channels import (
     get_output_channels,
 )
+from anomalymarinedetection.utils.device_utils import get_device, empty_cache
+from anomalymarinedetection.train_utils.checkpoint_path_utils import (
+    update_checkpoint_path,
+    check_checkpoint_path_exist,
+)
 
 
 def main(options):
+    # Use gpu or cpu
+    device = get_device()
     file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
@@ -147,12 +154,6 @@ def main(options):
 
     output_channels = get_output_channels(options["aggregate_classes"])
 
-    # Use gpu or cpu
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-
     model = UNet(
         input_bands=options["input_channels"],
         output_classes=output_channels,
@@ -167,9 +168,7 @@ def main(options):
             f"Loading model files from folder: {options['resume_model']}"
         )
         load_model(model, options["resume_model"], device)
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        empty_cache()
 
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
@@ -616,22 +615,10 @@ def main(options):
 if __name__ == "__main__":
     options = parse_args_train()
 
-    if options["mode"] == TrainMode.TRAIN_SSL:
-        options["checkpoint_path"] = os.path.join(
-            options["checkpoint_path"], "semi-supervised"
-        )
-    elif options["mode"] == TrainMode.TRAIN:
-        options["checkpoint_path"] = os.path.join(
-            options["checkpoint_path"], "supervised"
-        )
-    else:
-        pass
-
-    if not os.path.isdir(options["checkpoint_path"]):
-        raise Exception(
-            f'The checkpoint directory {options["checkpoint_path"]} does not exist'
-        )
-
+    options["checkpoint_path"] = update_checkpoint_path(
+        options["mode"], options["checkpoint_path"]
+    )
+    check_checkpoint_path_exist(options["checkpoint_path"])
     # lr_steps list or single float
     lr_steps = ast.literal_eval(options["lr_steps"])
     if type(lr_steps) is list:
