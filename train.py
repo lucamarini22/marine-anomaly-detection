@@ -49,7 +49,7 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 from anomalymarinedetection.train_utils.get_output_channels import (
     get_output_channels,
 )
-from anomalymarinedetection.utils.device_utils import get_device, empty_cache
+from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.train_utils.checkpoint_path_utils import (
     update_checkpoint_path,
     check_checkpoint_path_exist,
