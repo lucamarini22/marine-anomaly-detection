@@ -25,7 +25,7 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
    ```sh
    micromamba activate anomaly-marine-detection
    ```
-4. Install the local package.
+4. [Optional] Install the local package.
    ```
    pip install -e .
    ```
