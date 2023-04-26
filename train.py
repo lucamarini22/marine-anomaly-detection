@@ -136,20 +136,6 @@ def main(options):
             mu=options["mu"],
             drop_last=True,
         )
-    elif options["mode"] == TrainMode.EVAL:
-        test_loader = get_dataloaders_eval(
-            dataset_path=options["dataset_path"],
-            transform_test=transform_test,
-            standardization=standardization,
-            aggregate_classes=options["aggregate_classes"],
-            batch=options["batch"],
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            seed_worker_fn=set_seed_worker,
-            generator=g,
-        )
     else:
         raise Exception("The mode option should be train, train_ssl, or test")
 
@@ -569,48 +555,6 @@ def main(options):
                     scheduler.step()
 
                 model.train()
-    # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == TrainMode.EVAL:
-        model.eval()
-
-        test_loss = []
-        test_batches = 0
-        y_true = []
-        y_predicted = []
-
-        with torch.no_grad():
-            for image, target in tqdm(test_loader, desc="testing"):
-                image = image.to(device)
-                target = target.to(device)
-
-                logits = model(image)
-
-                loss = criterion(logits, target)
-
-                # Accuracy metrics only on annotated pixels
-                logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                logits = logits.reshape((-1, output_channels))
-                target = target.reshape(-1)
-                mask = target != -1
-                logits = logits[mask]
-                target = target[mask]
-
-                probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
-                target = target.cpu().numpy()
-
-                test_batches += target.shape[0]
-                test_loss.append((loss.data * target.shape[0]).tolist())
-                y_predicted += probs.argmax(1).tolist()
-                y_true += target.tolist()
-
-            y_predicted = np.asarray(y_predicted)
-            y_true = np.asarray(y_true)
-            # Save Scores to the .log file
-            acc = Evaluation(y_predicted, y_true)
-            logging.info("\n")
-            logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
-            logging.info("STATISTICS: \n")
-            logging.info("Evaluation: " + str(acc))
 
 
 if __name__ == "__main__":
