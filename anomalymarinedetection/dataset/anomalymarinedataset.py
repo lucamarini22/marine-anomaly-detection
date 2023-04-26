@@ -30,7 +30,7 @@ from anomalymarinedetection.dataset.aggregate_classes_to_super_class import (
 )
 from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
 from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
-from anomalymarinedetection.utils.constants import MIN_ALL_BANDS, MAX_ALL_BANDS, MARIDA_SIZE_X, MARIDA_SIZE_Y
+from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
 
 

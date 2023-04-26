@@ -31,6 +31,7 @@ from anomalymarinedetection.utils.constants import (
     SEPARATOR,
     IGNORE_INDEX,
     PADDING_VAL,
+    ANGLES_FIXED_ROTATION,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.io.file_io import FileIO
@@ -79,7 +80,7 @@ def main(options):
     transform_train = transforms.Compose(
         [
             transforms.ToTensor(),
-            DiscreteRandomRotation([-90, 0, 90, 180]),
+            DiscreteRandomRotation(ANGLES_FIXED_ROTATION),
             transforms.RandomHorizontalFlip(),
         ]
     )
