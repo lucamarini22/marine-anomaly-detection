@@ -56,6 +56,7 @@ from anomalymarinedetection.train_utils.checkpoint_path_utils import (
     update_checkpoint_path,
     check_checkpoint_path_exist,
 )
+from anomalymarinedetection.train_utils.get_lr_steps import get_lr_steps
 
 
 def main(options):
@@ -614,21 +615,11 @@ def main(options):
 
 if __name__ == "__main__":
     options = parse_args_train()
-
     options["checkpoint_path"] = update_checkpoint_path(
         options["mode"], options["checkpoint_path"]
     )
     check_checkpoint_path_exist(options["checkpoint_path"])
-    # lr_steps list or single float
-    lr_steps = ast.literal_eval(options["lr_steps"])
-    if type(lr_steps) is list:
-        pass
-    elif type(lr_steps) is int:
-        lr_steps = [lr_steps]
-    else:
-        raise
-
-    options["lr_steps"] = lr_steps
+    options["lr_steps"] = get_lr_steps(options["lr_steps"])
     # Logging
     logging.basicConfig(
         filename=os.path.join(options["log_folder"], "log_unet.log"),
@@ -637,7 +628,6 @@ if __name__ == "__main__":
         format="%(name)s - %(levelname)s - %(message)s",
     )
     logging.info("*" * 10)
-
     logging.info("parsed input parameters:")
     logging.info(json.dumps(options, indent=2))
     main(options)
