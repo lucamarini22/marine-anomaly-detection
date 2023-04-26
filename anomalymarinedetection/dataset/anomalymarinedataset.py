@@ -229,8 +229,6 @@ class AnomalyMarineDataset(Dataset):
             # when having the dataloader of the labeled train set and when 
             # perc_label is not None
             if mode == DataLoaderType.TRAIN_SUP and perc_labeled is not None:
-                 
-                # TODO: re-add assertion
                 assert_percentage_categories(self.categories_counter_dict, perc_labeled, num_pixels_dict)
 
         self.impute_nan = np.tile(
