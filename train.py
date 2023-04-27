@@ -404,15 +404,21 @@ def main(options):
                 logits_u_s = logits_u_s.cpu().detach().numpy()
                 # Sets all pixels that were added due to padding to a
                 # constant value to later ignore them when computing the loss
-                for i in range(logits_u_w.shape[0]):
-                    for j in range(logits_u_w.shape[1]):
-                        logits_u_w_i_j = logits_u_w[i, j, :, :]
-                        logits_u_s_i_j = logits_u_s[i, j, :, :]
-                        logits_u_s_i_j[
-                            np.where(logits_u_w_i_j == PADDING_VAL)
+                batch_size = logits_u_w.shape[0]
+                num_categories = logits_u_w.shape[1]
+                for idx_b in range(batch_size):
+                    for idx_cat in range(num_categories):
+                        # - logits_u_w_patch -> logits of the prediction of model
+                        #   on a weakly augmented image. Shape: (img_h, img_w)
+                        # - logits_u_s_patch -> logits of the prediction of model
+                        #   on a strongly augmented image. Shape: (img_h, img_w)
+                        logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
+                        logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
+                        logits_u_s_patch[
+                            np.where(logits_u_w_patch == PADDING_VAL)
                         ] = IGNORE_INDEX
-                        logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
-                        logits_u_s[i, j, :, :] = logits_u_s_i_j
+                        logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
+                        logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
                 # Moves new logits to device
                 # Weak-aug ones
                 logits_u_w = torch.from_numpy(logits_u_w)
