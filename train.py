@@ -42,19 +42,19 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.train_utils.check_num_alphas import check_num_alphas
 from anomalymarinedetection.dataset.update_class_distribution import (
     update_class_distribution,
 )
-from anomalymarinedetection.train_utils.get_output_channels import (
-    get_output_channels,
-)
 from anomalymarinedetection.utils.device import get_device, empty_cache
-from anomalymarinedetection.train_utils.checkpoint_path_utils import (
+from anomalymarinedetection.utils.train_functions import (
+    get_optimizer,
+    get_lr_scheduler,
+    check_num_alphas,
+    get_output_channels,
+    get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
 )
-from anomalymarinedetection.train_utils.get_lr_steps import get_lr_steps
 
 
 def main(options):
@@ -182,18 +182,13 @@ def main(options):
             ignore_index=IGNORE_INDEX,
         )
     # Optimizer
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=options["lr"], weight_decay=options["decay"]
+    optimizer = get_optimizer(
+        model, lr=options["lr"], weight_decay=options["decay"]
     )
     # Learning Rate scheduler
-    if options["reduce_lr_on_plateau"] == 1:
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.1, patience=10, verbose=True
-        )
-    else:
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, options["lr_steps"], gamma=0.1, verbose=True
-        )
+    scheduler = get_lr_scheduler(
+        options["reduce_lr_on_plateau"], optimizer, options["lr_steps"]
+    )
     # Start training
     epochs = options["epochs"]
     eval_every = options["eval_every"]
