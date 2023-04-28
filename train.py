@@ -16,9 +16,6 @@ from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
 from anomalymarinedetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
 )
-from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
-    DiscreteRandomRotation,
-)
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
     CLASS_DISTR,
@@ -27,7 +24,6 @@ from anomalymarinedetection.utils.constants import (
     SEPARATOR,
     IGNORE_INDEX,
     PADDING_VAL,
-    ANGLES_FIXED_ROTATION,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.io.file_io import FileIO
@@ -49,6 +45,7 @@ from anomalymarinedetection.utils.train_functions import (
     get_optimizer,
     get_lr_scheduler,
     get_model,
+    get_transform_train,
     check_num_alphas,
     get_output_channels,
     get_lr_steps,
@@ -83,13 +80,7 @@ def main(options):
         )
     )
     # Transformations
-    transform_train = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            DiscreteRandomRotation(ANGLES_FIXED_ROTATION),
-            transforms.RandomHorizontalFlip(),
-        ]
-    )
+    transform_train = get_transform_train()
     transform_test = transforms.Compose([transforms.ToTensor()])
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels

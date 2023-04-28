@@ -2,6 +2,10 @@ import os
 import ast
 import torch
 from torch import nn
+import torchvision.transforms as transforms
+from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
+    DiscreteRandomRotation,
+)
 
 from anomalymarinedetection.trainmode import TrainMode
 from anomalymarinedetection.utils.assets import labels_binary, labels_multi
@@ -10,7 +14,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 )
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.utils.constants import IGNORE_INDEX
+from anomalymarinedetection.utils.constants import IGNORE_INDEX, ANGLES_FIXED_ROTATION
 
 
 def get_criterion(
@@ -112,6 +116,22 @@ def get_model(
         hidden_channels=hidden_channels,
     )
     return model
+
+def get_transform_train() -> transforms.Compose:
+    """Gets the transformation to be applied to the training dataset.
+
+    Returns:
+        transforms.Compose: the transformation to be applied to the training 
+          dataset.
+    """
+    transform_train = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            DiscreteRandomRotation(ANGLES_FIXED_ROTATION),
+            transforms.RandomHorizontalFlip(),
+        ]
+    )
+    return transform_train
 
 
 def check_num_alphas(alphas: torch.Tensor, output_channels: int) -> None:
