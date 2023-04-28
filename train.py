@@ -46,6 +46,7 @@ from anomalymarinedetection.utils.train_functions import (
     get_lr_scheduler,
     get_model,
     get_transform_train,
+    get_transform_test,
     check_num_alphas,
     get_output_channels,
     get_lr_steps,
@@ -81,7 +82,7 @@ def main(options):
     )
     # Transformations
     transform_train = get_transform_train()
-    transform_test = transforms.Compose([transforms.ToTensor()])
+    transform_test = get_transform_test()
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)

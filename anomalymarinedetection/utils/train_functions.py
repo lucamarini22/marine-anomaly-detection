@@ -124,8 +124,7 @@ def get_transform_train() -> transforms.Compose:
     """Gets the transformation to be applied to the training dataset.
 
     Returns:
-        transforms.Compose: the transformation to be applied to the training
-          dataset.
+        transforms.Compose: the transformation to be applied to the training set.
     """
     transform_train = transforms.Compose(
         [
@@ -136,6 +135,14 @@ def get_transform_train() -> transforms.Compose:
     )
     return transform_train
 
+def get_transform_test() -> transforms.Compose:
+    """Gets the transformation to be applied to the test dataset.
+
+    Returns:
+        transforms.Compose: the transformation to be applied to the test set.
+    """
+    transform_test = transforms.Compose([transforms.ToTensor()])
+    return transform_test
 
 def check_num_alphas(
     alphas: torch.Tensor,
