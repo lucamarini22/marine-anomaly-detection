@@ -41,6 +41,7 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 )
 from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.utils.train_functions import (
+    train_step_supervised,
     train_step_semi_supervised,
     eval_step,
     get_criterion,
@@ -197,23 +198,16 @@ def main(options):
 
             i_board = 0
             for image, target in tqdm(train_loader, desc="training"):
-                image = image.to(device)
-                target = target.to(device)
-
-                optimizer.zero_grad()
-
-                logits = model(image)
-
-                loss = criterion(logits, target)
-
-                loss.backward()
-
+                loss, training_loss = train_step_supervised(
+                    image,
+                    target,
+                    criterion,
+                    training_loss,
+                    model,
+                    optimizer,
+                    device,
+                )
                 training_batches += target.shape[0]
-
-                training_loss.append((loss.data * target.shape[0]).tolist())
-
-                optimizer.step()
-
                 # Write running loss
                 tb_writer.add_scalar(
                     "training loss",

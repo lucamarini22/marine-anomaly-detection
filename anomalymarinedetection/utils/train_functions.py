@@ -31,6 +31,42 @@ from anomalymarinedetection.utils.constants import (
 from anomalymarinedetection.io.file_io import FileIO
 
 
+def train_step_supervised(
+    image: torch.Tensor,
+    target: torch.Tensor,
+    criterion: nn.Module,
+    training_loss: list[float],
+    model: nn.Module,
+    optimizer: torch.optim,
+    device: torch.device,
+) -> tuple[torch.Tensor, list[float]]:
+    """Trains the model for one semi-supervised epoch.
+
+    Args:
+        image (torch.Tensor): image.
+        target (torch.Tensor): segmentation map.
+        criterion (nn.Module): supervised loss.
+        training_loss (list[float]): list of supervised training loss of
+          batches.
+        model (nn.Module): model.
+        optimizer (torch.optim): optimizer.
+        device (torch.device): device.
+
+    Returns:
+        tuple[torch.Tensor, list[float]]: last superivsed loss, list of all
+          supervised losses of the current step.
+    """
+    image = image.to(device)
+    target = target.to(device)
+    optimizer.zero_grad()
+    logits = model(image)
+    loss = criterion(logits, target)
+    loss.backward()
+    training_loss.append((loss.data * target.shape[0]).tolist())
+    optimizer.step()
+    return loss, training_loss
+
+
 def train_step_semi_supervised(
     file_io: FileIO,
     labeled_train_loader: DataLoader,
@@ -51,7 +87,7 @@ def train_step_semi_supervised(
     lambda_v: float,
     padding_val: int = PADDING_VAL,
 ) -> tuple[torch.Tensor, list[float]]:
-    """Trains the model for one semi-supervised epoch.
+    """Trains the model for one semi-supervised step.
 
     Args:
         file_io (FileIO): file io.
@@ -78,7 +114,7 @@ def train_step_semi_supervised(
 
     Returns:
         tuple[torch.Tensor, list[float]]: last semi-superivsed loss, list of all
-          semi-supervised losses of the current epoch.
+          semi-supervised losses of the current step.
     """
     try:
         # Load labeled batch
@@ -219,7 +255,7 @@ def eval_step(
     output_channels: int,
     device: torch.device,
 ) -> tuple[list[float], list[float]]:
-    """Trains the model for one semi-supervised epoch.
+    """Evaluates the model.
 
     Args:
         image (torch.Tensor): image.
