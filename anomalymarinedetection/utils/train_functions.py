@@ -31,7 +31,7 @@ from anomalymarinedetection.utils.constants import (
 from anomalymarinedetection.io.file_io import FileIO
 
 
-def train_epoch_semi_supervised(
+def train_step_semi_supervised(
     file_io: FileIO,
     labeled_train_loader: DataLoader,
     unlabeled_train_loader: DataLoader,
@@ -50,7 +50,7 @@ def train_epoch_semi_supervised(
     threshold: float,
     lambda_v: float,
     padding_val: int = PADDING_VAL,
-) -> tuple[float, torch.Tensor]:
+) -> tuple[torch.Tensor, list[float]]:
     """Trains the model for one semi-supervised epoch.
 
     Args:
@@ -62,7 +62,8 @@ def train_epoch_semi_supervised(
         unlabeled_iter (Iterator): iterator of unlabeled_train_loader.
         criterion (nn.Module): supervised loss.
         criterion_unsup (nn.Module): unsupervised loss.
-        training_loss (list[float]): list of semi-supervised training loss.
+        training_loss (list[float]): list of semi-supervised training loss of
+          batches.
         model (nn.Module): model.
         model_name (str): name of the model.
         optimizer (torch.optim): optimizer
@@ -76,7 +77,7 @@ def train_epoch_semi_supervised(
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
-        tuple[float, torch.Tensor]: last semi-superivsed loss, list of all
+        tuple[torch.Tensor, list[float]]: last semi-superivsed loss, list of all
           semi-supervised losses of the current epoch.
     """
     try:
@@ -205,6 +206,58 @@ def train_epoch_semi_supervised(
     optimizer.step()
 
     return loss, training_loss
+
+
+def eval_step(
+    image: torch.Tensor,
+    target: torch.Tensor,
+    criterion: nn.Module,
+    test_loss: list[float],
+    y_predicted: list[int],
+    y_true: list[int],
+    model: nn.Module,
+    output_channels: int,
+    device: torch.device,
+) -> tuple[list[float], list[float]]:
+    """Trains the model for one semi-supervised epoch.
+
+    Args:
+        image (torch.Tensor): image.
+        target (torch.Tensor): segmentation map.
+        criterion (nn.Module): supervised loss.
+        test_loss (list[float]): list of semi-supervised test loss of batches.
+        y_predicted (list[int]): list of predicted categories.
+        y_true (list[int]): list of ground-truth categories.
+        model (nn.Module): model.
+        output_channels (int): number of output channels.
+        device (torch.device): device.
+
+    Returns:
+        tuple[list[float], list[float]]: list of predictions, list of ground
+          truths.
+    """
+    image = image.to(device)
+    target = target.to(device)
+
+    logits = model(image)
+
+    loss = criterion(logits, target)
+
+    # Accuracy metrics only on annotated pixels
+    logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
+    logits = logits.reshape((-1, output_channels))
+    target = target.reshape(-1)
+    mask = target != -1
+    logits = logits[mask]
+    target = target[mask]
+
+    probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
+    target = target.cpu().numpy()
+
+    test_loss.append((loss.data * target.shape[0]).tolist())
+    y_predicted += probs.argmax(1).tolist()
+    y_true += target.tolist()
+    return y_predicted, y_true
 
 
 def get_criterion(

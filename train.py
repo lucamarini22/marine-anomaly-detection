@@ -41,7 +41,8 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 )
 from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.utils.train_functions import (
-    train_epoch_semi_supervised,
+    train_step_semi_supervised,
+    eval_step,
     get_criterion,
     get_optimizer,
     get_lr_scheduler,
@@ -323,7 +324,7 @@ def main(options):
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                loss, training_loss = train_epoch_semi_supervised(
+                loss, training_loss = train_step_semi_supervised(
                     file_io,
                     labeled_train_loader,
                     unlabeled_train_loader,
@@ -364,34 +365,18 @@ def main(options):
 
                 with torch.no_grad():
                     for image, target in tqdm(test_loader, desc="testing"):
-                        image = image.to(device)
-                        target = target.to(device)
-
-                        logits = model(image)
-
-                        loss = criterion(logits, target)
-
-                        # Accuracy metrics only on annotated pixels
-                        logits = torch.movedim(
-                            logits, (0, 1, 2, 3), (0, 3, 1, 2)
+                        y_predicted, y_true = eval_step(
+                            image,
+                            target,
+                            criterion,
+                            test_loss,
+                            y_predicted,
+                            y_true,
+                            model,
+                            output_channels,
+                            device,
                         )
-                        logits = logits.reshape((-1, output_channels))
-                        target = target.reshape(-1)
-                        mask = target != -1
-                        logits = logits[mask]
-                        target = target[mask]
-
-                        probs = (
-                            torch.nn.functional.softmax(logits, dim=1)
-                            .cpu()
-                            .numpy()
-                        )
-                        target = target.cpu().numpy()
-
                         test_batches += target.shape[0]
-                        test_loss.append((loss.data * target.shape[0]).tolist())
-                        y_predicted += probs.argmax(1).tolist()
-                        y_true += target.tolist()
 
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
