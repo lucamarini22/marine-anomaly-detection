@@ -14,7 +14,10 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 )
 from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.utils.constants import IGNORE_INDEX, ANGLES_FIXED_ROTATION
+from anomalymarinedetection.utils.constants import (
+    IGNORE_INDEX,
+    ANGLES_FIXED_ROTATION,
+)
 
 
 def get_criterion(
@@ -95,10 +98,9 @@ def get_lr_scheduler(
         )
     return scheduler
 
+
 def get_model(
-    input_channels: int, 
-    output_channels: int, 
-    hidden_channels: int
+    input_channels: int, output_channels: int, hidden_channels: int
 ) -> nn.Module:
     """Gets the model.
 
@@ -117,11 +119,12 @@ def get_model(
     )
     return model
 
+
 def get_transform_train() -> transforms.Compose:
     """Gets the transformation to be applied to the training dataset.
 
     Returns:
-        transforms.Compose: the transformation to be applied to the training 
+        transforms.Compose: the transformation to be applied to the training
           dataset.
     """
     transform_train = transforms.Compose(
@@ -134,13 +137,18 @@ def get_transform_train() -> transforms.Compose:
     return transform_train
 
 
-def check_num_alphas(alphas: torch.Tensor, output_channels: int) -> None:
+def check_num_alphas(
+    alphas: torch.Tensor,
+    output_channels: int,
+    aggregate_classes: CategoryAggregation,
+) -> None:
     """Checks that the number of alpha coefficients is equal to the number of
     output channels.
 
     Args:
         alphas (torch.Tensor): alpha coefficients.
         output_channels (int): output channels.
+        aggregate_classes (CategoryAggregation): type of aggregation of classes.
 
     Raises:
         Exception: exception raised if the number of alpha coefficients is not
@@ -148,7 +156,7 @@ def check_num_alphas(alphas: torch.Tensor, output_channels: int) -> None:
     """
     if len(alphas) != output_channels:
         raise Exception(
-            f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {options['aggregate_classes']}"
+            f"There should be as many alphas as the number of categories, which in this case is {output_channels} because the parameter aggregate_classes was set to {aggregate_classes}"
         )
 
 
@@ -176,16 +184,17 @@ def get_lr_steps(lr_steps: str) -> list:
 
 
 def get_output_channels(aggregate_classes: CategoryAggregation) -> int:
-    """_summary_
+    """Gets the number of output channels.
 
     Args:
-        aggregate_classes (CategoryAggregation): _description_
+        aggregate_classes (CategoryAggregation): type of aggregation of
+          classes.
 
     Raises:
-        Exception: _description_
+        Exception: if the type of aggregation is not existent.
 
     Returns:
-        int: _description_
+        int: the number of output channels.
     """
     if aggregate_classes == CategoryAggregation.MULTI:
         output_channels = len(labels_multi)
@@ -199,7 +208,7 @@ def get_output_channels(aggregate_classes: CategoryAggregation) -> int:
 
 
 def update_checkpoint_path(mode: TrainMode, checkpoint_path: str) -> str:
-    """_summary_
+    """Updates the path where to store checkpooints.
 
     Args:
         mode (TrainMode): training mode.

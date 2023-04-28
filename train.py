@@ -156,7 +156,7 @@ def main(options):
         )
     # Coefficients of Focal loss
     alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])
-    check_num_alphas(alphas, output_channels)
+    check_num_alphas(alphas, output_channels, options["aggregate_classes"])
     # Init of supervised loss
     criterion = get_criterion(supervised=True, alphas=alphas, device=device)
     if options["mode"] == TrainMode.TRAIN_SSL:
