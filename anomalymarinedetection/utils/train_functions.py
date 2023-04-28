@@ -1,12 +1,21 @@
 import os
 import ast
+from typing import Iterator
+import numpy as np
 import torch
 from torch import nn
 import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+
 from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
     DiscreteRandomRotation,
 )
-
+from anomalymarinedetection.dataset.augmentation.randaugment import (
+    RandAugmentMC,
+)
+from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
+    StrongAugmentation,
+)
 from anomalymarinedetection.trainmode import TrainMode
 from anomalymarinedetection.utils.assets import labels_binary, labels_multi
 from anomalymarinedetection.dataset.categoryaggregation import (
@@ -17,7 +26,185 @@ from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.utils.constants import (
     IGNORE_INDEX,
     ANGLES_FIXED_ROTATION,
+    PADDING_VAL,
 )
+from anomalymarinedetection.io.file_io import FileIO
+
+
+def train_epoch_semi_supervised(
+    file_io: FileIO,
+    labeled_train_loader: DataLoader,
+    unlabeled_train_loader: DataLoader,
+    labeled_iter: Iterator,
+    unlabeled_iter: Iterator,
+    criterion: nn.Module,
+    criterion_unsup: nn.Module,
+    training_loss: list[float],
+    model: nn.Module,
+    model_name: str,
+    optimizer: torch.optim,
+    epoch: int,
+    device: torch.device,
+    batch_size: int,
+    classes_channel_idx: int,
+    threshold: float,
+    lambda_v: float,
+    padding_val: int = PADDING_VAL,
+) -> tuple[float, torch.Tensor]:
+    """Trains the model for one semi-supervised epoch.
+
+    Args:
+        file_io (FileIO): file io.
+        labeled_train_loader (DataLoader): dataloader for labeled training set.
+        unlabeled_train_loader (DataLoader): dataloader for unlabeled training
+          set.
+        labeled_iter (Iterator): iterator of labeled_train_loader.
+        unlabeled_iter (Iterator): iterator of unlabeled_train_loader.
+        criterion (nn.Module): supervised loss.
+        criterion_unsup (nn.Module): unsupervised loss.
+        training_loss (list[float]): list of semi-supervised training loss.
+        model (nn.Module): model.
+        model_name (str): name of the model.
+        optimizer (torch.optim): optimizer
+        epoch (int): epoch.
+        device (torch.device): device.
+        batch_size (int): batch size.
+        classes_channel_idx (int): index of the channel of the categories.
+        threshold (float): threshold for model+s confidence (threshold for
+          softmax values).
+        lambda_v (float): coefficient of the unsupervised loss.
+        padding_val (int, optional): padding value. Defaults to PADDING_VAL.
+
+    Returns:
+        tuple[float, torch.Tensor]: last semi-superivsed loss, list of all
+          semi-supervised losses of the current epoch.
+    """
+    try:
+        # Load labeled batch
+        img_x, seg_map = next(labeled_iter)
+    except:
+        labeled_iter = iter(labeled_train_loader)
+        img_x, seg_map = next(labeled_iter)
+    try:
+        # Load unlabeled batch of weakly augmented images
+        img_u_w = next(unlabeled_iter)
+    except:
+        unlabeled_iter = iter(unlabeled_train_loader)
+        img_u_w = next(unlabeled_iter)
+
+    # Initializes RandAugment with n random augmentations.
+    # So, every batch will have different random augmentations.
+    randaugment = RandAugmentMC(n=2, m=10)
+    # Get strong transform to apply to both pseudo-label map and
+    # weakly augmented image
+    strong_transform = StrongAugmentation(
+        randaugment=randaugment, mean=None, std=None
+    )
+    # Applies strong augmentation on weakly augmented images
+    img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
+    for i in range(img_u_w.shape[0]):
+        img_u_w_i = img_u_w[i, :, :, :]
+        img_u_w_i = img_u_w_i.cpu().detach().numpy()
+        img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
+        # Strongly-augmented image
+        img_u_s_i = strong_transform(img_u_w_i)
+        img_u_s[i, :, :, :] = img_u_s_i
+    img_u_s = torch.from_numpy(img_u_s)
+    # Moves data to device
+    inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
+    seg_map = seg_map.to(device)
+    optimizer.zero_grad()
+    # Computes logits
+    logits = model(inputs)
+    logits_x = logits[:batch_size]
+    logits_u_w, logits_u_s = logits[batch_size:].chunk(2)
+    del logits
+    # Supervised loss
+    Lx = criterion(logits_x, seg_map)
+    # Do not apply CutOut to the labels because the model has to
+    # learn to interpolate when part of the image is missing.
+    # It is only an augmentation on the inputs.
+    randaugment.use_cutout(False)
+    # Applies strong augmentation to pseudo label map
+    tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
+    for i in range(logits_u_w.shape[0]):
+        # When you debug visually: check that the strongly augmented
+        # weak images correspond to the strongly augmented images
+        # (e.g. the same ship should be at the same position in both
+        # images).
+        logits_u_w_i = logits_u_w[i, :, :, :]
+        logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
+        logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
+        logits_u_w_i = strong_transform(logits_u_w_i)
+        tmp[i, :, :, :] = logits_u_w_i
+    logits_u_w = tmp
+    logits_u_s = logits_u_s.cpu().detach().numpy()
+    # Sets all pixels that were added due to padding to a
+    # constant value to later ignore them when computing the loss
+    batch_size = logits_u_w.shape[0]
+    num_categories = logits_u_w.shape[1]
+    for idx_b in range(batch_size):
+        for idx_cat in range(num_categories):
+            # - logits_u_w_patch -> logits of the prediction of model
+            #   on a weakly augmented image. Shape: (img_h, img_w)
+            # - logits_u_s_patch -> logits of the prediction of model
+            #   on a strongly augmented image. Shape: (img_h, img_w)
+            logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
+            logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
+            logits_u_s_patch[
+                np.where(logits_u_w_patch == padding_val)
+            ] = IGNORE_INDEX
+            logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
+            logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
+    # Moves new logits to device
+    # Weak-aug ones
+    logits_u_w = torch.from_numpy(logits_u_w)
+    logits_u_w = logits_u_w.to(device)
+    # Strong-aug ones
+    logits_u_s = torch.from_numpy(logits_u_s)
+    logits_u_s = logits_u_s.to(device)
+    # Applies softmax
+    pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
+    # target_u is the segmentation map containing the idx of the
+    # class having the highest probability (for all pixels and for
+    # all images in the batch)
+    max_probs, targets_u = torch.max(pseudo_label, dim=classes_channel_idx)
+    # Mask to ignore all pixels whose "confidence" is lower than
+    # the specified threshold
+    mask = max_probs.ge(threshold).float()
+    # Mask to ignore all padding pixels
+    padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
+    # Merge the two masks
+    mask[padding_mask] = 0
+    # Unsupervised loss
+    # Multiplies the loss by the mask to ignore pixels
+    loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
+    if (loss_u).sum() == 0:
+        Lu = 0.0
+    else:
+        Lu = (loss_u).sum() / torch.flatten(mask).sum()
+
+    if Lu > 0:
+        file_io.append(
+            "./lu.txt",
+            f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
+        )
+    print("-" * 20)
+    print(f"Lx: {Lx}")
+    print(f"Lu: {Lu}")
+    print(f"Max prob: {max_probs.max()}")
+    print(f"n_pixels: {len(mask[mask == 1])}")
+
+    # Final loss
+    loss = Lx + lambda_v * Lu
+    loss.backward()
+
+    # training_batches += logits_x.shape[0]  # TODO check
+    training_loss.append((loss.data).tolist())
+
+    optimizer.step()
+
+    return loss, training_loss
 
 
 def get_criterion(
@@ -135,6 +322,7 @@ def get_transform_train() -> transforms.Compose:
     )
     return transform_train
 
+
 def get_transform_test() -> transforms.Compose:
     """Gets the transformation to be applied to the test dataset.
 
@@ -143,6 +331,7 @@ def get_transform_test() -> transforms.Compose:
     """
     transform_test = transforms.Compose([transforms.ToTensor()])
     return transform_test
+
 
 def check_num_alphas(
     alphas: torch.Tensor,
