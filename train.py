@@ -47,7 +47,7 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 )
 from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.utils.train_functions import (
-    get_supervised_criterion,
+    get_criterion,
     get_optimizer,
     get_lr_scheduler,
     check_num_alphas,
@@ -168,14 +168,11 @@ def main(options):
     alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])
     check_num_alphas(alphas, output_channels)
     # Init of supervised loss
-    criterion = get_supervised_criterion(alphas, device)
+    criterion = get_criterion(supervised=True, alphas=alphas, device=device)
     if options["mode"] == TrainMode.TRAIN_SSL:
         # Init of unsupervised loss
-        criterion_unsup = FocalLoss(
-            alpha=alphas.to(device),
-            gamma=2.0,
-            reduction="none",
-            ignore_index=IGNORE_INDEX,
+        criterion_unsup = get_criterion(
+            supervised=False, alphas=alphas, device=device
         )
     # Optimizer
     optimizer = get_optimizer(

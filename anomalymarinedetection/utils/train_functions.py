@@ -12,23 +12,40 @@ from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.utils.constants import IGNORE_INDEX
 
 
-def get_supervised_criterion(alphas: list[float], device: torch.device) -> nn.Module:
-    """Get the instance to compute the supervised loss. 
+def get_criterion(
+    supervised: bool,
+    alphas: list[float],
+    device: torch.device,
+    gamma: float = 2.0,
+) -> nn.Module:
+    """Gets the instance to compute the loss.
 
     Args:
+        supervised (bool): True to get supervised criterion.
+          False to return unsupervised criterion.
         alphas (list[float]): alpha coefficients of the Focal loss.
         device (torch.device): device.
+        gamma (float): gamma coefficient of the Focal loss.
 
     Returns:
-        nn.Module: the instance to compute the supervised loss. 
+        nn.Module: the instance to compute the supervised loss.
     """
-    criterion = FocalLoss(
-        alpha=alphas.to(device),
-        gamma=2.0,
-        reduction="mean",
-        ignore_index=IGNORE_INDEX,
-    )
+    if supervised:
+        criterion = FocalLoss(
+            alpha=alphas.to(device),
+            gamma=gamma,
+            reduction="mean",
+            ignore_index=IGNORE_INDEX,
+        )
+    else:
+        criterion = FocalLoss(
+            alpha=alphas.to(device),
+            gamma=gamma,
+            reduction="none",
+            ignore_index=IGNORE_INDEX,
+        )
     return criterion
+
 
 def get_optimizer(
     model: nn.Module, lr: float, weight_decay: float
@@ -48,11 +65,14 @@ def get_optimizer(
     )
     return optimizer
 
-def get_lr_scheduler(reduce_lr_on_plateau: int, optimizer: torch.optim, lr_steps: list[int]) -> torch.optim.lr_scheduler:
+
+def get_lr_scheduler(
+    reduce_lr_on_plateau: int, optimizer: torch.optim, lr_steps: list[int]
+) -> torch.optim.lr_scheduler:
     """Gets the learning rate scheduler.
 
     Args:
-        reduce_lr_on_plateau (int): reduces learning rate when no increase 
+        reduce_lr_on_plateau (int): reduces learning rate when no increase
           (0 or 1).
         optimizer (torch.optim): optimizer.
         lr_steps (list[int]): the steps that the lr will be reduced.
@@ -69,6 +89,7 @@ def get_lr_scheduler(reduce_lr_on_plateau: int, optimizer: torch.optim, lr_steps
             optimizer, lr_steps, gamma=0.1, verbose=True
         )
     return scheduler
+
 
 def check_num_alphas(alphas: torch.Tensor, output_channels: int) -> None:
     """Checks that the number of alpha coefficients is equal to the number of
