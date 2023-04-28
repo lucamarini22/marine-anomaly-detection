@@ -6,8 +6,6 @@ from tqdm import tqdm
 import torch
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.loss.focal_loss import FocalLoss
-from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl,
@@ -50,6 +48,7 @@ from anomalymarinedetection.utils.train_functions import (
     get_criterion,
     get_optimizer,
     get_lr_scheduler,
+    get_model,
     check_num_alphas,
     get_output_channels,
     get_lr_steps,
@@ -139,10 +138,10 @@ def main(options):
         raise Exception("The mode option should be train, train_ssl, or test")
 
     output_channels = get_output_channels(options["aggregate_classes"])
-
-    model = UNet(
-        input_bands=options["input_channels"],
-        output_classes=output_channels,
+    # Init model
+    model = get_model(
+        input_channels=options["input_channels"],
+        output_channels=output_channels,
         hidden_channels=options["hidden_channels"],
     )
 

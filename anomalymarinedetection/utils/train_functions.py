@@ -9,6 +9,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.loss.focal_loss import FocalLoss
+from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.utils.constants import IGNORE_INDEX
 
 
@@ -89,6 +90,28 @@ def get_lr_scheduler(
             optimizer, lr_steps, gamma=0.1, verbose=True
         )
     return scheduler
+
+def get_model(
+    input_channels: int, 
+    output_channels: int, 
+    hidden_channels: int
+) -> nn.Module:
+    """Gets the model.
+
+    Args:
+        input_channels (int): num of input channels of the neural network.
+        output_channels (int): num of output channels of the neural network.
+        hidden_channels (int): num of hidden layers of the neural network.
+
+    Returns:
+        nn.Module: model (neural network).
+    """
+    model = UNet(
+        input_bands=input_channels,
+        output_classes=output_channels,
+        hidden_channels=hidden_channels,
+    )
+    return model
 
 
 def check_num_alphas(alphas: torch.Tensor, output_channels: int) -> None:
