@@ -8,7 +8,27 @@ from anomalymarinedetection.utils.assets import labels_binary, labels_multi
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
+from anomalymarinedetection.loss.focal_loss import FocalLoss
+from anomalymarinedetection.utils.constants import IGNORE_INDEX
 
+
+def get_supervised_criterion(alphas: list[float], device: torch.device) -> nn.Module:
+    """Get the instance to compute the supervised loss. 
+
+    Args:
+        alphas (list[float]): alpha coefficients of the Focal loss.
+        device (torch.device): device.
+
+    Returns:
+        nn.Module: the instance to compute the supervised loss. 
+    """
+    criterion = FocalLoss(
+        alpha=alphas.to(device),
+        gamma=2.0,
+        reduction="mean",
+        ignore_index=IGNORE_INDEX,
+    )
+    return criterion
 
 def get_optimizer(
     model: nn.Module, lr: float, weight_decay: float
