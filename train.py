@@ -1,5 +1,4 @@
 import os
-import ast
 import json
 import logging
 import numpy as np
@@ -7,21 +6,15 @@ from tqdm import tqdm
 import torch
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.loss.focal_loss import FocalLoss
-from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl,
-    get_dataloaders_eval,
 )
 from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
 )
 from anomalymarinedetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
-)
-from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
-    DiscreteRandomRotation,
 )
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
@@ -43,16 +36,31 @@ from anomalymarinedetection.io.model_handler import (
     get_model_name,
 )
 from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.train_utils.check_num_alphas import check_num_alphas
 from anomalymarinedetection.dataset.update_class_distribution import (
     update_class_distribution,
 )
-from anomalymarinedetection.train_utils.get_output_channels import (
+from anomalymarinedetection.utils.device import get_device, empty_cache
+from anomalymarinedetection.utils.train_functions import (
+    train_step_supervised,
+    train_step_semi_supervised,
+    eval_step,
+    get_criterion,
+    get_optimizer,
+    get_lr_scheduler,
+    get_model,
+    get_transform_train,
+    get_transform_test,
+    check_num_alphas,
     get_output_channels,
+    get_lr_steps,
+    update_checkpoint_path,
+    check_checkpoint_path_exist,
 )
 
 
 def main(options):
+    # Use gpu or cpu
+    device = get_device()
     file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
@@ -76,14 +84,8 @@ def main(options):
         )
     )
     # Transformations
-    transform_train = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            DiscreteRandomRotation([-90, 0, 90, 180]),
-            transforms.RandomHorizontalFlip(),
-        ]
-    )
-    transform_test = transforms.Compose([transforms.ToTensor()])
+    transform_train = get_transform_train()
+    transform_test = get_transform_test()
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
@@ -127,34 +129,14 @@ def main(options):
             mu=options["mu"],
             drop_last=True,
         )
-    elif options["mode"] == TrainMode.EVAL:
-        test_loader = get_dataloaders_eval(
-            dataset_path=options["dataset_path"],
-            transform_test=transform_test,
-            standardization=standardization,
-            aggregate_classes=options["aggregate_classes"],
-            batch=options["batch"],
-            num_workers=options["num_workers"],
-            pin_memory=options["pin_memory"],
-            prefetch_factor=options["prefetch_factor"],
-            persistent_workers=options["persistent_workers"],
-            seed_worker_fn=set_seed_worker,
-            generator=g,
-        )
     else:
         raise Exception("The mode option should be train, train_ssl, or test")
 
     output_channels = get_output_channels(options["aggregate_classes"])
-
-    # Use gpu or cpu
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-
-    model = UNet(
-        input_bands=options["input_channels"],
-        output_classes=output_channels,
+    # Init model
+    model = get_model(
+        input_channels=options["input_channels"],
+        output_channels=output_channels,
         hidden_channels=options["hidden_channels"],
     )
 
@@ -166,9 +148,7 @@ def main(options):
             f"Loading model files from folder: {options['resume_model']}"
         )
         load_model(model, options["resume_model"], device)
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        empty_cache()
 
         start = int(options["resume_model"].split("/")[-2]) + 1
     else:
@@ -180,35 +160,22 @@ def main(options):
         )
     # Coefficients of Focal loss
     alphas = torch.Tensor([0.50, 0.125, 0.125, 0.125, 0.125])
-    check_num_alphas(alphas, output_channels)
+    check_num_alphas(alphas, output_channels, options["aggregate_classes"])
     # Init of supervised loss
-    criterion = FocalLoss(
-        alpha=alphas.to(device),
-        gamma=2.0,
-        reduction="mean",
-        ignore_index=IGNORE_INDEX,
-    )
+    criterion = get_criterion(supervised=True, alphas=alphas, device=device)
     if options["mode"] == TrainMode.TRAIN_SSL:
         # Init of unsupervised loss
-        criterion_unsup = FocalLoss(
-            alpha=alphas.to(device),
-            gamma=2.0,
-            reduction="none",
-            ignore_index=IGNORE_INDEX,
+        criterion_unsup = get_criterion(
+            supervised=False, alphas=alphas, device=device
         )
     # Optimizer
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=options["lr"], weight_decay=options["decay"]
+    optimizer = get_optimizer(
+        model, lr=options["lr"], weight_decay=options["decay"]
     )
     # Learning Rate scheduler
-    if options["reduce_lr_on_plateau"] == 1:
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.1, patience=10, verbose=True
-        )
-    else:
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, options["lr_steps"], gamma=0.1, verbose=True
-        )
+    scheduler = get_lr_scheduler(
+        options["reduce_lr_on_plateau"], optimizer, options["lr_steps"]
+    )
     # Start training
     epochs = options["epochs"]
     eval_every = options["eval_every"]
@@ -231,23 +198,16 @@ def main(options):
 
             i_board = 0
             for image, target in tqdm(train_loader, desc="training"):
-                image = image.to(device)
-                target = target.to(device)
-
-                optimizer.zero_grad()
-
-                logits = model(image)
-
-                loss = criterion(logits, target)
-
-                loss.backward()
-
+                loss, training_loss = train_step_supervised(
+                    image,
+                    target,
+                    criterion,
+                    training_loss,
+                    model,
+                    optimizer,
+                    device,
+                )
                 training_batches += target.shape[0]
-
-                training_loss.append((loss.data * target.shape[0]).tolist())
-
-                optimizer.step()
-
                 # Write running loss
                 tb_writer.add_scalar(
                     "training loss",
@@ -272,35 +232,18 @@ def main(options):
 
                 with torch.no_grad():
                     for image, target in tqdm(test_loader, desc="testing"):
-                        image = image.to(device)
-                        target = target.to(device)
-
-                        logits = model(image)
-
-                        loss = criterion(logits, target)
-
-                        # Accuracy metrics only on annotated pixels
-                        logits = torch.movedim(
-                            logits, (0, 1, 2, 3), (0, 3, 1, 2)
+                        y_predicted, y_true = eval_step(
+                            image,
+                            target,
+                            criterion,
+                            test_loss,
+                            y_predicted,
+                            y_true,
+                            model,
+                            output_channels,
+                            device,
                         )
-                        logits = logits.reshape((-1, output_channels))
-                        target = target.reshape(-1)
-                        mask = target != -1
-                        logits = logits[mask]
-                        target = target[mask]
-
-                        probs = (
-                            torch.nn.functional.softmax(logits, dim=1)
-                            .cpu()
-                            .numpy()
-                        )
-                        target = target.cpu().numpy()
-
                         test_batches += target.shape[0]
-                        test_loss.append((loss.data * target.shape[0]).tolist())
-                        y_predicted += probs.argmax(1).tolist()
-                        y_true += target.tolist()
-
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
                     # Save Scores to the .log file and visualize also with tensorboard
@@ -352,134 +295,32 @@ def main(options):
 
         for epoch in range(start, epochs + 1):
             print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+
             training_loss = []
             training_batches = 0
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                try:
-                    # Load labeled batch
-                    img_x, seg_map = next(labeled_iter)
-                except:
-                    labeled_iter = iter(labeled_train_loader)
-                    img_x, seg_map = next(labeled_iter)
-                try:
-                    # Load unlabeled batch of weakly augmented images
-                    img_u_w = next(unlabeled_iter)
-                except:
-                    unlabeled_iter = iter(unlabeled_train_loader)
-                    img_u_w = next(unlabeled_iter)
-
-                # Initializes RandAugment with n random augmentations.
-                # So, every batch will have different random augmentations.
-                randaugment = RandAugmentMC(n=2, m=10)
-                # Get strong transform to apply to both pseudo-label map and
-                # weakly augmented image
-                strong_transform = StrongAugmentation(
-                    randaugment=randaugment, mean=None, std=None
+                loss, training_loss = train_step_semi_supervised(
+                    file_io,
+                    labeled_train_loader,
+                    unlabeled_train_loader,
+                    labeled_iter,
+                    unlabeled_iter,
+                    criterion,
+                    criterion_unsup,
+                    training_loss,
+                    model,
+                    model_name,
+                    optimizer,
+                    epoch,
+                    device,
+                    options["batch"],
+                    classes_channel_idx,
+                    options["threshold"],
+                    options["lambda"],
+                    PADDING_VAL,
                 )
-                # Applies strong augmentation on weakly augmented images
-                img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
-                for i in range(img_u_w.shape[0]):
-                    img_u_w_i = img_u_w[i, :, :, :]
-                    img_u_w_i = img_u_w_i.cpu().detach().numpy()
-                    img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
-                    # Strongly-augmented image
-                    img_u_s_i = strong_transform(img_u_w_i)
-                    img_u_s[i, :, :, :] = img_u_s_i
-                img_u_s = torch.from_numpy(img_u_s)
-                # Moves data to device
-                inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
-                seg_map = seg_map.to(device)
-                optimizer.zero_grad()
-                # Computes logits
-                logits = model(inputs)
-                logits_x = logits[: options["batch"]]
-                logits_u_w, logits_u_s = logits[options["batch"] :].chunk(2)
-                del logits
-                # Supervised loss
-                Lx = criterion(logits_x, seg_map)
-                # Do not apply CutOut to the labels because the model has to
-                # learn to interpolate when part of the image is missing.
-                # It is only an augmentation on the inputs.
-                randaugment.use_cutout(False)
-                # Applies strong augmentation to pseudo label map
-                tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
-                for i in range(logits_u_w.shape[0]):
-                    # When you debug visually: check that the strongly augmented
-                    # weak images correspond to the strongly augmented images
-                    # (e.g. the same ship should be at the same position in both
-                    # images).
-                    logits_u_w_i = logits_u_w[i, :, :, :]
-                    logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
-                    logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-                    logits_u_w_i = strong_transform(logits_u_w_i)
-                    tmp[i, :, :, :] = logits_u_w_i
-                logits_u_w = tmp
-                logits_u_s = logits_u_s.cpu().detach().numpy()
-                # Sets all pixels that were added due to padding to a
-                # constant value to later ignore them when computing the loss
-                for i in range(logits_u_w.shape[0]):
-                    for j in range(logits_u_w.shape[1]):
-                        logits_u_w_i_j = logits_u_w[i, j, :, :]
-                        logits_u_s_i_j = logits_u_s[i, j, :, :]
-                        logits_u_s_i_j[
-                            np.where(logits_u_w_i_j == PADDING_VAL)
-                        ] = IGNORE_INDEX
-                        logits_u_s_i_j = torch.from_numpy(logits_u_s_i_j)
-                        logits_u_s[i, j, :, :] = logits_u_s_i_j
-                # Moves new logits to device
-                # Weak-aug ones
-                logits_u_w = torch.from_numpy(logits_u_w)
-                logits_u_w = logits_u_w.to(device)
-                # Strong-aug ones
-                logits_u_s = torch.from_numpy(logits_u_s)
-                logits_u_s = logits_u_s.to(device)
-                # Applies softmax
-                pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
-                # target_u is the segmentation map containing the idx of the
-                # class having the highest probability (for all pixels and for
-                # all images in the batch)
-                max_probs, targets_u = torch.max(
-                    pseudo_label, dim=classes_channel_idx
-                )
-                # Mask to ignore all pixels whose "confidence" is lower than
-                # the specified threshold
-                mask = max_probs.ge(options["threshold"]).float()
-                # Mask to ignore all padding pixels
-                padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
-                # Merge the two masks
-                mask[padding_mask] = 0
-                # Unsupervised loss
-                # Multiplies the loss by the mask to ignore pixels
-                loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(
-                    mask
-                )
-                if (loss_u).sum() == 0:
-                    Lu = 0.0
-                else:
-                    Lu = (loss_u).sum() / torch.flatten(mask).sum()
-
-                if Lu > 0:
-                    file_io.append(
-                        "./lu.txt",
-                        f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
-                    )
-                print("-" * 20)
-                print(f"Lx: {Lx}")
-                print(f"Lu: {Lu}")
-                print(f"Max prob: {max_probs.max()}")
-                print(f"n_pixels: {len(mask[mask == 1])}")
-
-                # Final loss
-                loss = Lx + options["lambda"] * Lu
-                loss.backward()
-
-                # training_batches += logits_x.shape[0]  # TODO check
-                training_loss.append((loss.data).tolist())
-
-                optimizer.step()
-
                 # Write running loss
                 tb_writer.add_scalar(
                     "training loss",
@@ -501,34 +342,18 @@ def main(options):
 
                 with torch.no_grad():
                     for image, target in tqdm(test_loader, desc="testing"):
-                        image = image.to(device)
-                        target = target.to(device)
-
-                        logits = model(image)
-
-                        loss = criterion(logits, target)
-
-                        # Accuracy metrics only on annotated pixels
-                        logits = torch.movedim(
-                            logits, (0, 1, 2, 3), (0, 3, 1, 2)
+                        y_predicted, y_true = eval_step(
+                            image,
+                            target,
+                            criterion,
+                            test_loss,
+                            y_predicted,
+                            y_true,
+                            model,
+                            output_channels,
+                            device,
                         )
-                        logits = logits.reshape((-1, output_channels))
-                        target = target.reshape(-1)
-                        mask = target != -1
-                        logits = logits[mask]
-                        target = target[mask]
-
-                        probs = (
-                            torch.nn.functional.softmax(logits, dim=1)
-                            .cpu()
-                            .numpy()
-                        )
-                        target = target.cpu().numpy()
-
                         test_batches += target.shape[0]
-                        test_loss.append((loss.data * target.shape[0]).tolist())
-                        y_predicted += probs.argmax(1).tolist()
-                        y_true += target.tolist()
 
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
@@ -568,79 +393,15 @@ def main(options):
                     scheduler.step()
 
                 model.train()
-    # CODE ONLY FOR EVALUATION - TESTING MODE !
-    elif options["mode"] == TrainMode.EVAL:
-        model.eval()
-
-        test_loss = []
-        test_batches = 0
-        y_true = []
-        y_predicted = []
-
-        with torch.no_grad():
-            for image, target in tqdm(test_loader, desc="testing"):
-                image = image.to(device)
-                target = target.to(device)
-
-                logits = model(image)
-
-                loss = criterion(logits, target)
-
-                # Accuracy metrics only on annotated pixels
-                logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
-                logits = logits.reshape((-1, output_channels))
-                target = target.reshape(-1)
-                mask = target != -1
-                logits = logits[mask]
-                target = target[mask]
-
-                probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
-                target = target.cpu().numpy()
-
-                test_batches += target.shape[0]
-                test_loss.append((loss.data * target.shape[0]).tolist())
-                y_predicted += probs.argmax(1).tolist()
-                y_true += target.tolist()
-
-            y_predicted = np.asarray(y_predicted)
-            y_true = np.asarray(y_true)
-            # Save Scores to the .log file
-            acc = Evaluation(y_predicted, y_true)
-            logging.info("\n")
-            logging.info("Test loss was: " + str(sum(test_loss) / test_batches))
-            logging.info("STATISTICS: \n")
-            logging.info("Evaluation: " + str(acc))
 
 
 if __name__ == "__main__":
     options = parse_args_train()
-
-    if options["mode"] == TrainMode.TRAIN_SSL:
-        options["checkpoint_path"] = os.path.join(
-            options["checkpoint_path"], "semi-supervised"
-        )
-    elif options["mode"] == TrainMode.TRAIN:
-        options["checkpoint_path"] = os.path.join(
-            options["checkpoint_path"], "supervised"
-        )
-    else:
-        pass
-
-    if not os.path.isdir(options["checkpoint_path"]):
-        raise Exception(
-            f'The checkpoint directory {options["checkpoint_path"]} does not exist'
-        )
-
-    # lr_steps list or single float
-    lr_steps = ast.literal_eval(options["lr_steps"])
-    if type(lr_steps) is list:
-        pass
-    elif type(lr_steps) is int:
-        lr_steps = [lr_steps]
-    else:
-        raise
-
-    options["lr_steps"] = lr_steps
+    options["checkpoint_path"] = update_checkpoint_path(
+        options["mode"], options["checkpoint_path"]
+    )
+    check_checkpoint_path_exist(options["checkpoint_path"])
+    options["lr_steps"] = get_lr_steps(options["lr_steps"])
     # Logging
     logging.basicConfig(
         filename=os.path.join(options["log_folder"], "log_unet.log"),
@@ -649,7 +410,6 @@ if __name__ == "__main__":
         format="%(name)s - %(levelname)s - %(message)s",
     )
     logging.info("*" * 10)
-
     logging.info("parsed input parameters:")
     logging.info(json.dumps(options, indent=2))
     main(options)

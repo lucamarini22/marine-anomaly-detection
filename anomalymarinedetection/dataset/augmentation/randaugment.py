@@ -15,7 +15,6 @@ from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, PADDING_VAL
 
 logger = logging.getLogger(__name__)
 
-CVAL = PADDING_VAL
 NUM_TIMES_CUTOUT = 3
 MIN_PERC_CUTOUT = 0.05
 MAX_PERC_CUTOUT = 0.15
@@ -106,7 +105,7 @@ def Rotate(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
-    aug = A.rotate(img, v, border_mode=0, value=CVAL)
+    aug = A.rotate(img, v, border_mode=0, value=PADDING_VAL)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -124,7 +123,7 @@ def ShearX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
-    aug = iaaa.ShearX(shear=v, cval=CVAL)(image=img)
+    aug = iaaa.ShearX(shear=v, cval=PADDING_VAL)(image=img)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -133,7 +132,7 @@ def ShearY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _int_parameter(v)
-    aug = iaaa.ShearY(shear=v, cval=CVAL)(image=img)
+    aug = iaaa.ShearY(shear=v, cval=PADDING_VAL)(image=img)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -151,7 +150,7 @@ def TranslateX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
-    aug = iaaa.TranslateX(percent=v, cval=CVAL)(image=img)
+    aug = iaaa.TranslateX(percent=v, cval=PADDING_VAL)(image=img)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -160,7 +159,7 @@ def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
     v = _truncate_float(v)
-    aug = iaaa.TranslateY(percent=v, cval=CVAL)(image=img)
+    aug = iaaa.TranslateY(percent=v, cval=PADDING_VAL)(image=img)
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
