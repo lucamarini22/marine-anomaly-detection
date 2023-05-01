@@ -88,7 +88,8 @@ categories_to_ignore_perc_labeled = [
     "Not labeled",
     "Marine Water",
     "Algae/Natural Organic Material",
-    "Ship",
+    # "Ship",
+    "Clouds",
 ]
 
 roi_mapping = {
