@@ -40,7 +40,7 @@ def parse_args_train():
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.8,
+        default=0.1,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -66,6 +66,19 @@ def parse_args_train():
         default=1,
         type=float,
         help="Coefficient of unlabeled loss.",
+    )
+    # Focal loss
+    parser.add_argument(
+        "--gamma",
+        default=2.0,
+        type=float,
+        help="Gamma coefficient of the focal loss.",
+    )
+    parser.add_argument(
+        "--alphas",
+        default=[0.50, 0.125, 0.125, 0.125, 0.125],
+        type=list[float],
+        help="Alpha coefficients of the focal loss.",
     )
     # Training hyperparameters
     parser.add_argument(
