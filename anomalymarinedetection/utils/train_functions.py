@@ -4,12 +4,8 @@ from typing import Iterator
 import numpy as np
 import torch
 from torch import nn
-import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
-    DiscreteRandomRotation,
-)
 from anomalymarinedetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
 )
@@ -25,7 +21,6 @@ from anomalymarinedetection.loss.focal_loss import FocalLoss
 from anomalymarinedetection.models.unet import UNet
 from anomalymarinedetection.utils.constants import (
     IGNORE_INDEX,
-    ANGLES_FIXED_ROTATION,
     PADDING_VAL,
 )
 from anomalymarinedetection.io.file_io import FileIO
@@ -394,32 +389,6 @@ def get_model(
         hidden_channels=hidden_channels,
     )
     return model
-
-
-def get_transform_train() -> transforms.Compose:
-    """Gets the transformation to be applied to the training dataset.
-
-    Returns:
-        transforms.Compose: the transformation to be applied to the training set.
-    """
-    transform_train = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            DiscreteRandomRotation(ANGLES_FIXED_ROTATION),
-            transforms.RandomHorizontalFlip(),
-        ]
-    )
-    return transform_train
-
-
-def get_transform_test() -> transforms.Compose:
-    """Gets the transformation to be applied to the test dataset.
-
-    Returns:
-        transforms.Compose: the transformation to be applied to the test set.
-    """
-    transform_test = transforms.Compose([transforms.ToTensor()])
-    return transform_test
 
 
 def check_num_alphas(

@@ -39,13 +39,17 @@ from anomalymarinedetection.utils.train_functions import (
     get_optimizer,
     get_lr_scheduler,
     get_model,
-    get_transform_train,
-    get_transform_test,
     check_num_alphas,
     get_output_channels,
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
+)
+from anomalymarinedetection.dataset.augmentation.get_transform_train import (
+    get_transform_train,
+)
+from anomalymarinedetection.dataset.augmentation.get_transform_test import (
+    get_transform_test,
 )
 
 
