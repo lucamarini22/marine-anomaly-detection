@@ -4,17 +4,10 @@ import logging
 import numpy as np
 from tqdm import tqdm
 import torch
-import torchvision.transforms as transforms
 
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl,
-)
-from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
-    StrongAugmentation,
-)
-from anomalymarinedetection.dataset.augmentation.randaugment import (
-    RandAugmentMC,
 )
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
@@ -22,10 +15,8 @@ from anomalymarinedetection.utils.constants import (
     BANDS_MEAN,
     BANDS_STD,
     SEPARATOR,
-    IGNORE_INDEX,
     PADDING_VAL,
 )
-from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.tbwriter import TBWriter
 from anomalymarinedetection.trainmode import TrainMode
