@@ -195,7 +195,6 @@ class AnomalyMarineDataset(Dataset):
                     )
                 else:
                     raise Exception("NotImplemented Category Aggregation value.")
-
                 if perc_labeled is not None:
                     # Counts the # pixels only if it is the ssl setting
                     
