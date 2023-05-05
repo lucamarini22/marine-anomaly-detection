@@ -15,7 +15,7 @@ def parse_args_train():
     # Options
     parser.add_argument(
         "--seed",
-        default=0,
+        default=2,
         help=("Seed."),
         type=int,
     )
@@ -40,7 +40,7 @@ def parse_args_train():
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.1,
+        default=0.8,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -108,9 +108,7 @@ def parse_args_train():
     )
     # Optimization
     parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
-    parser.add_argument(
-        "--decay", default=0, type=float, help="Learning rate decay"
-    )
+    parser.add_argument("--decay", default=0, type=float, help="Weight decay")
     parser.add_argument(
         "--reduce_lr_on_plateau",
         default=0,
