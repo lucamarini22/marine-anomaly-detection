@@ -21,3 +21,4 @@ dependencies:
   - albumentations
   - jupyter
   - matplotlib
+  - wandb
