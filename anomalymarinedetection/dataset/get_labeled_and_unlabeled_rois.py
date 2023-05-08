@@ -26,4 +26,7 @@ def get_labeled_and_unlabeled_rois(
     # Labeled regions of interests
     ROIs = np.setdiff1d(ROIs, ROIs_u)
 
+    print(ROIs)
+    print(len(ROIs))
+
     return ROIs, ROIs_u

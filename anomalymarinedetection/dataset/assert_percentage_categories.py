@@ -23,6 +23,7 @@ def assert_percentage_categories(
             min_perc_labeled_category = (
                 perc_labeled * num_pixels_dict[class_name]
             )
+            print(f"Class: {class_name}\n - num_lab_pixels: {categories_counter_dict[class_name]}\n - min_lab_pixels: {min_perc_labeled_category}")
             if not (
                 categories_counter_dict[class_name] >= min_perc_labeled_category
             ):
