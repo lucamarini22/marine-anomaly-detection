@@ -50,8 +50,8 @@ from anomalymarinedetection.utils.train_functions import (
 from anomalymarinedetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
 )
-from anomalymarinedetection.dataset.augmentation.get_transform_test import (
-    get_transform_test,
+from anomalymarinedetection.dataset.augmentation.get_transform_val import (
+    get_transform_val,
 )
 
 
@@ -82,7 +82,7 @@ def main(options):
     )
     # Transformations
     transform_train = get_transform_train()
-    transform_test = get_transform_test()
+    transform_val = get_transform_val()
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
@@ -90,10 +90,10 @@ def main(options):
     standardization = None  # transforms.Normalize(BANDS_MEAN, BANDS_STD)
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN:
-        train_loader, test_loader = get_dataloaders_supervised(
+        train_loader, val_loader = get_dataloaders_supervised(
             dataset_path=options["dataset_path"],
             transform_train=transform_train,
-            transform_test=transform_test,
+            transform_val=transform_val,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             batch=options["batch"],
@@ -108,11 +108,11 @@ def main(options):
         (
             labeled_train_loader,
             unlabeled_train_loader,
-            test_loader,
+            val_loader,
         ) = get_dataloaders_ssl(
             dataset_path=options["dataset_path"],
             transform_train=transform_train,
-            transform_test=transform_test,
+            transform_val=transform_val,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             batch=options["batch"],
@@ -234,32 +234,34 @@ def main(options):
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
-                val_loss = []
-                test_batches = 0
+                val_losses = []
+                val_batches = 0
                 y_true = []
                 y_predicted = []
 
                 with torch.no_grad():
-                    for image, target in tqdm(test_loader, desc="testing"):
+                    for image, target in tqdm(val_loader, desc="validation"):
                         y_predicted, y_true = eval_step(
                             image,
                             target,
                             criterion,
-                            val_loss,
+                            val_losses,
                             y_predicted,
                             y_true,
                             model,
                             output_channels,
                             device,
                         )
-                        test_batches += target.shape[0]
+                        val_batches += target.shape[0]
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
                     # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
+                    
+                    val_loss = sum(val_losses) / val_batches
                     logging.info("\n")
                     logging.info(
-                        "Val loss was: " + str(sum(val_loss) / test_batches)
+                        "Val loss was: " + str(val_loss)
                     )
                     logging.info(
                         "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
@@ -278,7 +280,7 @@ def main(options):
                     tb_writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Val loss": sum(val_loss) / test_batches,
+                            "Val loss": val_loss,
                             "Train loss": sum(training_loss) / training_batches,
                         },
                         epoch,
@@ -289,12 +291,12 @@ def main(options):
                         {
                             "epoch": epoch,
                             "train_loss": sum(training_loss) / training_batches,
-                            "val_loss": sum(val_loss) / test_batches,
+                            "val_loss": val_loss,
                         }
                     )
-
+                val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
-                    scheduler.step(sum(val_loss) / test_batches)
+                    scheduler.step(val_loss)
                 else:
                     scheduler.step()
 
@@ -338,11 +340,18 @@ def main(options):
                     options["lambda"],
                     PADDING_VAL,
                 )
+                training_batches += options["batch"]
                 # Write running loss
                 tb_writer.add_scalar(
                     "training loss",
                     loss,
                     (epoch - 1) * len(labeled_train_loader) + i_board,
+                )
+                wandb.log(
+                    {
+                        "train_loss": loss,
+                        "step": (epoch - 1) * len(labeled_train_loader) + i_board,
+                    }
                 )
                 i_board += 1
 
@@ -352,33 +361,34 @@ def main(options):
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
-                val_loss = []
-                test_batches = 0
+                val_losses = []
+                val_batches = 0
                 y_true = []
                 y_predicted = []
 
                 with torch.no_grad():
-                    for image, target in tqdm(test_loader, desc="testing"):
+                    for image, target in tqdm(val_loader, desc="validation"):
                         y_predicted, y_true = eval_step(
                             image,
                             target,
                             criterion,
-                            val_loss,
+                            val_losses,
                             y_predicted,
                             y_true,
                             model,
                             output_channels,
                             device,
                         )
-                        test_batches += target.shape[0]
+                        val_batches += target.shape[0]
 
                     y_predicted = np.asarray(y_predicted)
                     y_true = np.asarray(y_true)
                     # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
+                    val_loss = sum(val_losses) / val_batches
                     logging.info("\n")
                     logging.info(
-                        "Val loss was: " + str(sum(val_loss) / test_batches)
+                        "Val loss was: " + str(val_loss)
                     )
                     logging.info(
                         "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
@@ -397,15 +407,23 @@ def main(options):
                     tb_writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Val loss": sum(val_loss) / test_batches,
+                            "Val loss": val_loss,
                             "Train loss": np.mean(training_loss),
                         },
                         epoch,
                     )
                     tb_writer.add_eval_metrics(acc, epoch)
+                    wandb.log(
+                        {
+                            "epoch": epoch,
+                            "train_loss": sum(training_loss) / training_batches,
+                            "val_loss": val_loss,
+                        }
+                    )
 
+                val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
-                    scheduler.step(sum(val_loss) / test_batches)
+                    scheduler.step(val_loss)
                 else:
                     scheduler.step()
 
