@@ -22,7 +22,7 @@ from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
 def get_dataloaders_supervised(
     dataset_path: str,
     transform_train: transforms.Compose,
-    transform_test: transforms.Compose,
+    transform_val: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
@@ -39,8 +39,8 @@ def get_dataloaders_supervised(
         dataset_path (str): path of the dataset.
         transform_train (transforms.Compose): transformations to be applied
           to training set.
-        transform_test (transforms.Compose): transformations to be applied
-          to test set.
+        transform_val (transforms.Compose): transformations to be applied
+          to the validation set.
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
@@ -63,7 +63,7 @@ def get_dataloaders_supervised(
           generate `base_seed` for workers.
 
     Returns:
-        tuple[DataLoader, DataLoader]: training and test dataloaders.
+        tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
     dataset_train = AnomalyMarineDataset(
         DataLoaderType.TRAIN_SUP,
@@ -72,9 +72,9 @@ def get_dataloaders_supervised(
         aggregate_classes=aggregate_classes,
         path=dataset_path,
     )
-    dataset_test = AnomalyMarineDataset(
+    dataset_val = AnomalyMarineDataset(
         DataLoaderType.VAL,
-        transform=transform_test,
+        transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
@@ -92,8 +92,8 @@ def get_dataloaders_supervised(
         generator=generator,
     )
 
-    test_loader = DataLoader(
-        dataset_test,
+    val_loader = DataLoader(
+        dataset_val,
         batch_size=batch,
         shuffle=False,
         num_workers=num_workers,
@@ -103,13 +103,13 @@ def get_dataloaders_supervised(
         worker_init_fn=seed_worker_fn,
         generator=generator,
     )
-    return train_loader, test_loader
+    return train_loader, val_loader
 
 
 def get_dataloaders_ssl(
     dataset_path: str,
     transform_train: transforms.Compose,
-    transform_test: transforms.Compose,
+    transform_val: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
@@ -129,8 +129,8 @@ def get_dataloaders_ssl(
         dataset_path (str): path of the dataset.
         transform_train (transforms.Compose): transformations to be applied
           to training set.
-        transform_test (transforms.Compose): transformations to be applied
-          to test set.
+        transform_val (transforms.Compose): transformations to be applied
+          to the validation set.
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
@@ -160,7 +160,7 @@ def get_dataloaders_ssl(
 
     Returns:
         tuple[DataLoader, DataLoader, DataLoader]: labeled training dataloader,
-        unlabeled training dataloader, and test dataloader.
+        unlabeled training dataloader, and validation dataloader.
     """
     # Split training data into labeled and unlabeled sets
     ROIs, ROIs_u = get_labeled_and_unlabeled_rois(
@@ -185,9 +185,9 @@ def get_dataloaders_ssl(
         rois=ROIs_u,
         path=dataset_path,
     )
-    dataset_test = AnomalyMarineDataset(
+    dataset_val = AnomalyMarineDataset(
         DataLoaderType.VAL,
-        transform=transform_test,
+        transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
@@ -218,8 +218,8 @@ def get_dataloaders_ssl(
         drop_last=drop_last,
     )
 
-    test_loader = DataLoader(
-        dataset_test,
+    val_loader = DataLoader(
+        dataset_val,
         batch_size=batch,
         shuffle=False,
         num_workers=num_workers,
@@ -229,4 +229,4 @@ def get_dataloaders_ssl(
         worker_init_fn=seed_worker_fn,
         generator=generator,
     )
-    return labeled_train_loader, unlabeled_train_loader, test_loader
+    return labeled_train_loader, unlabeled_train_loader, val_loader
