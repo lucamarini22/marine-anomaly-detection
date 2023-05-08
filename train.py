@@ -1,9 +1,11 @@
 import os
 import json
+import yaml
 import logging
 import numpy as np
 from tqdm import tqdm
 import torch
+import wandb
 
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
@@ -214,6 +216,13 @@ def main(options):
                     loss,
                     (epoch - 1) * len(train_loader) + i_board,
                 )
+
+                wandb.log(
+                    {
+                        "train_loss": loss,
+                        "step": (epoch - 1) * len(train_loader) + i_board,
+                    }
+                )
                 i_board += 1
 
             logging.info(
@@ -225,7 +234,7 @@ def main(options):
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
-                test_loss = []
+                val_loss = []
                 test_batches = 0
                 y_true = []
                 y_predicted = []
@@ -236,7 +245,7 @@ def main(options):
                             image,
                             target,
                             criterion,
-                            test_loss,
+                            val_loss,
                             y_predicted,
                             y_true,
                             model,
@@ -250,7 +259,7 @@ def main(options):
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
                     logging.info(
-                        "Val loss was: " + str(sum(test_loss) / test_batches)
+                        "Val loss was: " + str(sum(val_loss) / test_batches)
                     )
                     logging.info(
                         "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
@@ -269,15 +278,23 @@ def main(options):
                     tb_writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Val loss": sum(test_loss) / test_batches,
+                            "Val loss": sum(val_loss) / test_batches,
                             "Train loss": sum(training_loss) / training_batches,
                         },
                         epoch,
                     )
                     tb_writer.add_eval_metrics(acc, epoch)
 
+                    wandb.log(
+                        {
+                            "epoch": epoch,
+                            "train_loss": sum(training_loss) / training_batches,
+                            "val_loss": sum(val_loss) / test_batches,
+                        }
+                    )
+
                 if options["reduce_lr_on_plateau"] == 1:
-                    scheduler.step(sum(test_loss) / test_batches)
+                    scheduler.step(sum(val_loss) / test_batches)
                 else:
                     scheduler.step()
 
@@ -335,7 +352,7 @@ def main(options):
             if epoch % eval_every == 0 or epoch == 1:
                 model.eval()
 
-                test_loss = []
+                val_loss = []
                 test_batches = 0
                 y_true = []
                 y_predicted = []
@@ -346,7 +363,7 @@ def main(options):
                             image,
                             target,
                             criterion,
-                            test_loss,
+                            val_loss,
                             y_predicted,
                             y_true,
                             model,
@@ -361,7 +378,7 @@ def main(options):
                     acc = Evaluation(y_predicted, y_true)
                     logging.info("\n")
                     logging.info(
-                        "Val loss was: " + str(sum(test_loss) / test_batches)
+                        "Val loss was: " + str(sum(val_loss) / test_batches)
                     )
                     logging.info(
                         "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
@@ -380,7 +397,7 @@ def main(options):
                     tb_writer.add_scalars(
                         "Loss per epoch",
                         {
-                            "Val loss": sum(test_loss) / test_batches,
+                            "Val loss": sum(val_loss) / test_batches,
                             "Train loss": np.mean(training_loss),
                         },
                         epoch,
@@ -388,7 +405,7 @@ def main(options):
                     tb_writer.add_eval_metrics(acc, epoch)
 
                 if options["reduce_lr_on_plateau"] == 1:
-                    scheduler.step(sum(test_loss) / test_batches)
+                    scheduler.step(sum(val_loss) / test_batches)
                 else:
                     scheduler.step()
 
@@ -396,7 +413,17 @@ def main(options):
 
 
 if __name__ == "__main__":
-    options = parse_args_train()
+    # Weight and Biases
+    wandb.login()
+
+    # Set up your default hyperparameters
+    with open("./config.yaml") as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+
+    run = wandb.init(config=config)
+    config = wandb.config
+
+    options = parse_args_train(config)
     options["checkpoint_path"] = update_checkpoint_path(
         options["mode"], options["checkpoint_path"]
     )

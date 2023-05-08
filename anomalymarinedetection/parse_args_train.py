@@ -8,7 +8,7 @@ from anomalymarinedetection.dataset.categoryaggregation import (
 from anomalymarinedetection.trainmode import TrainMode
 
 
-def parse_args_train():
+def parse_args_train(config):
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
@@ -178,4 +178,6 @@ def parse_args_train():
     args.today_str = today_str
     # convert to ordinary dict
     options = vars(args)
+    options["lr"] = config.lr
+    options["threshold"] = config.threshold
     return options
