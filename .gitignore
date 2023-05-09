@@ -270,3 +270,6 @@ anomalymarinedetection/semantic_segmentation/unet/trained_models/*
 
 anomalymarinedetection/multi-label/*
 *.npz
+
+*.wandb
+wandb*.json
