@@ -273,3 +273,6 @@ anomalymarinedetection/multi-label/*
 
 *.wandb
 wandb*.json
+config-*.yaml
+conda-*.yaml
+req*.txt
