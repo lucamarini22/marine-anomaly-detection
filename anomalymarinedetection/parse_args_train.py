@@ -9,13 +9,14 @@ from anomalymarinedetection.trainmode import TrainMode
 
 
 def parse_args_train(config):
+    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]= "1000"
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
     # Options
     parser.add_argument(
         "--seed",
-        default=2,
+        #default=0,
         help=("Seed."),
         type=int,
     )
@@ -40,7 +41,7 @@ def parse_args_train(config):
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.8,
+        default=0.5,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -51,13 +52,13 @@ def parse_args_train(config):
     )
     parser.add_argument(
         "--mu",
-        default=9,
+        #default=9,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        default=0.9,
+        #default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
@@ -87,7 +88,8 @@ def parse_args_train(config):
         type=int,
         help="Number of epochs to run",
     )
-    parser.add_argument("--batch", default=5, type=int, help="Batch size")
+    parser.add_argument("--batch", #default=5, 
+                        type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
@@ -107,7 +109,8 @@ def parse_args_train(config):
         "--dataset_path", help="path of dataset", default="data"
     )
     # Optimization
-    parser.add_argument("--lr", default=2e-4, type=float, help="learning rate")
+    parser.add_argument("--lr", #default=2e-4, 
+                        type=float, help="learning rate")
     parser.add_argument("--decay", default=0, type=float, help="Weight decay")
     parser.add_argument(
         "--reduce_lr_on_plateau",
@@ -180,4 +183,7 @@ def parse_args_train(config):
     options = vars(args)
     options["lr"] = config.lr
     options["threshold"] = config.threshold
+    options["mu"] = config.mu
+    options["batch"] = config.batch
+    options["seed"] = config.seed
     return options

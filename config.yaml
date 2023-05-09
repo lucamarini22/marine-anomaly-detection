@@ -5,10 +5,16 @@ metric:
   goal: minimize
 parameters:
   lr:
-    min: 0.0001
-    max: 0.1
+    values: [0.0001, 0.001, 0.01, 0.1]
   threshold:
     values: [0.7, 0.8, 0.9]
   epochs:
-    value: 1500
+    value: 1000
+  batch:
+    values: [10] #5, 10]
+  seed:
+    min: 0
+    max: 1000
+  mu:
+    values: [9] #, 9]
   
