@@ -75,9 +75,7 @@ def save_marida_and_cop_hub_2_png(
         tokens = PurePath(marida_file_path).parts
         marida_patch_folder_name = tokens[-2]
         marida_patch_name = tokens[-1]
-        # TODO: remove this if condition asa you have all the cop hub images,
-        # but keep the appending to list (outside the if condition when you
-        # remove it)
+
         if marida_patch_folder_name not in MISSING_TILES:
             marida_patch_name = remove_extension_from_name(
                 marida_patch_name, ext
