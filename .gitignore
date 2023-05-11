@@ -273,3 +273,4 @@ anomalymarinedetection/multi-label/*
 
 *.wandb
 wandb*.json
+wandb/*
