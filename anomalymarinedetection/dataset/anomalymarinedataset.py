@@ -77,6 +77,9 @@ class AnomalyMarineDataset(Dataset):
             # dict that will contain the number of labeled pixels for each 
             # category
             self.categories_counter_dict = {}
+            for roi_print in self.ROIs:
+                print(roi_print)
+            print(len(self.ROIs))
 
         elif mode == DataLoaderType.TRAIN_SSL:
             # Semi-supervised learning case - training unlabeled data
