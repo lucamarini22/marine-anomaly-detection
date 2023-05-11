@@ -1,20 +1,22 @@
 program: train.py
 method: random
 metric:
-  name: val_loss
   goal: minimize
+  name: min_val_loss_among_epochs
 parameters:
   lr:
-    values: [0.0001, 0.001, 0.01, 0.1]
+    values: [2e-4] #[0.0001, 0.001, 0.01, 0.1]
   threshold:
     values: [0.7, 0.8, 0.9]
   epochs:
-    value: 1000
+    value: 2000
   batch:
-    values: [10] #5, 10]
+    values: [5] #[10] 
   seed:
+    #value: 2
     min: 0
     max: 1000
   mu:
     values: [9] #, 9]
+  
   
