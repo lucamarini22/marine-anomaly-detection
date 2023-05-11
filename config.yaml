@@ -13,7 +13,7 @@ parameters:
   batch:
     values: [5] #[10] 
   seed:
-    #value: 2
+    #value: 205
     min: 0
     max: 1000
   mu:
