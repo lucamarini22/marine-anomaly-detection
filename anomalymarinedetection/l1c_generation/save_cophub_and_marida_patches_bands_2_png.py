@@ -20,8 +20,7 @@ from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
     float32_to_uint8,
 )
 
-# TODO: Remove this
-TEMP = ["S2_24-3-20_18QYF", "S2_29-8-17_51RVQ"]
+MISSING_TILES = ["S2_12-1-17_16PCC", "S2_12-1-17_16PEC", "S2_21-2-17_16PCC"]
 
 
 def save_marida_and_cop_hub_2_png(
@@ -76,10 +75,8 @@ def save_marida_and_cop_hub_2_png(
         tokens = PurePath(marida_file_path).parts
         marida_patch_folder_name = tokens[-2]
         marida_patch_name = tokens[-1]
-        # TODO: remove this if condition asa you have all the cop hub images,
-        # but keep the appending to list (outside the if condition when you
-        # remove it)
-        if marida_patch_folder_name in TEMP:
+
+        if marida_patch_folder_name not in MISSING_TILES:
             marida_patch_name = remove_extension_from_name(
                 marida_patch_name, ext
             )
