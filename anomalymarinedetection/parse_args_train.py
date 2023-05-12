@@ -9,14 +9,15 @@ from anomalymarinedetection.trainmode import TrainMode
 
 
 def parse_args_train(config):
-    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]= "1000"
+    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]="1000"
+    os.environ["WANDB_AGENT_DISABLE_FLAPPING"]="true"
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
     # Options
     parser.add_argument(
         "--seed",
-        #default=0,
+        #default=476,
         help=("Seed."),
         type=int,
     )
@@ -41,7 +42,7 @@ def parse_args_train(config):
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.5,
+        default=0.1,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -120,7 +121,7 @@ def parse_args_train(config):
     )
     parser.add_argument(
         "--lr_steps",
-        default="[10000]",
+        default="[40]", #"[10000]",
         type=str,
         help="Specify the steps that the lr will be reduced",
     )
@@ -182,8 +183,9 @@ def parse_args_train(config):
     # convert to ordinary dict
     options = vars(args)
     options["lr"] = config.lr
-    options["threshold"] = config.threshold
-    options["mu"] = config.mu
+    if options["mode"] == TrainMode.TRAIN_SSL:
+        options["threshold"] = config.threshold
+        options["mu"] = config.mu
     options["batch"] = config.batch
     options["seed"] = config.seed
     return options
