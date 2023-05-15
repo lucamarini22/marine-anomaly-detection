@@ -8,7 +8,6 @@ class WandbLogger():
     def login() -> wandb.sdk.wandb_config.Config:
         """Logins on wandb."""
         wandb.login()
-        
 
     @staticmethod
     def get_config(config_file_path: str) -> wandb.sdk.wandb_config.Config:
