@@ -69,6 +69,8 @@ def main(options, wandb_logger):
         options["mode"],
         options["aggregate_classes"],
         options["today_str"],
+        options["run_id"],
+        options["run_name"],
         SEPARATOR,
     )
     # Tensorboard

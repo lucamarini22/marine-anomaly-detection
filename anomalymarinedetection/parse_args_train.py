@@ -1,5 +1,6 @@
 import os
 import argparse
+import wandb
 
 from anomalymarinedetection.utils.string import get_today_str
 from anomalymarinedetection.dataset.categoryaggregation import (
@@ -42,7 +43,7 @@ def parse_args_train(config):
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.1,
+        default=0.5,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -115,13 +116,13 @@ def parse_args_train(config):
     parser.add_argument("--decay", default=0, type=float, help="Weight decay")
     parser.add_argument(
         "--reduce_lr_on_plateau",
-        default=0,
+        #default=1,
         type=int,
         help="Reduce learning rate when no increase (0 or 1)",
     )
     parser.add_argument(
         "--lr_steps",
-        default="[40]", #"[10000]",
+        default="[10000]", #"[40]",
         type=str,
         help="Specify the steps that the lr will be reduced",
     )
@@ -188,4 +189,9 @@ def parse_args_train(config):
         options["mu"] = config.mu
     options["batch"] = config.batch
     options["seed"] = config.seed
+    options["reduce_lr_on_plateau"] = config.reduce_lr_on_plateau
+    
+    options["run_id"] = wandb.run.id
+    options["run_name"] = wandb.run.name
+    
     return options

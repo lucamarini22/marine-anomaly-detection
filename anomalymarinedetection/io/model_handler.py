@@ -33,6 +33,8 @@ def get_model_name(
     mode: TrainMode,
     category_agg: CategoryAggregation,
     today_str: str,
+    run_id: str,
+    run_name: str,
     separator: str = "_",
 ) -> str:
     """Gets the name of the model.
@@ -42,6 +44,8 @@ def get_model_name(
         mode (TrainMode): train mode.
         category_agg (CategoryAggregation): category aggregation.
         today_str (str): today time represented as a string.
+        run_id (str): run id of wandb.
+        run_name (str): run name of wandb.
         separator (str, optional): separator. Defaults to "_".
 
     Returns:
@@ -53,4 +57,5 @@ def get_model_name(
         model_name = (
             today_str + separator + mode.name + separator + category_agg.name
         )
+    model_name = model_name + separator + run_id + separator + run_name
     return model_name
