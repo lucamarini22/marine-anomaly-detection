@@ -16,12 +16,11 @@ from anomalymarinedetection.utils.bands import get_marida_band_idx
 from anomalymarinedetection.io.file_io import FileIO
 from anomalymarinedetection.io.image_io import ImageIO
 from anomalymarinedetection.io.tif_io import TifIO
-from anomalymarinedetection.imageprocessing.scale_img_to_0_255 import (
-    scale_img_to_0_255
+from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
+    float32_to_uint8,
 )
 
-# TODO: Remove this
-TEMP = ["S2_24-3-20_18QYF", "S2_29-8-17_51RVQ"]
+MISSING_TILES = ["S2_12-1-17_16PCC", "S2_12-1-17_16PEC", "S2_21-2-17_16PCC"]
 
 
 def save_marida_and_cop_hub_2_png(
@@ -60,10 +59,7 @@ def save_marida_and_cop_hub_2_png(
     tif_io = TifIO()
     # Asserts the file containing all the pairs of corresponding copernicus
     # hub does not already exist and that is empty if it exists
-    if (
-        os.path.exists(pairs_file_path)
-        and os.path.getsize(pairs_file_path) > 0
-    ):
+    if os.path.exists(pairs_file_path) and os.path.getsize(pairs_file_path) > 0:
         raise Exception(f"The file at {pairs_file_path} should be empty.")
 
     assert os.path.isdir(
@@ -79,10 +75,8 @@ def save_marida_and_cop_hub_2_png(
         tokens = PurePath(marida_file_path).parts
         marida_patch_folder_name = tokens[-2]
         marida_patch_name = tokens[-1]
-        # TODO: remove this if condition asa you have all the cop hub images,
-        # but keep the appending to list (outside the if condition when you
-        # remove it)
-        if marida_patch_folder_name in TEMP:
+
+        if marida_patch_folder_name not in MISSING_TILES:
             marida_patch_name = remove_extension_from_name(
                 marida_patch_name, ext
             )
@@ -100,7 +94,7 @@ def save_marida_and_cop_hub_2_png(
                             marida_patch_name,
                             marida_patch_name + l1c + band_cop_hub + ext,
                         )
-                        img_marida = scale_img_to_0_255(
+                        img_marida = float32_to_uint8(
                             img_marida[:, :, band_marida]
                         )
                         # Saves marida patch as .png
@@ -127,7 +121,7 @@ def save_marida_and_cop_hub_2_png(
                         + band_cop_hub
                         + out_img_ext
                     )
-                    img_cop_hub = scale_img_to_0_255(img_cop_hub[:, :, 0])
+                    img_cop_hub = float32_to_uint8(img_cop_hub[:, :, 0])
                     image_io.save_img(
                         img_cop_hub,
                         os.path.join(output_folder_path, name_cop_hub_img),
