@@ -16,6 +16,11 @@ def parse_args_train(config):
     today_str = get_today_str()
 
     # Options
+    parser.add_argument(
+        "--seed",
+        help=("Seed."),
+        type=int,
+    )
     # Aggregation of categories
     parser.add_argument(
         "--aggregate_classes",
@@ -46,6 +51,21 @@ def parse_args_train(config):
         ),
         type=float,
     )
+    parser.add_argument(
+        "--mu",
+        help=("Unlabeled data ratio."),
+        type=float,
+    )
+    parser.add_argument(
+        "--threshold",
+        help=("Confidence threshold for pseudo-labels."),
+        type=float,
+    )
+    parser.add_argument(
+        "--lambda_coeff",
+        type=float,
+        help="Coefficient of unlabeled loss.",
+    )
     # Focal loss
     parser.add_argument(
         "--gamma",
@@ -60,6 +80,12 @@ def parse_args_train(config):
         help="Alpha coefficients of the focal loss.",
     )
     # Training hyperparameters
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        help="Number of epochs to run",
+    )
+    parser.add_argument("--batch", type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
@@ -79,13 +105,20 @@ def parse_args_train(config):
         "--dataset_path", help="path of dataset", default="data"
     )
     # Optimization
+    parser.add_argument("--lr", type=float, help="learning rate")
     parser.add_argument("--decay", default=0, type=float, help="Weight decay")
+    parser.add_argument(
+        "--reduce_lr_on_plateau",
+        type=int,
+        help="Reduces learning rate when no increase (0 or 1).",
+    )
     parser.add_argument(
         "--lr_steps",
         default="[10000]",
         type=str,
-        help="Specify the steps that the lr will be reduced. To use only when reduce_lr_on_plateau is set to 0 in the config.yaml file",
+        help="Specify the steps that the lr will be reduced. To use only when reduce_lr_on_plateau is set to 0 in the config.yaml file. When reduce_lr_on_plateau = 1 another learning rate decay strategy is applied.",
     )
+
     # Evaluation/Checkpointing
     parser.add_argument(
         "--checkpoint_path",
@@ -148,7 +181,7 @@ def parse_args_train(config):
         options["mu"] = config.mu
     options["batch"] = config.batch
     options["seed"] = config.seed
-    options["reduce_lr_on_plateau"] = config.reduce_lr_on_plateau
+    #options["reduce_lr_on_plateau"] = config.reduce_lr_on_plateau
     options["lambda_coeff"] = config.lambda_coeff
     
     options["run_id"] = wandb.run.id

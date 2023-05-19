@@ -4,19 +4,21 @@ metric:
   goal: minimize
   name: min_val_loss_among_epochs
 parameters:
-  lr: # Learning rate.
+  # See the description of the following hyperparameters here: 
+  # https://github.com/lucamarini22/anomaly-marine-detection/blob/main/anomalymarinedetection/parse_args_train.py 
+  lr:
     values: [0.0002, 0.001, 0.01] #, 0.1] #[2e-4]
-  threshold: # Confidence threshold for pseudo-labels.
+  threshold:
     values: [0.9, 0.95]
-  epochs: # Number of epochs to run.
+  epochs:
     value: 900
-  batch: # Batch size.
+  batch:
     values: [5, 10]
   seed:
     values: [719]
-  mu: # Unlabeled data ratio.
+  mu:
     values: [5, 9]
-  reduce_lr_on_plateau: # Reduces learning rate when no increase (0 or 1).
+  reduce_lr_on_plateau:
     values: [0, 1]
-  lambda_coeff: # Coefficient of unlabeled loss.
+  lambda_coeff:
     values: [0.25]
