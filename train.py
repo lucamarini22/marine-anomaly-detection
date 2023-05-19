@@ -349,7 +349,7 @@ def main(options, wandb_logger):
                     options["batch"],
                     classes_channel_idx,
                     options["threshold"],
-                    options["lambda"],
+                    options["lambda_coeff"],
                     PADDING_VAL,
                 )
                 training_batches += options["batch"]
