@@ -1,4 +1,5 @@
 import os
+from loguru import logger
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -78,8 +79,8 @@ class AnomalyMarineDataset(Dataset):
             # category
             self.categories_counter_dict = {}
             for roi_print in self.ROIs:
-                print(roi_print)
-            print(len(self.ROIs))
+                logger.info(roi_print)
+            logger.info(f"Total of {len(self.ROIs)} training patches.")
 
         elif mode == DataLoaderType.TRAIN_SSL:
             # Semi-supervised learning case - training unlabeled data

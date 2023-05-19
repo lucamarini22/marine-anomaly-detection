@@ -1,5 +1,6 @@
 import os
 import json
+from loguru import logger
 import logging
 import numpy as np
 from tqdm import tqdm
@@ -65,6 +66,8 @@ def main(options, wandb_logger):
     set_seed(seed)
     g = torch.Generator()
     g.manual_seed(seed)
+    
+    logger.add(os.path.join(f"{options['log_folder']}", "log_set.log"))
 
     model_name = get_model_name(
         options["resume_model"],
