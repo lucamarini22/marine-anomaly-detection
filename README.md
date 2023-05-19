@@ -30,3 +30,26 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
    pip install -e .
    ```
 
+### Training
+1. Create a [Weight and Biases](https://wandb.ai) account to keep track of the experiments.
+2. Set the values of the hyperparameters in this [config.yaml](https://github.com/lucamarini22/anomaly-marine-detection/blob/main/config.yaml) file.
+3. Enter in the main folder
+   ```sh
+   cd /anomaly-marine-detection/
+   ```
+4. Create a [Sweep](https://docs.wandb.ai/guides/sweeps) to keep track of your training runs.
+   ```
+   wandb sweep --project <project-name> config.yaml
+   ```
+5. Start an agent and execute $NUM training runs.
+   ```
+   wandb agent --count $NUM <your-entity/sweep-demo-cli/sweepID>
+   ```
+
+### Evaluation
+1. Evaluate a model.
+   ```
+   python evaluation.py --model_path=<path_to_model>
+   ```
+2. Visualize the predictions of the last evaluated model by running the cells of the notebook [Visualize Predictions.ipynb](https://github.com/lucamarini22/anomaly-marine-detection/blob/main/notebooks/Visualize%20Predictions.ipynb). Specify the variable `tile_name` to see the predictions for the patches of the specified tile.
+
