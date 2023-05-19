@@ -4,13 +4,13 @@ metric:
   goal: minimize
   name: min_val_loss_among_epochs
 parameters:
-  lr:
+  lr: # Learning rate.
     values: [0.0002, 0.001, 0.01] #, 0.1] #[2e-4]
   threshold: # Confidence threshold for pseudo-labels.
     values: [0.9, 0.95]
-  epochs:
+  epochs: # Number of epochs to run.
     value: 900
-  batch:
+  batch: # Batch size.
     values: [5, 10]
   seed:
     values: [719]
