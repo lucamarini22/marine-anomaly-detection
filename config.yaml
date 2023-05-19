@@ -5,18 +5,18 @@ metric:
   name: min_val_loss_among_epochs
 parameters:
   lr:
-    values: [0.0002, 0.001, 0.01, 0.1] #[2e-4]
-  threshold:
-    values: [0.6, 0.7, 0.8, 0.9]
+    values: [0.0002, 0.001, 0.01] #, 0.1] #[2e-4]
+  threshold: # Confidence threshold for pseudo-labels.
+    values: [0.9, 0.95]
   epochs:
-    value: 2000
+    value: 900
   batch:
-    values: [5, 10] # [5] 
+    values: [5, 10]
   seed:
     values: [719]
-    #min: 0
-    #max: 10000
-  mu:
+  mu: # Unlabeled data ratio.
     values: [5, 9]
-  reduce_lr_on_plateau:
+  reduce_lr_on_plateau: # Reduces learning rate when no increase (0 or 1).
     values: [0, 1]
+  lambda_coeff: # Coefficient of unlabeled loss.
+    values: [0.25]
