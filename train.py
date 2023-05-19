@@ -60,6 +60,8 @@ def main(options, wandb_logger):
     file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
+    options["batch"] = int(options["batch"])
+    options["mu"] = int(options["mu"])
     set_seed(seed)
     g = torch.Generator()
     g.manual_seed(seed)

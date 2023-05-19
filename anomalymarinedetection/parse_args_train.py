@@ -175,15 +175,6 @@ def parse_args_train(config):
     args.today_str = today_str
     # convert to ordinary dict
     options = vars(args)
-    options["lr"] = config.lr
-    if options["mode"] == TrainMode.TRAIN_SSL:
-        options["threshold"] = config.threshold
-        options["mu"] = config.mu
-    options["batch"] = config.batch
-    options["seed"] = config.seed
-    #options["reduce_lr_on_plateau"] = config.reduce_lr_on_plateau
-    options["lambda_coeff"] = config.lambda_coeff
-    
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
