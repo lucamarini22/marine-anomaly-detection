@@ -246,17 +246,17 @@ if __name__ == "__main__":
         "--dataset_path", help="path of dataset", default="data"
     )
     # Unet model path
-    parser.add_argument(
+    parser.add_argument( 
         "--model_path",
         default=os.path.join(
             "results",
             "trained_models",
             "semi-supervised",
-            "2023_04_25_H_12_46_11_TRAIN_SSL_MULTI",
-            "848",
+            "2023_05_18_H_13_06_14_TRAIN_SSL_MULTI_e3vq1vuw_honest-sweep-1",
+            "941",
             "model.pth",
         ),
-        help="Path to Unet pytorch model",
+        help="Path to trained model",
     )
 
     # Produce Predicted Masks
