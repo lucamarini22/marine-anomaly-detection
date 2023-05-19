@@ -18,7 +18,6 @@ def parse_args_train(config):
     # Options
     parser.add_argument(
         "--seed",
-        #default=476,
         help=("Seed."),
         type=int,
     )
@@ -54,19 +53,16 @@ def parse_args_train(config):
     )
     parser.add_argument(
         "--mu",
-        #default=9,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        #default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
     parser.add_argument(
-        "--lambda",
-        default=1,
+        "--lambda_coeff",
         type=float,
         help="Coefficient of unlabeled loss.",
     )
@@ -90,8 +86,7 @@ def parse_args_train(config):
         type=int,
         help="Number of epochs to run",
     )
-    parser.add_argument("--batch", #default=5, 
-                        type=int, help="Batch size")
+    parser.add_argument("--batch", type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
@@ -111,18 +106,16 @@ def parse_args_train(config):
         "--dataset_path", help="path of dataset", default="data"
     )
     # Optimization
-    parser.add_argument("--lr", #default=2e-4, 
-                        type=float, help="learning rate")
+    parser.add_argument("--lr", type=float, help="learning rate")
     parser.add_argument("--decay", default=0, type=float, help="Weight decay")
     parser.add_argument(
         "--reduce_lr_on_plateau",
-        #default=1,
         type=int,
         help="Reduce learning rate when no increase (0 or 1)",
     )
     parser.add_argument(
         "--lr_steps",
-        default="[10000]", #"[40]",
+        default="[10000]",
         type=str,
         help="Specify the steps that the lr will be reduced",
     )
@@ -190,6 +183,7 @@ def parse_args_train(config):
     options["batch"] = config.batch
     options["seed"] = config.seed
     options["reduce_lr_on_plateau"] = config.reduce_lr_on_plateau
+    options["lambda_coeff"] = config.lambda_coeff
     
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
