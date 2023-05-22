@@ -1,11 +1,10 @@
 import os
 import json
-import yaml
+from loguru import logger
 import logging
 import numpy as np
 from tqdm import tqdm
 import torch
-import wandb
 
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
@@ -53,23 +52,30 @@ from anomalymarinedetection.dataset.augmentation.get_transform_train import (
 from anomalymarinedetection.dataset.augmentation.get_transform_val import (
     get_transform_val,
 )
+from anomalymarinedetection.io.wandb_logger import WandbLogger
 
 
-def main(options):
+def main(options, wandb_logger):
     # Use gpu or cpu
     device = get_device()
     file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
+    options["batch"] = int(options["batch"])
+    options["mu"] = int(options["mu"])
     set_seed(seed)
     g = torch.Generator()
     g.manual_seed(seed)
+    
+    logger.add(os.path.join(f"{options['log_folder']}", "log_set.log"))
 
     model_name = get_model_name(
         options["resume_model"],
         options["mode"],
         options["aggregate_classes"],
         options["today_str"],
+        options["run_id"],
+        options["run_name"],
         SEPARATOR,
     )
     # Tensorboard
@@ -183,6 +189,9 @@ def main(options):
     eval_every = options["eval_every"]
 
     if options["mode"] == TrainMode.TRAIN:
+        val_losses_avg_all_epochs = []
+        min_val_loss_among_epochs = float("inf")
+        
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
         # Write model-graph to Tensorboard
@@ -217,11 +226,11 @@ def main(options):
                     (epoch - 1) * len(train_loader) + i_board,
                 )
 
-                wandb.log(
-                    {
-                        "train_loss": loss,
-                        "step": (epoch - 1) * len(train_loader) + i_board,
-                    }
+                wandb_logger.log_train_loss(
+                    loss, 
+                    epoch, 
+                    len(train_loader), 
+                    i_board
                 )
                 i_board += 1
 
@@ -258,7 +267,12 @@ def main(options):
                     # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
                     
+                    train_loss = sum(training_loss) / training_batches
                     val_loss = sum(val_losses) / val_batches
+                    val_losses_avg_all_epochs.append(val_loss)
+                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
+                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
+                        epoch_min_val_loss = epoch
                     logging.info("\n")
                     logging.info(
                         "Val loss was: " + str(val_loss)
@@ -281,20 +295,21 @@ def main(options):
                         "Loss per epoch",
                         {
                             "Val loss": val_loss,
-                            "Train loss": sum(training_loss) / training_batches,
+                            "Train loss": train_loss,
                         },
                         epoch,
                     )
                     tb_writer.add_eval_metrics(acc, epoch)
-
-                    wandb.log(
-                        {
-                            "epoch": epoch,
-                            "train_loss": sum(training_loss) / training_batches,
-                            "val_loss": val_loss,
-                        }
+                    
+                    wandb_logger.log_eval_losses(
+                        train_loss, 
+                        val_loss, 
+                        min_val_loss_among_epochs, 
+                        epoch,
+                        epoch_min_val_loss
                     )
-                val_loss = sum(val_losses) / val_batches
+                    
+                #val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(val_loss)
                 else:
@@ -303,6 +318,8 @@ def main(options):
                 model.train()
 
     elif options["mode"] == TrainMode.TRAIN_SSL:
+        val_losses_avg_all_epochs = []
+        min_val_loss_among_epochs = float("inf")
         classes_channel_idx = 1
 
         labeled_iter = iter(labeled_train_loader)
@@ -337,7 +354,7 @@ def main(options):
                     options["batch"],
                     classes_channel_idx,
                     options["threshold"],
-                    options["lambda"],
+                    options["lambda_coeff"],
                     PADDING_VAL,
                 )
                 training_batches += options["batch"]
@@ -347,11 +364,11 @@ def main(options):
                     loss,
                     (epoch - 1) * len(labeled_train_loader) + i_board,
                 )
-                wandb.log(
-                    {
-                        "train_loss": loss,
-                        "step": (epoch - 1) * len(labeled_train_loader) + i_board,
-                    }
+                wandb_logger.log_train_loss(
+                    loss, 
+                    epoch, 
+                    len(labeled_train_loader), 
+                    i_board
                 )
                 i_board += 1
 
@@ -386,6 +403,11 @@ def main(options):
                     # Save Scores to the .log file and visualize also with tensorboard
                     acc = Evaluation(y_predicted, y_true)
                     val_loss = sum(val_losses) / val_batches
+                    val_losses_avg_all_epochs.append(val_loss)
+                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
+                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
+                        epoch_min_val_loss = epoch
+                    
                     logging.info("\n")
                     logging.info(
                         "Val loss was: " + str(val_loss)
@@ -413,12 +435,13 @@ def main(options):
                         epoch,
                     )
                     tb_writer.add_eval_metrics(acc, epoch)
-                    wandb.log(
-                        {
-                            "epoch": epoch,
-                            "train_loss": sum(training_loss) / training_batches,
-                            "val_loss": val_loss,
-                        }
+                    
+                    wandb_logger.log_eval_losses(
+                        np.mean(training_loss), 
+                        val_loss, 
+                        min_val_loss_among_epochs, 
+                        epoch,
+                        epoch_min_val_loss
                     )
 
                 val_loss = sum(val_losses) / val_batches
@@ -431,15 +454,9 @@ def main(options):
 
 
 if __name__ == "__main__":
-    # Weight and Biases
-    wandb.login()
-
-    # Set up your default hyperparameters
-    with open("./config.yaml") as file:
-        config = yaml.load(file, Loader=yaml.FullLoader)
-
-    run = wandb.init(config=config)
-    config = wandb.config
+    wandb_logger = WandbLogger()
+    wandb_logger.login()
+    config = wandb_logger.get_config("./config.yaml")
 
     options = parse_args_train(config)
     options["checkpoint_path"] = update_checkpoint_path(
@@ -457,4 +474,4 @@ if __name__ == "__main__":
     logging.info("*" * 10)
     logging.info("parsed input parameters:")
     logging.info(json.dumps(options, indent=2))
-    main(options)
+    main(options, wandb_logger)

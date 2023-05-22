@@ -1,0 +1,82 @@
+import yaml
+import wandb
+
+class WandbLogger():
+    """Weight and Biases logger."""
+    
+    @staticmethod
+    def login() -> wandb.sdk.wandb_config.Config:
+        """Logins on wandb."""
+        wandb.login()
+
+    @staticmethod
+    def get_config(config_file_path: str) -> wandb.sdk.wandb_config.Config:
+        """Gets the hyperparameters configuration setttings.
+
+        Args:
+            config_file_path (str): path of the yaml hyperparameters 
+              configuration file.
+
+        Returns:
+            wandb.sdk.wandb_config.Config: configuration settings.
+        """        
+        with open(config_file_path) as file:
+            config = yaml.load(file, Loader=yaml.FullLoader)
+
+        run = wandb.init(config=config)
+        config = wandb.config
+        
+        return config
+    
+    @staticmethod
+    def log_train_loss(
+        train_loss: float, 
+        epoch: int, 
+        len_dataloader: int, 
+        idx_dataloader: int
+    ) -> None:
+        """Logs the train loss at given step.
+
+        Args:
+            train_loss (float): training loss.
+            epoch (int): epoch.
+            len_dataloader (int): length of dataloader.
+            idx_dataloader (int): index of dataloader.
+        """
+        wandb.log(
+            {
+                "train_loss": train_loss,
+                "step": (epoch - 1) * len_dataloader + idx_dataloader,
+            }
+        )
+    
+    @staticmethod
+    def log_eval_losses(
+        train_loss: float, 
+        val_loss: int, 
+        min_val_loss_among_epochs: float, 
+        epoch: int,
+        epoch_min_val_loss: int
+    ) -> None:
+        """Logs losses in an evaluation step.
+
+        Args:
+            train_loss (float): training loss.
+            val_loss (int): validation loss.
+            min_val_loss_among_epochs (float): minimum validation loss across 
+              all the epochs.
+            epoch (int): epoch
+            epoch_least_val_loss (int): epoch at which the val loss was the 
+              minimum.
+        """
+        wandb.log(
+            {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "min_val_loss_among_epochs": min_val_loss_among_epochs,
+                "epoch_min_val_loss": epoch_min_val_loss
+            }
+        )
+
+        

@@ -25,8 +25,5 @@ def get_labeled_and_unlabeled_rois(
     ROIs_u = np.random.choice(ROIs, num_unlabeled_samples, replace=False)
     # Labeled regions of interests
     ROIs = np.setdiff1d(ROIs, ROIs_u)
-
-    print(ROIs)
-    print(len(ROIs))
-
+    
     return ROIs, ROIs_u

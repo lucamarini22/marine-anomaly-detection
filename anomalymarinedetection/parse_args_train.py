@@ -1,5 +1,6 @@
 import os
 import argparse
+import wandb
 
 from anomalymarinedetection.utils.string import get_today_str
 from anomalymarinedetection.dataset.categoryaggregation import (
@@ -9,14 +10,14 @@ from anomalymarinedetection.trainmode import TrainMode
 
 
 def parse_args_train(config):
-    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]= "1000"
+    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]="1000"
+    os.environ["WANDB_AGENT_DISABLE_FLAPPING"]="true"
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
     # Options
     parser.add_argument(
         "--seed",
-        #default=0,
         help=("Seed."),
         type=int,
     )
@@ -41,7 +42,6 @@ def parse_args_train(config):
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.5,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
@@ -52,19 +52,16 @@ def parse_args_train(config):
     )
     parser.add_argument(
         "--mu",
-        #default=9,
         help=("Unlabeled data ratio."),
         type=float,
     )
     parser.add_argument(
         "--threshold",
-        #default=0.9,
         help=("Confidence threshold for pseudo-labels."),
         type=float,
     )
     parser.add_argument(
-        "--lambda",
-        default=1,
+        "--lambda_coeff",
         type=float,
         help="Coefficient of unlabeled loss.",
     )
@@ -84,12 +81,10 @@ def parse_args_train(config):
     # Training hyperparameters
     parser.add_argument(
         "--epochs",
-        default=20000,
         type=int,
         help="Number of epochs to run",
     )
-    parser.add_argument("--batch", #default=5, 
-                        type=int, help="Batch size")
+    parser.add_argument("--batch", type=int, help="Batch size")
     parser.add_argument(
         "--resume_model",
         default=None,  # "/data/anomaly-marine-detection/results/trained_models/semi-supervised/2023_04_18_H_09_27_31_SSL_multi/1592/model.pth",
@@ -109,20 +104,18 @@ def parse_args_train(config):
         "--dataset_path", help="path of dataset", default="data"
     )
     # Optimization
-    parser.add_argument("--lr", #default=2e-4, 
-                        type=float, help="learning rate")
+    parser.add_argument("--lr", type=float, help="learning rate")
     parser.add_argument("--decay", default=0, type=float, help="Weight decay")
     parser.add_argument(
         "--reduce_lr_on_plateau",
-        default=0,
         type=int,
-        help="Reduce learning rate when no increase (0 or 1)",
+        help="Reduces learning rate when no increase (0 or 1).",
     )
     parser.add_argument(
         "--lr_steps",
         default="[10000]",
         type=str,
-        help="Specify the steps that the lr will be reduced",
+        help="Specify the steps that the lr will be reduced. To use only when reduce_lr_on_plateau is set to 0 in the config.yaml file. When reduce_lr_on_plateau = 1 another learning rate decay strategy is applied.",
     )
 
     # Evaluation/Checkpointing
@@ -181,9 +174,7 @@ def parse_args_train(config):
     args.today_str = today_str
     # convert to ordinary dict
     options = vars(args)
-    options["lr"] = config.lr
-    options["threshold"] = config.threshold
-    options["mu"] = config.mu
-    options["batch"] = config.batch
-    options["seed"] = config.seed
+    options["run_id"] = wandb.run.id
+    options["run_name"] = wandb.run.name
+    
     return options

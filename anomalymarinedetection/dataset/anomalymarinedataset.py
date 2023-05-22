@@ -1,4 +1,5 @@
 import os
+from loguru import logger
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -77,6 +78,9 @@ class AnomalyMarineDataset(Dataset):
             # dict that will contain the number of labeled pixels for each 
             # category
             self.categories_counter_dict = {}
+            for roi_print in self.ROIs:
+                logger.info(roi_print)
+            logger.info(f"Total of {len(self.ROIs)} training patches.")
 
         elif mode == DataLoaderType.TRAIN_SSL:
             # Semi-supervised learning case - training unlabeled data
