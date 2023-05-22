@@ -42,7 +42,6 @@ def parse_args_train(config):
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
-        default=0.5,
         help=(
             "Percentage of labeled training set. This argument has "
             "effect only when --mode=TrainMode.TRAIN_SSL. "
