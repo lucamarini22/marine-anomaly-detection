@@ -1,6 +1,7 @@
 import os
 import glob
 from pathlib import PurePath
+from loguru import logger
 import numpy as np
 import cv2 as cv
 import rasterio
@@ -123,5 +124,8 @@ class PatchesBandsConcatenator:
             band_img (np.ndarray): image of the band.
         """
         band_cop_hub_idx = get_cop_hub_band_idx(band_name)
-        self._init_patch(patch_name)
-        self.patches_dict[patch_name][:, :, band_cop_hub_idx] = band_img
+        if band_img.shape == (MARIDA_SIZE_X, MARIDA_SIZE_Y):
+            self._init_patch(patch_name)
+            self.patches_dict[patch_name][:, :, band_cop_hub_idx] = band_img
+        else:
+            logger.info(f"Patch {patch_name} had wrong size. Shape was {band_img.shape}, expected {(MARIDA_SIZE_X, MARIDA_SIZE_Y)}.")
