@@ -177,4 +177,15 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
+    if options["perc_labeled"] == 0.1:
+        options["seed"] = 73
+    elif options["perc_labeled"] == 0.2:
+        options["seed"] = 982
+    elif options["perc_labeled"] == 0.3:
+        options["seed"] = 1312
+    elif options["perc_labeled"] == 0.4:
+        options["seed"] = 5647
+    else:
+        pass
+    
     return options
