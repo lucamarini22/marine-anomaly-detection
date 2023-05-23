@@ -1,4 +1,6 @@
+import os
 import argparse
+from loguru import logger
 
 from anomalymarinedetection.l1c_generation.patchesbandsconcatenator import (
     PatchesBandsConcatenator,
@@ -6,6 +8,8 @@ from anomalymarinedetection.l1c_generation.patchesbandsconcatenator import (
 
 
 if __name__ == "__main__":
+    logger.add(os.path.join(f"/data/anomaly-marine-detection/logs", "patches_different_shape.log"))
+    
     parser = argparse.ArgumentParser(
         description="""Saves cropped L1C Copernicus Hub patches as .tif files."""
     )
