@@ -1,5 +1,6 @@
 import glob
 from pathlib import PurePath
+from loguru import logger
 import numpy as np
 import cv2 as cv
 import os
@@ -25,6 +26,8 @@ from anomalymarinedetection.utils.constants import (
 )
 from anomalymarinedetection.io.load_keypoints import load_keypoints
 from anomalymarinedetection.io.image_io import ImageIO
+
+USE_PRECOMPUTED_MEAN = True
 
 
 class ShifterAndCropperCopHub:
@@ -82,9 +85,9 @@ class ShifterAndCropperCopHub:
         x_axis: str = "x",
         y_axis: str = "y",
     ) -> dict:
-        """Gets a dictionary with each key corresponding to a
-        list of horizontal (or vertical) differences of matched
-        keypoints of a patch.
+        """Gets a dictionary with each key corresponding to a name of a tile
+        and its value corresponding to a list of horizontal (or vertical) 
+        differences of matched keypoints of a patch.
 
         Args:
             path_keypoints_folder (str): path to the folder containing all
@@ -100,9 +103,9 @@ class ShifterAndCropperCopHub:
             y_axis (str): y axis string id.
 
         Returns:
-            dict: dictionary with each key corresponding to a
-            list of horizontal (or vertical) differences of matched
-            keypoints of a patch.
+            dict: dictionary with each key corresponding to a name of a tile
+            and its value corresponding to a list of horizontal (or vertical) 
+            differences of matched keypoints of a patch.
         """
         patches_mean_diffs = {}
 
@@ -174,7 +177,8 @@ class ShifterAndCropperCopHub:
         x_axis: str = "x",
         y_axis: str = "y",
     ) -> dict:
-        """Computes the mean of the differences of matching keypoints of patches.
+        """Computes the mean of the differences of matching keypoints of 
+        patches.
 
         Args:
             patches_mean_diffs (dict): dictionary with each key corresponding
@@ -192,41 +196,59 @@ class ShifterAndCropperCopHub:
             verical difference between all matching keypoints of all bands of
             a patch.
         """
+        logger.add(os.path.join(f"/data/anomaly-marine-detection/logs", "patches_with_no_keypoints.log"))
+
         mean_diff_patch_dict = {}
         for key in patches_mean_diffs:
-            # Mean of horizontal or vertical differences of a patch
-            mean_diffs = np.mean(patches_mean_diffs[key])
-            # print(mean_diffs)
-            # Standard deviation of horizontal or vertical differences of
-            # a patch
-            std_dev_diffs = np.std(patches_mean_diffs[key])
-            # print(std_dev_diffs)
-            # Discard differences whose value is not in the interval
-            # [mean_diff - std_dev, mean_diff + std_dev]
-            # and do this for both horizontal and vertical differences
-            patches_mean_diffs[
-                key
-            ] = discard_means_out_of_std_dev(
-                patches_mean_diffs[key],
-                mean_diffs,
-                std_dev_diffs,
-            )
-
-            # Recompute the mean of the horizontal and vertical differences
-            # and round it to the nearest integer
-            # (since we use pixels)
-            updated_mean_diffs = round(np.mean(patches_mean_diffs[key]))
-
             (
                 patch_name,
                 axis_id,
             ) = get_patch_name_and_axis_id_from_key(
                 key, separator, x_axis, y_axis
             )
+            if USE_PRECOMPUTED_MEAN:
+                # Uses pre-computed value of mean shifts to shift all patches
+                ShifterAndCropperCopHub._update_single_mean_with_default(
+                    mean_diff_patch_dict, patch_name
+                )
+            else:
+                # Compute the mean shift for every patch
+                # Mean of horizontal or vertical differences of a patch
+                mean_diffs = np.mean(patches_mean_diffs[key])
+                # print(mean_diffs)
+                # Standard deviation of horizontal or vertical differences of
+                # a patch
+                std_dev_diffs = np.std(patches_mean_diffs[key])
+                
+                if patches_mean_diffs[key] == []:
+                    # If there are no keypoints for the current patch, set the 
+                    # means as the default ones.
+                    logger.info(patch_name)
+                    ShifterAndCropperCopHub._update_single_mean_with_default(
+                        mean_diff_patch_dict, patch_name
+                    )
+                else:
+                    # print(std_dev_diffs)
+                    # Discard differences whose value is not in the interval
+                    # [mean_diff - std_dev, mean_diff + std_dev]
+                    # and do this for both horizontal and vertical differences
+                    patches_mean_diffs[
+                        key
+                    ] = discard_means_out_of_std_dev(
+                        patches_mean_diffs[key],
+                        mean_diffs,
+                        std_dev_diffs,
+                    )
 
-            ShifterAndCropperCopHub._update_single_mean(
-                mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
-            )
+                    # Recompute the mean of the horizontal and vertical differences
+                    # and round it to the nearest integer
+                    # (since we use pixels)
+                    updated_mean_diffs = round(np.mean(patches_mean_diffs[key]))
+
+                    ShifterAndCropperCopHub._update_single_mean(
+                        mean_diff_patch_dict, patch_name, updated_mean_diffs, axis_id
+                    )
+                
         return mean_diff_patch_dict
 
     def shift_and_crop_cophub_images(
@@ -318,6 +340,7 @@ class ShifterAndCropperCopHub:
                     + "shifted"
                     + out_ext
                 )
+                
                 self.image_io.save_img(
                     cop_hub_2_marida_img,
                     os.path.join(
@@ -330,7 +353,7 @@ class ShifterAndCropperCopHub:
     @staticmethod
     def _update_single_mean(
         mean_diff_patch_dict: dict,
-        key: str,
+        patch_name: str,
         new_mean_value: float,
         axis_id: int,
         default_hor_diff_mean: float = 0.0,
@@ -344,21 +367,44 @@ class ShifterAndCropperCopHub:
               corresponding to a tuple containing the mean horizontal and mean
               verical difference between all matching keypoints of all bands
               of a patch.
-            key (str): patch name.
+            patch_name (str): patch name.
             new_mean_value (float): updated mean of horizontal or vertical
               differences.
             axis_id (int): int id of axis. 0 for x axis, 1 for y axis.
-            default_hor_diff_mean (float, optional): default vale for
+            default_hor_diff_mean (float, optional): default value for
               horizontal mean of differences. Defaults to 0.0.
-            default_vert_diff_mean (float, optional): default vale for
-              vertical mean of differences.
-            Defaults to 0.0.
+            default_vert_diff_mean (float, optional): default value for
+              vertical mean of differences. Defaults to 0.0.
         """
         current_hor_and_vert_mean_values = mean_diff_patch_dict.setdefault(
-            key, (default_hor_diff_mean, default_vert_diff_mean)
+            patch_name, (default_hor_diff_mean, default_vert_diff_mean)
         )
         current_hor_and_vert_mean_values = list(
             current_hor_and_vert_mean_values
         )
         current_hor_and_vert_mean_values[axis_id] = new_mean_value
-        mean_diff_patch_dict[key] = tuple(current_hor_and_vert_mean_values)
+        mean_diff_patch_dict[patch_name] = tuple(current_hor_and_vert_mean_values)
+
+
+    @staticmethod
+    def _update_single_mean_with_default(
+        mean_diff_patch_dict: dict,
+        patch_name: str,
+        default_hor_diff_mean: int = -20,
+        default_vert_diff_mean: float = -20,
+    ):
+        """Updates the horizontal or the vertical mean contained in the value
+        (tuple) of a dictionary corresponding to key.
+
+        Args:
+            mean_diff_patch_dict (dict): dictionary with each key
+              corresponding to a tuple containing the mean horizontal and mean
+              verical difference between all matching keypoints of all bands
+              of a patch.
+            patch_name (str): patch name.
+            default_hor_diff_mean (float, optional): default value for
+              horizontal mean of differences. Defaults to 0.0.
+            default_vert_diff_mean (float, optional): default value for
+              vertical mean of differences. Defaults to 0.0.
+        """
+        mean_diff_patch_dict[patch_name] = (default_hor_diff_mean, default_vert_diff_mean)
