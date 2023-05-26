@@ -56,7 +56,12 @@ def train_step_supervised(
     optimizer.zero_grad()
     logits = model(image)
     loss = criterion(logits, target)
-    loss.backward()
+    # No backward pass if all pixels in the image are unlabeled.
+    # Indeed, if all pixels in the image are unlabeled the loss
+    # is set to zero. However, it is not good that the loss is zero.
+    # So, that's why the bacward pass is skipped (this is the supervised loss)
+    if loss.grad_fn is not None:
+        loss.backward()
     training_loss.append((loss.data * target.shape[0]).tolist())
     optimizer.step()
     return loss, training_loss
@@ -208,6 +213,8 @@ def train_step_semi_supervised(
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
     # Merge the two masks
     mask[padding_mask] = 0
+    
+    logits_u_s.requires_grad = True
     # Unsupervised loss
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
