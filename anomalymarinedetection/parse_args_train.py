@@ -10,8 +10,8 @@ from anomalymarinedetection.trainmode import TrainMode
 
 
 def parse_args_train(config):
-    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"]="1000"
-    os.environ["WANDB_AGENT_DISABLE_FLAPPING"]="true"
+    os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"] = "1000"
+    os.environ["WANDB_AGENT_DISABLE_FLAPPING"] = "true"
     parser = argparse.ArgumentParser()
     today_str = get_today_str()
 
@@ -177,6 +177,10 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
+    if options["mode"] == TrainMode.TRAIN_SSL:
+        options["batch"] = int(options["batch"])
+        options["mu"] = int(options["mu"])
+
     if options["perc_labeled"] == 0.1:
         options["seed"] = 73
     elif options["perc_labeled"] == 0.2:
@@ -187,5 +191,5 @@ def parse_args_train(config):
         options["seed"] = 5647
     else:
         pass
-    
+
     return options

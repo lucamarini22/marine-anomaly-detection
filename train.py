@@ -34,7 +34,7 @@ from anomalymarinedetection.dataset.update_class_distribution import (
 from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.utils.train_functions import (
     train_step_supervised,
-    train_step_semi_supervised,
+    train_step_semi_supervised_separate_batches,
     eval_step,
     get_criterion,
     get_optimizer,
@@ -61,8 +61,6 @@ def main(options, wandb_logger):
     file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
-    options["batch"] = int(options["batch"])
-    options["mu"] = int(options["mu"])
     set_seed(seed)
     g = torch.Generator()
     g.manual_seed(seed)
@@ -337,7 +335,7 @@ def main(options, wandb_logger):
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                loss, training_loss = train_step_semi_supervised(
+                loss, training_loss = train_step_semi_supervised_separate_batches(
                     file_io,
                     labeled_train_loader,
                     unlabeled_train_loader,
