@@ -60,12 +60,17 @@ class AnomalyMarineDataset(Dataset):
         """
         if mode == DataLoaderType.TRAIN_SUP:
             if rois is None:
-                # Supervised learning case - training labeled data
+                # Fully-Supervised learning case with 1 training set in which:
+                #  - Labeled pixels are used in the supervised loss.
+                #  - Unlabeled pixels are not used.
                 self.ROIs = load_roi(
                     os.path.join(path, "splits", "train_X.txt")
                 )
             else:
-                # Semi-supervised learning case - training labeled data
+                # Semi-supervised learning case with 2 different training subsets:
+                #  - Labeled training subset -> this case.
+                #  - Unlabeled training subset -> see case when 
+                #    mode == DataLoaderType.TRAIN_SSL.
                 self.ROIs = rois
             # dict that will contain the number of labeled pixels for each 
             # category
@@ -75,7 +80,10 @@ class AnomalyMarineDataset(Dataset):
             logger.info(f"Total of {len(self.ROIs)} training patches.")
 
         elif mode == DataLoaderType.TRAIN_SSL:
-            # Semi-supervised learning case - training unlabeled data
+            # Semi-supervised learning case with 2 different training subsets:
+            #  - Labeled training subset -> see case when 
+            #    mode == DataLoaderType.TRAIN_SUP and rois is not None.
+            #  - Unlabeled training subset -> this case.
             self.ROIs = rois
         elif mode == DataLoaderType.TEST:
             self.ROIs = load_roi(os.path.join(path, "splits", "test_X.txt"))
@@ -102,7 +110,7 @@ class AnomalyMarineDataset(Dataset):
                 min_patch, max_patch = patch.min(), patch.max()
                 patch = normalize_img(patch, min_patch, max_patch)
                 self.X_u.append(patch)
-        
+
         
         # Labeled dataloader
         else:
