@@ -82,7 +82,11 @@ class AnomalyMarineDataset(Dataset):
 
         elif mode == DataLoaderType.VAL:
             self.ROIs = load_roi(os.path.join(path, "splits", "val_X.txt"))
-
+        elif mode == DataLoaderType.TRAIN_SSL_SUP:
+            # Semi-supervised learning case with only 1 training set in which:
+            #  - Labeled pixels are used in the supervised loss.
+            #  - Unlabeled pixels are used in the unsupervised loss.
+            self.ROIs = load_roi(os.path.join(path, "splits", "train_X.txt"))
         else:
             raise Exception("Bad mode.")
 
@@ -98,7 +102,8 @@ class AnomalyMarineDataset(Dataset):
                 min_patch, max_patch = patch.min(), patch.max()
                 patch = normalize_img(patch, min_patch, max_patch)
                 self.X_u.append(patch)
-
+        
+        
         # Labeled dataloader
         else:
             # Loaded Images
