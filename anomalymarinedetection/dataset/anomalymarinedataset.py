@@ -23,6 +23,7 @@ from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
 from anomalymarinedetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
 from anomalymarinedetection.dataset.get_rois import get_rois
+from anomalymarinedetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
 
 
 class AnomalyMarineDataset(Dataset):
@@ -47,7 +48,7 @@ class AnomalyMarineDataset(Dataset):
               Defaults to None.
             path (str, optional): dataset path.
             aggregate_classes (CategoryAggregation, optional): type
-              of aggragation of categories.
+              of aggregation of categories.
               Defaults to CategoryAggregation.MULTI.
             rois (list[str], optional): list of region of interest names to
               consider. Defaults to None.
@@ -108,26 +109,12 @@ class AnomalyMarineDataset(Dataset):
                     raise Exception("Not Implemented Category Aggregation value.")
                 
                 if perc_labeled is not None:
-                    # Counts the # pixels only if it is the ssl setting
+                    num_pixels_dict = update_count_labeled_pixels(
+                        seg_map, 
+                        aggregate_classes, 
+                        self.categories_counter_dict
+                    )
                     
-                    # Semi-supervised learning case - keeping track of 
-                    # the # pixels for each category
-                    if aggregate_classes == CategoryAggregation.MULTI:
-                        cat_mapping_inv = cat_mapping_multi_inv
-                        num_pixels_dict = num_labeled_pixels_train_multi
-                    elif aggregate_classes == CategoryAggregation.BINARY:
-                        cat_mapping_inv = cat_mapping_binary_inv
-                        num_pixels_dict = num_labeled_pixels_train_binary
-                    else:
-                        raise Exception("Not Implemented Category Aggregation value.")
-                    class_ids, counts = np.unique(seg_map, return_counts=True)
-                    for idx in range(len(class_ids)):
-                        if class_ids[idx] == 0:
-                            class_name = "Not labeled"
-                        else:
-                            class_name = cat_mapping_inv[class_ids[idx]]
-                        self.categories_counter_dict[class_name] = \
-                            self.categories_counter_dict.get(class_name, 0) + counts[idx]
                 # Categories from 1 to 0
                 seg_map = np.copy(seg_map - 1)
                 self.y.append(seg_map)

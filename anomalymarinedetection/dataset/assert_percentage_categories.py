@@ -4,9 +4,9 @@ from anomalymarinedetection.utils.assets import (
 
 
 def assert_percentage_categories(
-    categories_counter_dict: dict, 
+    categories_counter_dict: dict[str, int], 
     perc_labeled: float, 
-    num_pixels_dict: dict,
+    num_pixels_dict: dict[str, int],
     additional_perc_lower_limit: float = 0.05,
     additional_perc_upper_limit: float = 0.05
 ) -> None:
@@ -20,12 +20,12 @@ def assert_percentage_categories(
         categories_counter_dict (dict): dictionary with:
           - key: category name.
           - value: number of labeled pixels of that category in the current 
-              subset of the data.
+            subset of the data.
         perc_labeled (float): percentage of total number of labeled pixels.
         num_pixels_dict (dict): dictionary with:
           - key: category name.
           - value: number of labeled pixels of that category in the total set 
-              of the data.
+            of the data.
         additional_perc_lower_limit (float): additional percentage of labeled 
           pixels that can be subtracted from perc_labeled.
         additional_perc_upper_limit (float): additional percentage of labeled 
