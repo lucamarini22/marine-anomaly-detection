@@ -5,14 +5,8 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 
 from anomalymarinedetection.utils.assets import (
-    cat_mapping,
-    cat_mapping_binary,
     cat_mapping_binary_inv,
-    cat_mapping_multi,
     cat_mapping_multi_inv,
-    labels,
-    labels_binary,
-    labels_multi,
     num_labeled_pixels_train_binary,
     num_labeled_pixels_train_multi
 )
@@ -26,13 +20,11 @@ from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.dataset.aggregate_classes_to_super_class import (
-    aggregate_classes_to_super_class,
-)
 from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
 from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
 from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
+from anomalymarinedetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
 
 
 class AnomalyMarineDataset(Dataset):
@@ -124,81 +116,20 @@ class AnomalyMarineDataset(Dataset):
 
                 # Aggregation
                 if aggregate_classes == CategoryAggregation.MULTI:
-                    # Keep classes: Marine Water, Cloud, Ship, Marine Debris,
+                    # Aggregates original 15 classes into 5 more 
+                    # coarse-grained classes: 
+                    # Marine Water, Cloud, Ship, Marine Debris, 
                     # Algae/Organic Material.
-                    # Note: make sure you aggregate classes according to the
-                    # increasing order specified in assets.
-
-                    # Aggregate 'Dense Sargassum','Sparse Sargassum', 'Natural
-                    # Organic Material' to Algae/Natural Organic Material.
-                    algae_classes_names = labels[
-                        labels.index("Dense Sargassum") : labels.index(
-                            "Natural Organic Material"
-                        )
-                        + 1
-                    ]
-                    super_organic_material_class_name = labels_multi[1]
-                    seg_map = aggregate_classes_to_super_class(
-                        seg_map,
-                        algae_classes_names,
-                        super_organic_material_class_name,
-                        cat_mapping,
-                        cat_mapping_multi,
-                    )
-
-                    # Aggregate Ship to new position
-                    ship_class_name = [labels[4]]
-                    super_ship_class_name = labels[4]
-                    seg_map = aggregate_classes_to_super_class(
-                        seg_map,
-                        ship_class_name,
-                        super_ship_class_name,
-                        cat_mapping,
-                        cat_mapping_multi,
-                    )
-
-                    # Aggregate Clouds to new position
-                    clouds_class_name = [labels[5]]
-                    super_clouds_class_name = labels[5]
-                    seg_map = aggregate_classes_to_super_class(
-                        seg_map,
-                        clouds_class_name,
-                        super_clouds_class_name,
-                        cat_mapping,
-                        cat_mapping_multi,
-                    )
-
-                    # Aggregate 'Sediment-Laden Water', 'Foam','Turbid Water',
-                    # 'Shallow Water','Waves','Cloud Shadows','Wakes',
-                    # 'Mixed Water' to 'Marine Water'
-                    water_classes_names = labels[-9:]
-                    super_water_class_name = labels[6]
-
-                    seg_map = aggregate_classes_to_super_class(
-                        seg_map,
-                        water_classes_names,
-                        super_water_class_name,
-                        cat_mapping,
-                        cat_mapping_multi,
-                    )
+                    seg_map = aggregate_to_multi(seg_map)
 
                 elif aggregate_classes == CategoryAggregation.BINARY:
-                    # Keep classes: Marine Debris and Other
-                    # Aggregate all classes (except Marine Debris) to Marine
-                    # Water Class
-                    other_classes_names = labels[labels_binary.index("Other") :]
-                    super_class_name = labels_binary[
-                        labels_binary.index("Other")
-                    ]
-                    seg_map = aggregate_classes_to_super_class(
-                        seg_map,
-                        other_classes_names,
-                        super_class_name,
-                        cat_mapping,
-                        cat_mapping_binary,
-                    )
+                    # Aggregates original 15 classes into 2 more 
+                    # coarse-grained classes: 
+                    # Other, Marine Debris
+                    seg_map = aggregate_to_binary(seg_map)
                 else:
-                    raise Exception("NotImplemented Category Aggregation value.")
+                    raise Exception("Not Implemented Category Aggregation value.")
+                
                 if perc_labeled is not None:
                     # Counts the # pixels only if it is the ssl setting
                     
@@ -211,7 +142,7 @@ class AnomalyMarineDataset(Dataset):
                         cat_mapping_inv = cat_mapping_binary_inv
                         num_pixels_dict = num_labeled_pixels_train_binary
                     else:
-                        raise Exception("NotImplemented Category Aggregation value.")
+                        raise Exception("Not Implemented Category Aggregation value.")
                     class_ids, counts = np.unique(seg_map, return_counts=True)
                     for idx in range(len(class_ids)):
                         if class_ids[idx] == 0:
@@ -254,7 +185,10 @@ class AnomalyMarineDataset(Dataset):
         return self.ROIs
 
     def __getitem__(self, index):
-        # Unlabeled dataloader
+        # Unlabeled dataloader. To train on all pixels of each patch. It 
+        # considers all pixels (even the labeled ones) as unlabeled. The 
+        # patches in this dataloader are excluded from the labeled dataloader
+        # when training with SSL.
         if self.mode == DataLoaderType.TRAIN_SSL:
             img = self.X_u[index]
             # CxWxH to WxHxC
@@ -270,8 +204,9 @@ class AnomalyMarineDataset(Dataset):
                 weak = self.standardization(weak)
             return weak
 
-        # Labeled dataloader
-        else:
+        # Labeled dataloader. To train only on labeled and pixels of each 
+        # training patch.
+        elif self.mode == DataLoaderType.TRAIN_SUP:
             img = self.X[index]
             target = self.y[index]
 
@@ -296,4 +231,13 @@ class AnomalyMarineDataset(Dataset):
                 img = self.standardization(img)
 
             return img, target
+        # Labeled and unlabeled dataloader. To train on all pixels of each patch. It 
+        # considers:
+        #   - Labeled pixels as labeled.
+        #   - Unlabeled pixels as unlabeled.
+        elif self.mode == DataLoaderType.TRAIN_SSL_SUP:
+            pass
+        else:
+            raise Exception(f"The specified DataLoaderType:{self.mode} does not exist.")
+    
         

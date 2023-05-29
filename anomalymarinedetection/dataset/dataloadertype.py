@@ -12,3 +12,5 @@ class DataLoaderType(IntEnum):
     """Dataloader for labeled validation data."""
     TEST = 4
     """Dataloader for labeled test data."""
+    TRAIN_SSL_SUP = 5
+    """Dataloader for both labeled and unlabeled training data."""
