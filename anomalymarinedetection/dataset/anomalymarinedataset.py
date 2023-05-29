@@ -183,7 +183,9 @@ class AnomalyMarineDataset(Dataset):
 
         # Labeled dataloader. To train only on labeled and pixels of each 
         # training patch.
-        elif self.mode == DataLoaderType.TRAIN_SUP:
+        elif self.mode == DataLoaderType.TRAIN_SUP \
+            or self.mode == DataLoaderType.VAL \
+            or self.mode == DataLoaderType.TEST:
             img = self.X[index]
             target = self.y[index]
 
@@ -215,6 +217,6 @@ class AnomalyMarineDataset(Dataset):
         elif self.mode == DataLoaderType.TRAIN_SSL_SUP:
             pass
         else:
-            raise Exception(f"The specified DataLoaderType:{self.mode} does not exist.")
+            raise Exception(f"The specified DataLoaderType does not exist.")
     
         
