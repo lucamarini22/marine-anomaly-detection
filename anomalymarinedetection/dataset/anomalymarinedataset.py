@@ -35,7 +35,8 @@ class AnomalyMarineDataset(Dataset):
         path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
-        perc_labeled: float = None
+        perc_labeled: float = None,
+        second_transform=None
     ):
         """Initializes the anomaly marine detection dataset.
 
@@ -52,11 +53,19 @@ class AnomalyMarineDataset(Dataset):
               Defaults to CategoryAggregation.MULTI.
             rois (list[str], optional): list of region of interest names to
               consider. Defaults to None.
+            second_transform (_type_, optional): transformation to apply to 
+              the patches that will be used in the unsupervised loss. Only to 
+              use when mode is TRAIN_SSL_SUP.
+              Defaults to None.
 
         Raises:
             Exception: raises an exception if the specified Category 
+              Aggregation is TRAIN_SSL_SUP and second_transform is not None.
+            Exception: raises an exception if the specified Category 
               Aggregation does not exist.
         """
+        if second_transform is not None and mode is not DataLoaderType.TRAIN_SSL_SUP:
+            raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
         # dict that will contain the number of labeled pixels for each 
         # category.
         if mode == DataLoaderType.TRAIN_SUP:
@@ -64,7 +73,12 @@ class AnomalyMarineDataset(Dataset):
         # Gets the names of the regions of interest
         self.ROIs = get_rois(path, mode, rois)
 
-        # Unlabeled dataloader (only when using semi-supervised learning mode)
+        # Unlabeled dataloader 
+        # (only when using semi-supervised learning mode with two training 
+        # subsets:
+        #  - an Unlabeled one
+        #  - a Labeled one
+        #  )
         if mode == DataLoaderType.TRAIN_SSL:
             self.X_u = []
 
@@ -78,6 +92,10 @@ class AnomalyMarineDataset(Dataset):
                 self.X_u.append(patch)
 
         # Labeled dataloader
+        # (when using:
+        #  - fully-supervised learning mode
+        #  - or semi-supervised learning mode with only one training set.
+        #  )
         else:
             # Loaded Images
             self.X = []
@@ -135,6 +153,7 @@ class AnomalyMarineDataset(Dataset):
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
+        self.second_transform = second_transform
         if mode == DataLoaderType.TRAIN_SSL:
             self.length = len(self.X_u)
         else:
@@ -202,7 +221,38 @@ class AnomalyMarineDataset(Dataset):
         #   - Labeled pixels as labeled.
         #   - Unlabeled pixels as unlabeled.
         elif self.mode == DataLoaderType.TRAIN_SSL_SUP:
-            pass
+            # Loads patch and its seg map
+            img = self.X[index]
+            target = self.y[index]
+            # CxWxH to WxHxC
+            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
+            nan_mask = np.isnan(img)
+            img[nan_mask] = self.impute_nan[nan_mask]
+            # Creates a copy of patch to use it for unsupervised loss
+            img_unsup = np.copy(img)
+            
+            if self.second_transform is not None:
+                img_unsup = self.transform(img_unsup)
+            # Weakly-augmented patch
+            weak = img_unsup
+
+            if self.transform is not None:
+                # (256, 256) -> (256, 256, 1)
+                target = target[:, :, np.newaxis]
+                # In order to rotate-transform both mask and image
+                stack = np.concatenate([img, target], axis=-1).astype("float32")
+
+                stack = self.transform(stack)
+
+                img = stack[:-1, :, :]
+                # Recast target values back to int64 or torch long dtype
+                target = stack[-1, :, :].long()
+
+            if self.standardization is not None:
+                img = self.standardization(img)
+                weak = self.standardization(weak)
+
+            return img, target, weak
         else:
             raise Exception(f"The specified DataLoaderType does not exist.")
     
