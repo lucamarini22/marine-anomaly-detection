@@ -117,6 +117,7 @@ def get_dataloaders_ssl_single_train_set(
     persistent_workers: bool,
     seed_worker_fn: Callable,
     generator: torch.Generator,
+    drop_last: bool = True,
 ) -> tuple[DataLoader, DataLoader]:
     """Gets dataloaders to perform semi-supervised learning with one unique 
     training set. Having a patch of the training set:
@@ -181,6 +182,7 @@ def get_dataloaders_ssl_single_train_set(
         persistent_workers=persistent_workers,
         worker_init_fn=seed_worker_fn,
         generator=generator,
+        drop_last=drop_last,
     )
 
     val_loader = DataLoader(

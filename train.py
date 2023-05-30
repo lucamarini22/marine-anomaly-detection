@@ -36,6 +36,7 @@ from anomalymarinedetection.utils.device import get_device, empty_cache
 from anomalymarinedetection.utils.train_functions import (
     train_step_supervised,
     train_step_semi_supervised_separate_batches,
+    train_step_semi_supervised_one_batch,
     eval_step,
     get_criterion,
     get_optimizer,
@@ -190,7 +191,8 @@ def main(options, wandb_logger):
     criterion = get_criterion(
         supervised=True, alphas=alphas, device=device, gamma=options["gamma"]
     )
-    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
+        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         # Init of unsupervised loss
         criterion_unsup = get_criterion(
             supervised=False,
@@ -467,6 +469,145 @@ def main(options, wandb_logger):
                     )
 
                 val_loss = sum(val_losses) / val_batches
+                if options["reduce_lr_on_plateau"] == 1:
+                    scheduler.step(val_loss)
+                else:
+                    scheduler.step()
+
+                model.train()
+    elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        val_losses_avg_all_epochs = []
+        min_val_loss_among_epochs = float("inf")
+        classes_channel_idx = 1
+        
+        #dataiter = iter(train_loader)
+        #image_temp, _ = next(dataiter)
+        # Write model-graph to Tensorboard
+        #tb_writer.add_graph(model, image_temp.to(device))
+
+        ###############################################################
+        # Start Supervised Training                                   #
+        ###############################################################
+        model.train()
+
+        for epoch in range(start, epochs + 1):
+            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            training_loss = []
+            training_batches = 0
+
+            i_board = 0
+            for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
+                loss, training_loss = train_step_semi_supervised_one_batch(
+                    image=image,
+                    seg_map=target,
+                    weak_aug_img=weakly_aug_image,
+                    file_io=file_io,
+                    criterion=criterion,
+                    criterion_unsup=criterion_unsup,
+                    training_loss=training_loss,
+                    model=model,
+                    model_name=model_name,
+                    optimizer=optimizer,
+                    epoch=epoch,
+                    device=device,
+                    batch_size=options["batch"],
+                    classes_channel_idx=classes_channel_idx,
+                    threshold=options["threshold"],
+                    lambda_v=options["lambda_coeff"],
+                    padding_val=PADDING_VAL,
+                )
+                training_batches += target.shape[0]
+                # Write running loss
+                tb_writer.add_scalar(
+                    "training loss",
+                    loss,
+                    (epoch - 1) * len(train_loader) + i_board,
+                )
+
+                wandb_logger.log_train_loss(
+                    loss, 
+                    epoch, 
+                    len(train_loader), 
+                    i_board
+                )
+                i_board += 1
+
+            logging.info(
+                "Training loss was: "
+                + str(sum(training_loss) / training_batches)
+            )
+
+            # Evaluation
+            if epoch % eval_every == 0 or epoch == 1:
+                model.eval()
+
+                val_losses = []
+                val_batches = 0
+                y_true = []
+                y_predicted = []
+
+                with torch.no_grad():
+                    for image, target in tqdm(val_loader, desc="validation"):
+                        y_predicted, y_true = eval_step(
+                            image,
+                            target,
+                            criterion,
+                            val_losses,
+                            y_predicted,
+                            y_true,
+                            model,
+                            output_channels,
+                            device,
+                        )
+                        val_batches += target.shape[0]
+                    y_predicted = np.asarray(y_predicted)
+                    y_true = np.asarray(y_true)
+                    # Save Scores to the .log file and visualize also with tensorboard
+                    acc = Evaluation(y_predicted, y_true)
+                    
+                    train_loss = sum(training_loss) / training_batches
+                    val_loss = sum(val_losses) / val_batches
+                    val_losses_avg_all_epochs.append(val_loss)
+                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
+                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
+                        epoch_min_val_loss = epoch
+                    logging.info("\n")
+                    logging.info(
+                        "Val loss was: " + str(val_loss)
+                    )
+                    logging.info(
+                        "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
+                    )
+                    logging.info("Evaluation: " + str(acc))
+
+                    logging.info("Saving models")
+                    model_dir = os.path.join(
+                        options["checkpoint_path"],
+                        model_name,
+                        str(epoch),
+                    )
+                    os.makedirs(model_dir, exist_ok=True)
+                    save_model(model, os.path.join(model_dir, "model.pth"))
+
+                    tb_writer.add_scalars(
+                        "Loss per epoch",
+                        {
+                            "Val loss": val_loss,
+                            "Train loss": train_loss,
+                        },
+                        epoch,
+                    )
+                    tb_writer.add_eval_metrics(acc, epoch)
+                    
+                    wandb_logger.log_eval_losses(
+                        train_loss, 
+                        val_loss, 
+                        min_val_loss_among_epochs, 
+                        epoch,
+                        epoch_min_val_loss
+                    )
+                    
+                #val_loss = sum(val_losses) / val_batches #TODO ?
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(val_loss)
                 else:

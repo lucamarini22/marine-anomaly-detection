@@ -251,71 +251,39 @@ def train_step_semi_supervised_separate_batches(
     return loss, training_loss
 
 def train_step_semi_supervised_one_batch(
+    image: torch.Tensor,
+    seg_map: torch.Tensor,
+    weak_aug_img: torch.Tensor,
+    
+    
     file_io: FileIO,
-    labeled_train_loader: DataLoader,
-    unlabeled_train_loader: DataLoader,
-    labeled_iter: Iterator,
-    unlabeled_iter: Iterator,
+    #labeled_train_loader: DataLoader,
+    #unlabeled_train_loader: DataLoader,
+    #labeled_iter: Iterator,
+    #unlabeled_iter: Iterator,
+    
     criterion: nn.Module,
     criterion_unsup: nn.Module,
+    
     training_loss: list[float],
     model: nn.Module,
     model_name: str,
+    
     optimizer: torch.optim,
+    
     epoch: int,
+    
     device: torch.device,
+    
     batch_size: int,
     classes_channel_idx: int,
+    
     threshold: float,
     lambda_v: float,
     padding_val: int = PADDING_VAL,
 ) -> tuple[torch.Tensor, list[float]]:
-    """Trains the model for one semi-supervised step.
-    It computes:
-      - Supervised loss on the labeled pixels of a batch of the training set.
-      - Unsupervised loss on the unlabeled pixels of the same batch of 
-        the training set.
-
-    Args:
-        file_io (FileIO): file io.
-        labeled_train_loader (DataLoader): dataloader for labeled training set.
-        unlabeled_train_loader (DataLoader): dataloader for unlabeled training
-          set.
-        labeled_iter (Iterator): iterator of labeled_train_loader.
-        unlabeled_iter (Iterator): iterator of unlabeled_train_loader.
-        criterion (nn.Module): supervised loss.
-        criterion_unsup (nn.Module): unsupervised loss.
-        training_loss (list[float]): list of semi-supervised training loss of
-          batches.
-        model (nn.Module): model.
-        model_name (str): name of the model.
-        optimizer (torch.optim): optimizer
-        epoch (int): epoch.
-        device (torch.device): device.
-        batch_size (int): batch size.
-        classes_channel_idx (int): index of the channel of the categories.
-        threshold (float): threshold for model+s confidence (threshold for
-          softmax values).
-        lambda_v (float): coefficient of the unsupervised loss.
-        padding_val (int, optional): padding value. Defaults to PADDING_VAL.
-
-    Returns:
-        tuple[torch.Tensor, list[float]]: last semi-superivsed loss, list of all
-          semi-supervised losses of the current step.
-    """
-    try:
-        # Load labeled batch
-        img_x, seg_map = next(labeled_iter)
-    except:
-        labeled_iter = iter(labeled_train_loader)
-        img_x, seg_map = next(labeled_iter)
-    try:
-        # Load unlabeled batch of weakly augmented images
-        img_u_w = next(unlabeled_iter)
-    except:
-        unlabeled_iter = iter(unlabeled_train_loader)
-        img_u_w = next(unlabeled_iter)
-
+    # TODO: add docstring
+    
     # Initializes RandAugment with n random augmentations.
     # So, every batch will have different random augmentations.
     randaugment = RandAugmentMC(n=2, m=10)
@@ -325,9 +293,9 @@ def train_step_semi_supervised_one_batch(
         randaugment=randaugment, mean=None, std=None
     )
     # Applies strong augmentation on weakly augmented images
-    img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
-    for i in range(img_u_w.shape[0]):
-        img_u_w_i = img_u_w[i, :, :, :]
+    img_u_s = np.zeros((weak_aug_img.shape), dtype=np.float32)
+    for i in range(weak_aug_img.shape[0]):
+        img_u_w_i = weak_aug_img[i, :, :, :]
         img_u_w_i = img_u_w_i.cpu().detach().numpy()
         img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
         # Strongly-augmented image
@@ -335,8 +303,8 @@ def train_step_semi_supervised_one_batch(
         img_u_s[i, :, :, :] = img_u_s_i
     img_u_s = torch.from_numpy(img_u_s)
     # Moves data to device
-    inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
-    seg_map = seg_map.to(device)
+    inputs = torch.cat((image, weak_aug_img, img_u_s)).to(device)
+    seg_map = seg_map.to(device) # TODO: should I keep this one or the same call above?
     optimizer.zero_grad()
     # Computes logits
     logits = model(inputs)
@@ -400,6 +368,8 @@ def train_step_semi_supervised_one_batch(
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
     # Merge the two masks
     mask[padding_mask] = 0
+    
+    # TODO: ignore pixels that are labeled -> 
     
     logits_u_s.requires_grad = True
     # Unsupervised loss
@@ -668,9 +638,11 @@ def update_checkpoint_path(mode: TrainMode, checkpoint_path: str) -> str:
         str: the updated path of the checkpoint.
     """
     if mode == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
-        checkpoint_path = os.path.join(checkpoint_path, "semi-supervised")
+        checkpoint_path = os.path.join(checkpoint_path, "semi-supervised-two-train-sets")
     elif mode == TrainMode.TRAIN:
         checkpoint_path = os.path.join(checkpoint_path, "supervised")
+    elif mode == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        checkpoint_path = os.path.join(checkpoint_path, "semi-supervised-one-train-set")
     else:
         raise Exception("Mode is not known.")
     return checkpoint_path
