@@ -667,7 +667,7 @@ def update_checkpoint_path(mode: TrainMode, checkpoint_path: str) -> str:
     Returns:
         str: the updated path of the checkpoint.
     """
-    if mode == TrainMode.TRAIN_SSL:
+    if mode == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         checkpoint_path = os.path.join(checkpoint_path, "semi-supervised")
     elif mode == TrainMode.TRAIN:
         checkpoint_path = os.path.join(checkpoint_path, "supervised")

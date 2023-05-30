@@ -108,7 +108,7 @@ def main(options, wandb_logger):
             seed_worker_fn=set_seed_worker,
             generator=g,
         )
-    elif options["mode"] == TrainMode.TRAIN_SSL:
+    elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
             labeled_train_loader,
             unlabeled_train_loader,
@@ -131,7 +131,7 @@ def main(options, wandb_logger):
             drop_last=True,
         )
     else:
-        raise Exception("The mode option should be train, train_ssl, or test")
+        raise Exception("The specified mode option does not exist.")
 
     output_channels = get_output_channels(options["aggregate_classes"])
     # Init model
@@ -166,7 +166,7 @@ def main(options, wandb_logger):
     criterion = get_criterion(
         supervised=True, alphas=alphas, device=device, gamma=options["gamma"]
     )
-    if options["mode"] == TrainMode.TRAIN_SSL:
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         # Init of unsupervised loss
         criterion_unsup = get_criterion(
             supervised=False,
@@ -315,7 +315,7 @@ def main(options, wandb_logger):
 
                 model.train()
 
-    elif options["mode"] == TrainMode.TRAIN_SSL:
+    elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
         classes_channel_idx = 1

@@ -36,7 +36,7 @@ def parse_args_train(config):
     parser.add_argument(
         "--mode",
         choices=list(TrainMode),
-        default=TrainMode.TRAIN_SSL,
+        default=TrainMode.TRAIN_SSL_TWO_TRAIN_SETS,
         help="Mode",
     )
     # SSL hyperparameters
@@ -44,7 +44,7 @@ def parse_args_train(config):
         "--perc_labeled",
         help=(
             "Percentage of labeled training set. This argument has "
-            "effect only when --mode=TrainMode.TRAIN_SSL. "
+            "effect only when --mode=TrainMode.TRAIN_SSL_TWO_TRAIN_SETS. "
             " The percentage of the unlabeled training set will be "
             " 1 - perc_labeled."
         ),
@@ -177,7 +177,7 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
-    if options["mode"] == TrainMode.TRAIN_SSL:
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         options["batch"] = int(options["batch"])
         options["mu"] = int(options["mu"])
 
