@@ -1,13 +1,8 @@
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
+import torchvision.transforms as transforms
 
-from anomalymarinedetection.utils.assets import (
-    cat_mapping_binary_inv,
-    cat_mapping_multi_inv,
-    num_labeled_pixels_train_binary,
-    num_labeled_pixels_train_multi
-)
 from anomalymarinedetection.utils.constants import BANDS_MEAN
 from anomalymarinedetection.io.load_data import (
     load_patch,
@@ -30,22 +25,22 @@ class AnomalyMarineDataset(Dataset):
     def __init__(
         self,
         mode: DataLoaderType = DataLoaderType.TRAIN_SUP,
-        transform=None,
-        standardization=None,
+        transform: transforms.Compose = None,
+        standardization : transforms.Normalize =None,
         path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
         perc_labeled: float = None,
-        second_transform=None
+        second_transform: transforms.Compose = None
     ):
         """Initializes the anomaly marine detection dataset.
 
         Args:
             mode (DataLoaderType, optional): data loader mode.
               Defaults to DataLoaderType.TRAIN_SUP.
-            transform (_type_, optional): transformation to apply to dataset.
-              Defaults to None.
-            standardization (_type_, optional): standardization.
+            transform (transforms.Compose, optional): transformation to apply
+              to dataset. Defaults to None.
+            standardization (transforms.Normalize, optional): standardization.
               Defaults to None.
             path (str, optional): dataset path.
             aggregate_classes (CategoryAggregation, optional): type
@@ -53,10 +48,9 @@ class AnomalyMarineDataset(Dataset):
               Defaults to CategoryAggregation.MULTI.
             rois (list[str], optional): list of region of interest names to
               consider. Defaults to None.
-            second_transform (_type_, optional): transformation to apply to 
-              the patches that will be used in the unsupervised loss. Only to 
-              use when mode is TRAIN_SSL_SUP.
-              Defaults to None.
+            second_transform (transforms.Compose, optional): transformation to 
+              apply to the patches that will be used in the unsupervised loss. 
+              Only to use when mode is TRAIN_SSL_SUP. Defaults to None.
 
         Raises:
             Exception: raises an exception if the specified Category 
