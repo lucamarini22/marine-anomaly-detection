@@ -106,7 +106,7 @@ def get_dataloaders_supervised(
     return train_loader, val_loader
 
 
-def get_dataloaders_ssl(
+def get_dataloaders_ssl_separate_train_sets(
     dataset_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
@@ -123,7 +123,12 @@ def get_dataloaders_ssl(
     mu: int,
     drop_last: bool = True,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
-    """_summary_
+    """Gets dataloaders to perform semi-supervised learning with two different
+    training sets:
+      - D_s: weakly-labeled dataset
+      - D_u: unlabeled dataset
+    (D_s U D_u = D, i.e. the union of the 2 datasets is the full training 
+    dataset).   
 
     Args:
         dataset_path (str): path of the dataset.

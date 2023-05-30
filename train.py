@@ -8,7 +8,7 @@ import torch
 
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
-    get_dataloaders_ssl,
+    get_dataloaders_ssl_separate_train_sets,
 )
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
@@ -113,7 +113,7 @@ def main(options, wandb_logger):
             labeled_train_loader,
             unlabeled_train_loader,
             val_loader,
-        ) = get_dataloaders_ssl(
+        ) = get_dataloaders_ssl_separate_train_sets(
             dataset_path=options["dataset_path"],
             transform_train=transform_train,
             transform_val=transform_val,
