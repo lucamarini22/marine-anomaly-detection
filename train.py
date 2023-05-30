@@ -9,6 +9,7 @@ import torch
 from anomalymarinedetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl_separate_train_sets,
+    get_dataloaders_ssl_single_train_set,
 )
 from anomalymarinedetection.utils.metrics import Evaluation
 from anomalymarinedetection.utils.constants import (
@@ -53,6 +54,9 @@ from anomalymarinedetection.dataset.augmentation.get_transform_val import (
     get_transform_val,
 )
 from anomalymarinedetection.io.wandb_logger import WandbLogger
+from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
+    WeakAugmentation,
+)
 
 
 def main(options, wandb_logger):
@@ -87,6 +91,9 @@ def main(options, wandb_logger):
     # Transformations
     transform_train = get_transform_train()
     transform_val = get_transform_val()
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
+        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        weakly_transform = WeakAugmentation(mean=None, std=None)
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
@@ -117,6 +124,7 @@ def main(options, wandb_logger):
             dataset_path=options["dataset_path"],
             transform_train=transform_train,
             transform_val=transform_val,
+            weakly_transform=weakly_transform,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             batch=options["batch"],
@@ -129,6 +137,22 @@ def main(options, wandb_logger):
             perc_labeled=options["perc_labeled"],
             mu=options["mu"],
             drop_last=True,
+        )
+    elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        train_loader, val_loader = get_dataloaders_ssl_single_train_set(
+            dataset_path=options["dataset_path"],
+            transform_train=transform_train,
+            transform_val=transform_val,
+            weakly_transform=weakly_transform,  
+            standardization=standardization,
+            aggregate_classes=options["aggregate_classes"],
+            batch=options["batch"],
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            seed_worker_fn=set_seed_worker,
+            generator=g,
         )
     else:
         raise Exception("The specified mode option does not exist.")

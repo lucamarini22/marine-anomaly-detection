@@ -8,9 +8,6 @@ from anomalymarinedetection.dataset.anomalymarinedataset import (
     AnomalyMarineDataset,
 )
 from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
-    WeakAugmentation,
-)
 from anomalymarinedetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
@@ -204,6 +201,7 @@ def get_dataloaders_ssl_separate_train_sets(
     dataset_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
+    weakly_transform: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
@@ -230,9 +228,11 @@ def get_dataloaders_ssl_separate_train_sets(
     Args:
         dataset_path (str): path of the dataset.
         transform_train (transforms.Compose): transformations to be applied
-          to training set.
+          to the D_s training set.
         transform_val (transforms.Compose): transformations to be applied
           to the validation set.
+        weakly_transform (transforms.Compose): transformation to be applied to
+          the D_u training set.
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
@@ -281,7 +281,7 @@ def get_dataloaders_ssl_separate_train_sets(
     )
     unlabeled_dataset_train = AnomalyMarineDataset(
         DataLoaderType.TRAIN_SSL,
-        transform=WeakAugmentation(mean=None, std=None),
+        transform=weakly_transform,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs_u,
