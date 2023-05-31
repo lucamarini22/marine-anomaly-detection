@@ -323,7 +323,9 @@ def train_step_semi_supervised_one_batch(
     img_u_s = torch.from_numpy(img_u_s)
     # Moves data to device
     inputs = torch.cat((image, weak_aug_img, img_u_s)).to(device)
-    seg_map = seg_map.to(device) # TODO: should I keep this one or the same call above?
+    seg_map = seg_map.to(device)
+    # Mask that is True for all unlabeled pixels
+    unlabeled_pixels_mask = seg_map != IGNORE_INDEX
     optimizer.zero_grad()
     # Computes logits
     logits = model(inputs)
@@ -385,10 +387,12 @@ def train_step_semi_supervised_one_batch(
     mask = max_probs.ge(threshold).float()
     # Mask to ignore all padding pixels
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
-    # Merge the two masks
+    # Merges threshold mask and padding mask 
     mask[padding_mask] = 0
-    
-    # TODO: ignore pixels that are labeled -> 
+    # Ignores pixels that are labeled when computing the unsupervised loss 
+    unlabeled_pixels_mask = unlabeled_pixels_mask.float()
+    # Merges labeled pixels mask and threshold + padding mask 
+    mask = torch.logical_and(mask, unlabeled_pixels_mask).float()
     
     logits_u_s.requires_grad = True
     # Unsupervised loss
