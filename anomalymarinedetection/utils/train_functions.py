@@ -254,36 +254,55 @@ def train_step_semi_supervised_one_batch(
     image: torch.Tensor,
     seg_map: torch.Tensor,
     weak_aug_img: torch.Tensor,
-    
-    
     file_io: FileIO,
-    #labeled_train_loader: DataLoader,
-    #unlabeled_train_loader: DataLoader,
-    #labeled_iter: Iterator,
-    #unlabeled_iter: Iterator,
-    
     criterion: nn.Module,
     criterion_unsup: nn.Module,
-    
     training_loss: list[float],
     model: nn.Module,
     model_name: str,
-    
     optimizer: torch.optim,
-    
     epoch: int,
-    
     device: torch.device,
-    
     batch_size: int,
     classes_channel_idx: int,
-    
     threshold: float,
     lambda_v: float,
     padding_val: int = PADDING_VAL,
 ) -> tuple[torch.Tensor, list[float]]:
-    # TODO: add docstring
-    
+    """Trains the model for one semi-supervised step.
+    It computes:
+      - Supervised loss on the labeled pixels of a batch of the training set.
+      - Unsupervised loss on the unlabeled pixels of the same batch used to 
+        compute the supervised loss.
+    There is only one training set and:
+      - Labeled pixels contribute only to the supervised loss.
+      - Unlabeled pixels contribute only to the unsupervised loss.
+
+    Args:
+        image (torch.Tensor): image.
+        seg_map (torch.Tensor): segmentation map.
+        weak_aug_img (torch.Tensor): weakly-augmented image.
+        file_io (FileIO): file io.
+        criterion (nn.Module): supervised loss.
+        criterion_unsup (nn.Module): unsupervised loss.
+        training_loss (list[float]): list of supervised training loss of
+          batches.
+        model (nn.Module): model.
+        model_name (str): name of the model.
+        optimizer (torch.optim): optimizer.
+        epoch (int): epoch.
+        device (torch.device): device.
+        batch_size (int): batch size.
+        classes_channel_idx (int): index of the channel of the categories.
+        threshold (float): threshold for model+s confidence (threshold for
+          softmax values).
+        lambda_v (float): coefficient of the unsupervised loss.
+        padding_val (int, optional): padding value. Defaults to PADDING_VAL.
+
+    Returns:
+        tuple[torch.Tensor, list[float]]: last superivsed loss, list of all
+          supervised losses of the current step.
+    """
     # Initializes RandAugment with n random augmentations.
     # So, every batch will have different random augmentations.
     randaugment = RandAugmentMC(n=2, m=10)
