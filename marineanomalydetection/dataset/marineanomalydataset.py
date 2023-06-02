@@ -50,7 +50,13 @@ class MarineAnomalyDataset(Dataset):
               consider. Defaults to None.
             second_transform (transforms.Compose, optional): transformation to 
               apply to the patches that will be used in the unsupervised loss. 
-              Only to use when mode is TRAIN_SSL_SUP. Defaults to None.
+              Only to use when mode is TRAIN_SSL_SUP. In particular, the 
+              second_transform is only applied for the SSL case with one single
+              training set because the same patch will be used to compute:
+                - the supervised loss -> transform is applied to the patch.
+                - the unsupervised loss -> second_transform is applied to a 
+                  copy of the patch.
+              Defaults to None.
 
         Raises:
             Exception: raises an exception if the specified Category 
