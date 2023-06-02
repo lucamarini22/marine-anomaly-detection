@@ -4,6 +4,7 @@ import numpy as np
 
 from marineanomalydetection.io.load_roi import load_roi
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.io.log_functions import log_patches
 
 
 def get_rois(
@@ -42,9 +43,7 @@ def get_rois(
             #  - Unlabeled training subset -> see case when 
             #    mode == DataLoaderType.TRAIN_SSL.
             ROIs = rois
-        for roi_print in ROIs:
-            logger_set.info(roi_print)
-        logger_set.info(f"Total of {len(ROIs)} training patches.")
+        log_patches(ROIs, logger_set)
 
     elif mode == DataLoaderType.TRAIN_SSL:
         # Semi-supervised learning case with 2 different training subsets:

@@ -1,7 +1,22 @@
 import loguru
-
-
+import numpy as np
 import torch
+
+
+def log_patches(
+    patches: np.ndarray | list[str], 
+    logger: loguru._logger.Logger
+) -> None:
+    """Logs the name of the patches
+
+    Args:
+        patches (np.ndarray | list[str]): names of the patches.
+        logger (loguru._logger.Logger): logger.
+    """
+    for roi_print in patches:
+        logger.info(roi_print)
+    logger.info(f"Total of {len(patches)} training patches.")
+
 
 def log_epoch_init(
     epoch: int, 
@@ -30,7 +45,7 @@ def log_ssl_loss_components(
     logger: loguru._logger.Logger,
     separator: str = "-",
     num_sep: int = 20
-):
+) -> None:
     """Logs:
       - the loss components (supervised and unsupervised) of the 
         semi-supervised loss.
