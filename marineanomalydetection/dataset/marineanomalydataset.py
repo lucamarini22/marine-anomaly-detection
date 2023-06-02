@@ -168,8 +168,7 @@ class MarineAnomalyDataset(Dataset):
         # when training with SSL.
         if self.mode == DataLoaderType.TRAIN_SSL:
             img = self.X_u[index]
-            # CxWxH to WxHxC
-            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
+            img = self._CxWxH_to_WxHxC(img)
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
 
@@ -189,8 +188,7 @@ class MarineAnomalyDataset(Dataset):
             img = self.X[index]
             target = self.y[index]
 
-            # CxWxH to WxHxC
-            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
+            img = self._CxWxH_to_WxHxC(img)
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
 
@@ -218,8 +216,8 @@ class MarineAnomalyDataset(Dataset):
             # Loads patch and its seg map
             img = self.X[index]
             target = self.y[index]
-            # CxWxH to WxHxC
-            img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype("float32")
+
+            img = self._CxWxH_to_WxHxC(img)
             nan_mask = np.isnan(img)
             img[nan_mask] = self.impute_nan[nan_mask]
             # Creates a copy of patch to use it for unsupervised loss
@@ -250,4 +248,19 @@ class MarineAnomalyDataset(Dataset):
         else:
             raise Exception(f"The specified DataLoaderType does not exist.")
     
+    @staticmethod
+    def _CxWxH_to_WxHxC(img: np.ndarray, dtype: str = "float32") -> np.ndarray:
+        """Swaps the axes of an image from (channels, width, height) to
+        (width, height, channels). 
+
+        Args:
+            img (np.ndarray): image.
+            dtype (str, optional): type of the returned image. 
+              Defaults to "float32".
+
+        Returns:
+            np.ndarray: image with swapped axes.
+        """
+        img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype(dtype)
+        return img
         
