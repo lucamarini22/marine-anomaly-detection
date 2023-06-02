@@ -3,6 +3,7 @@ import torch
 
 # Logger names
 LOG_SET = "log_set"
+LOG_STD_OUT = "log_std_out"
 
 IGNORE_INDEX = -1
 PADDING_VAL = 0

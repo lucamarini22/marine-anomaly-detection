@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 from loguru import logger
@@ -18,6 +19,8 @@ from marineanomalydetection.utils.constants import (
     BANDS_STD,
     SEPARATOR,
     PADDING_VAL,
+    LOG_SET,
+    LOG_STD_OUT,
 )
 from marineanomalydetection.io.file_io import FileIO
 from marineanomalydetection.io.tbwriter import TBWriter
@@ -47,6 +50,7 @@ from marineanomalydetection.utils.train_functions import (
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
+    log_epoch_init,
 )
 from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
@@ -72,9 +76,14 @@ def main(options, wandb_logger):
     
 
     logger.add(
-        os.path.join(f"{options['log_folder']}", "log_set.log"), 
-        filter=lambda record: record["extra"].get("name") == "log_set"
-    )    
+        os.path.join(f"{options['log_folder']}", LOG_SET + ".log"), 
+        filter=lambda record: record["extra"].get("name") == LOG_SET
+    )
+    logger.add(
+        sys.__stdout__, 
+        filter=lambda record: record["extra"].get("name") == LOG_STD_OUT
+    )
+    logger_std_out = logger.bind(name=LOG_STD_OUT)
 
     model_name = get_model_name(
         options["resume_model"],
@@ -231,7 +240,7 @@ def main(options, wandb_logger):
         model.train()
 
         for epoch in range(start, epochs + 1):
-            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            log_epoch_init(epoch, logger_std_out)
             training_loss = []
             training_batches = 0
 
@@ -358,7 +367,7 @@ def main(options, wandb_logger):
         model.train()
 
         for epoch in range(start, epochs + 1):
-            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            log_epoch_init(epoch, logger_std_out)
 
             training_loss = []
             training_batches = 0
@@ -495,7 +504,7 @@ def main(options, wandb_logger):
         model.train()
 
         for epoch in range(start, epochs + 1):
-            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            log_epoch_init(epoch, logger_std_out)
             training_loss = []
             training_batches = 0
 

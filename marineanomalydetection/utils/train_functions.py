@@ -1,6 +1,7 @@
 import os
 import ast
 from typing import Iterator
+import loguru
 import numpy as np
 import torch
 from torch import nn
@@ -684,3 +685,23 @@ def check_checkpoint_path_exist(checkpoint_path: str):
         raise Exception(
             f"The checkpoint directory {checkpoint_path} does not exist"
         )
+
+
+def log_epoch_init(
+    epoch: int, 
+    logger: loguru._logger.Logger,
+    separator: str = "_", 
+    num_sep: int = 40
+) -> None:
+    """Logs the epoch number.
+
+    Args:
+        epoch (int): number of epoch.
+        logger (loguru._logger.Logger): logger.
+        separator (str, optional): separator. Defaults to "_".
+        num_sep (int, optional): number of separators. Defaults to 40.
+    """
+    logger.info(
+        separator * num_sep + "Epoch " + str(epoch) + ": " + separator * num_sep
+    )
+    
