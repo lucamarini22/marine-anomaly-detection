@@ -6,24 +6,24 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from anomalymarinedetection.dataset.augmentation.randaugment import (
+from marineanomalydetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
 )
-from anomalymarinedetection.dataset.augmentation.strongaugmentation import (
+from marineanomalydetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
 )
-from anomalymarinedetection.trainmode import TrainMode
-from anomalymarinedetection.utils.assets import labels_binary, labels_multi
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.trainmode import TrainMode
+from marineanomalydetection.utils.assets import labels_binary, labels_multi
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.loss.focal_loss import FocalLoss
-from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.loss.focal_loss import FocalLoss
+from marineanomalydetection.models.unet import UNet
+from marineanomalydetection.utils.constants import (
     IGNORE_INDEX,
     PADDING_VAL,
 )
-from anomalymarinedetection.io.file_io import FileIO
+from marineanomalydetection.io.file_io import FileIO
 
 
 def train_step_supervised(

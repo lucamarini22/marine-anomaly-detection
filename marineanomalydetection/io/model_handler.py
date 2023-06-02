@@ -1,9 +1,9 @@
 import torch
 
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.trainmode import TrainMode
+from marineanomalydetection.trainmode import TrainMode
 
 
 def load_model(model, path_model_to_load: str, device) -> None:

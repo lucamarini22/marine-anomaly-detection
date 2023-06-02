@@ -6,13 +6,13 @@ import numpy as np
 import cv2 as cv
 import rasterio
 
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.constants import (
     COP_HUB_BANDS,
     MARIDA_SIZE_X,
     MARIDA_SIZE_Y,
     BAND_NAMES_IN_COPERNICUS_HUB,
 )
-from anomalymarinedetection.utils.bands import (
+from marineanomalydetection.utils.bands import (
     get_band_and_patch_names_from_file_name, get_cop_hub_band_idx
 )
 

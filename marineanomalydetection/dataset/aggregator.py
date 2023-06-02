@@ -1,6 +1,6 @@
 import numpy as np
 
-from anomalymarinedetection.utils.assets import (
+from marineanomalydetection.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
     cat_mapping_multi,

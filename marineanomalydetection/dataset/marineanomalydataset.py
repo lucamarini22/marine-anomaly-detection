@@ -3,25 +3,25 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.utils.constants import BANDS_MEAN
-from anomalymarinedetection.io.load_data import (
+from marineanomalydetection.utils.constants import BANDS_MEAN
+from marineanomalydetection.io.load_data import (
     load_patch,
     load_segmentation_map,
 )
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.dataset.get_roi_tokens import get_roi_tokens
-from anomalymarinedetection.imageprocessing.normalize_img import normalize_img
-from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
-from anomalymarinedetection.dataset.assert_percentage_categories import assert_percentage_categories
-from anomalymarinedetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
-from anomalymarinedetection.dataset.get_rois import get_rois
-from anomalymarinedetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
+from marineanomalydetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.dataset.get_roi_tokens import get_roi_tokens
+from marineanomalydetection.imageprocessing.normalize_img import normalize_img
+from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
+from marineanomalydetection.dataset.assert_percentage_categories import assert_percentage_categories
+from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
+from marineanomalydetection.dataset.get_rois import get_rois
+from marineanomalydetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
 
 
-class AnomalyMarineDataset(Dataset):
+class MarineAnomalyDataset(Dataset):
     def __init__(
         self,
         mode: DataLoaderType = DataLoaderType.TRAIN_SUP,

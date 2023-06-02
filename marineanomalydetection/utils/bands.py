@@ -1,8 +1,8 @@
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.constants import (
     BAND_NAMES_IN_MARIDA,
     BAND_NAMES_IN_COPERNICUS_HUB,
 )
-from anomalymarinedetection.utils.string import (
+from marineanomalydetection.utils.string import (
     number_starting_with_zero_2_number,
 )
 

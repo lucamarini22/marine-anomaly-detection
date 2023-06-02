@@ -1,9 +1,9 @@
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
+from marineanomalydetection.dataset.augmentation.discreterandomrotation import (
     DiscreteRandomRotation,
 )
-from anomalymarinedetection.utils.constants import ANGLES_FIXED_ROTATION
+from marineanomalydetection.utils.constants import ANGLES_FIXED_ROTATION
 
 
 def get_transform_train() -> transforms.Compose:

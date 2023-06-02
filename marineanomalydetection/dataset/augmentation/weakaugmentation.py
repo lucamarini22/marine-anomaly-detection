@@ -2,10 +2,10 @@ import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 import numpy as np
 
-from anomalymarinedetection.dataset.augmentation.discreterandomrotation import (
+from marineanomalydetection.dataset.augmentation.discreterandomrotation import (
     DiscreteRandomRotation,
 )
-from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
+from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 
 
 class WeakAugmentation(object):

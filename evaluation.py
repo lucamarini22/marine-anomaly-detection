@@ -14,22 +14,22 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.models.unet import UNet
-from anomalymarinedetection.dataset.anomalymarinedataset import (
-    AnomalyMarineDataset,
+from marineanomalydetection.models.unet import UNet
+from marineanomalydetection.dataset.marineanomalydetection import (
+    MarineAnomalyDataset,
 )
-from anomalymarinedetection.utils.constants import BANDS_MEAN, BANDS_STD
-from anomalymarinedetection.io.load_roi import load_roi
-from anomalymarinedetection.utils.metrics import Evaluation, confusion_matrix
-from anomalymarinedetection.utils.assets import (
+from marineanomalydetection.utils.constants import BANDS_MEAN, BANDS_STD
+from marineanomalydetection.io.load_roi import load_roi
+from marineanomalydetection.utils.metrics import Evaluation, confusion_matrix
+from marineanomalydetection.utils.assets import (
     labels_binary,
     labels_multi,
 )
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.utils.seed import set_seed
+from marineanomalydetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.utils.seed import set_seed
 
 root_path = dirname(os.path.abspath(__file__))
 
@@ -51,7 +51,7 @@ def main(options):
 
     # Construct Data loader
 
-    dataset_test = AnomalyMarineDataset(
+    dataset_test = MarineAnomalyDataset(
         DataLoaderType.TEST,
         transform=transform_test,
         standardization=standardization,
@@ -246,14 +246,14 @@ if __name__ == "__main__":
         "--dataset_path", help="path of dataset", default="data"
     )
     # Unet model path
-    parser.add_argument( 
+    parser.add_argument(
         "--model_path",
         default=os.path.join(
             "results",
             "trained_models",
-            "semi-supervised",
-            "2023_05_21_H_21_18_43_TRAIN_SSL_MULTI_7bfns3ja_cosmic-sweep-2",
-            "737",
+            "semi-supervised-one-train-set",
+            "2023_06_01_H_11_19_30_TRAIN_SSL_ONE_TRAIN_SET_MULTI_x9cs392u_northern-sweep-8",
+            "638",
             "model.pth",
         ),
         help="Path to trained model",

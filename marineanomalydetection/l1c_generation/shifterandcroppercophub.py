@@ -5,27 +5,27 @@ import numpy as np
 import cv2 as cv
 import os
 
-from anomalymarinedetection.l1c_generation.discard_means_out_of_std_dev import (
+from marineanomalydetection.l1c_generation.discard_means_out_of_std_dev import (
     discard_means_out_of_std_dev
 )
-from anomalymarinedetection.utils.bands import (
+from marineanomalydetection.utils.bands import (
     get_band_and_patch_names_from_file_name,
 )
-from anomalymarinedetection.utils.bands import (
+from marineanomalydetection.utils.bands import (
     is_first_band,
     get_patch_name_and_axis_id_from_key
 )
-from anomalymarinedetection.utils.get_coords_of_keypoint import (
+from marineanomalydetection.utils.get_coords_of_keypoint import (
     get_coords_of_keypoint
 )
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.constants import (
     NOT_A_MATCH,
     COP_HUB_BASE_NAME,
     HALF_MARIDA_SIZE_X,
     HALF_MARIDA_SIZE_Y,
 )
-from anomalymarinedetection.io.load_keypoints import load_keypoints
-from anomalymarinedetection.io.image_io import ImageIO
+from marineanomalydetection.io.load_keypoints import load_keypoints
+from marineanomalydetection.io.image_io import ImageIO
 
 USE_PRECOMPUTED_MEAN = True
 

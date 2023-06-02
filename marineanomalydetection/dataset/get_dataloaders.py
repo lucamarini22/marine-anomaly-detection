@@ -4,14 +4,14 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 
-from anomalymarinedetection.dataset.anomalymarinedataset import (
-    AnomalyMarineDataset,
+from marineanomalydetection.dataset.marineanomalydataset import (
+    MarineAnomalyDataset,
 )
-from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.dataset.get_labeled_and_unlabeled_rois import (
+from marineanomalydetection.dataset.get_labeled_and_unlabeled_rois import (
     get_labeled_and_unlabeled_rois,
 )
 
@@ -62,14 +62,14 @@ def get_dataloaders_supervised(
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
-    dataset_train = AnomalyMarineDataset(
+    dataset_train = MarineAnomalyDataset(
         DataLoaderType.TRAIN_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
     )
-    dataset_val = AnomalyMarineDataset(
+    dataset_val = MarineAnomalyDataset(
         DataLoaderType.VAL,
         transform=transform_val,
         standardization=standardization,
@@ -156,7 +156,7 @@ def get_dataloaders_ssl_single_train_set(
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
-    dataset_train = AnomalyMarineDataset(
+    dataset_train = MarineAnomalyDataset(
         DataLoaderType.TRAIN_SSL_SUP,
         transform=transform_train,
         standardization=standardization,
@@ -164,7 +164,7 @@ def get_dataloaders_ssl_single_train_set(
         path=dataset_path,
         second_transform=weakly_transform
     )
-    dataset_val = AnomalyMarineDataset(
+    dataset_val = MarineAnomalyDataset(
         DataLoaderType.VAL,
         transform=transform_val,
         standardization=standardization,
@@ -272,7 +272,7 @@ def get_dataloaders_ssl_separate_train_sets(
     )
 
     # TODO: update (e.g. transformations and other)
-    labeled_dataset_train = AnomalyMarineDataset(
+    labeled_dataset_train = MarineAnomalyDataset(
         DataLoaderType.TRAIN_SUP,
         transform=transform_train,
         standardization=standardization,
@@ -281,7 +281,7 @@ def get_dataloaders_ssl_separate_train_sets(
         path=dataset_path,
         perc_labeled=perc_labeled,
     )
-    unlabeled_dataset_train = AnomalyMarineDataset(
+    unlabeled_dataset_train = MarineAnomalyDataset(
         DataLoaderType.TRAIN_SSL,
         transform=weakly_transform,
         standardization=standardization,
@@ -289,7 +289,7 @@ def get_dataloaders_ssl_separate_train_sets(
         rois=ROIs_u,
         path=dataset_path,
     )
-    dataset_val = AnomalyMarineDataset(
+    dataset_val = MarineAnomalyDataset(
         DataLoaderType.VAL,
         transform=transform_val,
         standardization=standardization,

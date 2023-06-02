@@ -6,34 +6,34 @@ import numpy as np
 from tqdm import tqdm
 import torch
 
-from anomalymarinedetection.dataset.get_dataloaders import (
+from marineanomalydetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
     get_dataloaders_ssl_separate_train_sets,
     get_dataloaders_ssl_single_train_set,
 )
-from anomalymarinedetection.utils.metrics import Evaluation
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.metrics import Evaluation
+from marineanomalydetection.utils.constants import (
     CLASS_DISTR,
     BANDS_MEAN,
     BANDS_STD,
     SEPARATOR,
     PADDING_VAL,
 )
-from anomalymarinedetection.io.file_io import FileIO
-from anomalymarinedetection.io.tbwriter import TBWriter
-from anomalymarinedetection.trainmode import TrainMode
-from anomalymarinedetection.parse_args_train import parse_args_train
-from anomalymarinedetection.io.model_handler import (
+from marineanomalydetection.io.file_io import FileIO
+from marineanomalydetection.io.tbwriter import TBWriter
+from marineanomalydetection.trainmode import TrainMode
+from marineanomalydetection.parse_args_train import parse_args_train
+from marineanomalydetection.io.model_handler import (
     load_model,
     save_model,
     get_model_name,
 )
-from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.dataset.update_class_distribution import (
+from marineanomalydetection.utils.seed import set_seed, set_seed_worker
+from marineanomalydetection.dataset.update_class_distribution import (
     update_class_distribution,
 )
-from anomalymarinedetection.utils.device import get_device, empty_cache
-from anomalymarinedetection.utils.train_functions import (
+from marineanomalydetection.utils.device import get_device, empty_cache
+from marineanomalydetection.utils.train_functions import (
     train_step_supervised,
     train_step_semi_supervised_separate_batches,
     train_step_semi_supervised_one_batch,
@@ -48,14 +48,14 @@ from anomalymarinedetection.utils.train_functions import (
     update_checkpoint_path,
     check_checkpoint_path_exist,
 )
-from anomalymarinedetection.dataset.augmentation.get_transform_train import (
+from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
 )
-from anomalymarinedetection.dataset.augmentation.get_transform_val import (
+from marineanomalydetection.dataset.augmentation.get_transform_val import (
     get_transform_val,
 )
-from anomalymarinedetection.io.wandb_logger import WandbLogger
-from anomalymarinedetection.dataset.augmentation.weakaugmentation import (
+from marineanomalydetection.io.wandb_logger import WandbLogger
+from marineanomalydetection.dataset.augmentation.weakaugmentation import (
     WeakAugmentation,
 )
 

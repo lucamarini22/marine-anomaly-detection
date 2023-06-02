@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from anomalymarinedetection.io.load_roi import load_roi
+from marineanomalydetection.io.load_roi import load_roi
 
 
 def get_labeled_and_unlabeled_rois(

@@ -10,7 +10,7 @@ import torch
 import albumentations as A
 from imgaug import augmenters as iaaa
 
-from anomalymarinedetection.utils.constants import MARIDA_SIZE_X, PADDING_VAL
+from marineanomalydetection.utils.constants import MARIDA_SIZE_X, PADDING_VAL
 
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,9 @@
 import torch
 
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.utils.assets import (
+from marineanomalydetection.utils.assets import (
     labels,
     labels_binary,
     labels_multi,

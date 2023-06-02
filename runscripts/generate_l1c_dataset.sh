@@ -1,19 +1,19 @@
 #!/bin/bash
 
 echo -ne '            (0%)\r'
-python ../anomalymarinedetection/l1c_generation/save_cophub_and_marida_patches_bands_2_png.py \
+python ../marineanomalydetection/l1c_generation/save_cophub_and_marida_patches_bands_2_png.py \
 --marida_patches_path="/data/anomaly-marine-detection/data/patches/" \
 --cop_hub_patches_path="/data/pyraws_luca/pyraws/generate_l1c/l1c_images" \
 --pairs_file_path="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs/cop_hub_marida_pairs.txt" \
 --output_folder_path="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching/" || exit
 echo -ne '###         (25%)\r'
 
-DIRECTORY="/data/anomaly-marine-detection/anomalymarinedetection/l1c_generation/SuperGluePretrainedNetwork"
+DIRECTORY="/data/anomaly-marine-detection/marineanomalydetection/l1c_generation/SuperGluePretrainedNetwork"
 if [ ! -d "$DIRECTORY" ]; then
   git clone https://github.com/magicleap/SuperGluePretrainedNetwork
 fi
 
-../anomalymarinedetection/l1c_generation/SuperGluePretrainedNetwork/match_pairs.py \
+../marineanomalydetection/l1c_generation/SuperGluePretrainedNetwork/match_pairs.py \
 --input_pairs="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs/cop_hub_marida_pairs.txt" \
 --input_dir="/data/anomaly-marine-detection/data/l1c_data/images_before_keypoint_matching" \
 --output_dir="/data/anomaly-marine-detection/data/l1c_data/keypoints_pairs" \

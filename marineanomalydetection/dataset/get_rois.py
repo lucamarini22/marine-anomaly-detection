@@ -2,8 +2,8 @@ import os
 from loguru import logger
 import numpy as np
 
-from anomalymarinedetection.io.load_roi import load_roi
-from anomalymarinedetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.io.load_roi import load_roi
+from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 
 
 def get_rois(

@@ -1,4 +1,4 @@
-from anomalymarinedetection.utils.assets import (
+from marineanomalydetection.utils.assets import (
     categories_to_ignore_perc_labeled,
 )
 

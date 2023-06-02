@@ -2,11 +2,11 @@ import os
 import argparse
 import wandb
 
-from anomalymarinedetection.utils.string import get_today_str
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.utils.string import get_today_str
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
-from anomalymarinedetection.trainmode import TrainMode
+from marineanomalydetection.trainmode import TrainMode
 
 
 def parse_args_train(config):
@@ -36,7 +36,7 @@ def parse_args_train(config):
     parser.add_argument(
         "--mode",
         choices=list(TrainMode),
-        default=TrainMode.TRAIN_SSL_TWO_TRAIN_SETS,
+        default=TrainMode.TRAIN_SSL_ONE_TRAIN_SET,
         help="Mode",
     )
     # SSL hyperparameters
@@ -177,7 +177,8 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
-    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
+        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         options["batch"] = int(options["batch"])
         options["mu"] = int(options["mu"])
 

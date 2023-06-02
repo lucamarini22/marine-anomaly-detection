@@ -3,20 +3,20 @@ import glob
 import argparse
 from pathlib import PurePath
 
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.constants import (
     BAND_NAMES_IN_MARIDA,
     BAND_NAMES_IN_COPERNICUS_HUB,
     NOT_TO_CONSIDER_MARIDA,
     COP_HUB_BASE_NAME,
 )
-from anomalymarinedetection.utils.string import (
+from marineanomalydetection.utils.string import (
     remove_extension_from_name,
 )
-from anomalymarinedetection.utils.bands import get_marida_band_idx
-from anomalymarinedetection.io.file_io import FileIO
-from anomalymarinedetection.io.image_io import ImageIO
-from anomalymarinedetection.io.tif_io import TifIO
-from anomalymarinedetection.imageprocessing.float32_to_uint8 import (
+from marineanomalydetection.utils.bands import get_marida_band_idx
+from marineanomalydetection.io.file_io import FileIO
+from marineanomalydetection.io.image_io import ImageIO
+from marineanomalydetection.io.tif_io import TifIO
+from marineanomalydetection.imageprocessing.float32_to_uint8 import (
     float32_to_uint8,
 )
 

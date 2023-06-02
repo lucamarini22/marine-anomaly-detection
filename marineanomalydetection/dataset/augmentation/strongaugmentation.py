@@ -2,7 +2,7 @@ import numpy as np
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 
-from anomalymarinedetection.dataset.augmentation.randaugment import (
+from marineanomalydetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
 )
 

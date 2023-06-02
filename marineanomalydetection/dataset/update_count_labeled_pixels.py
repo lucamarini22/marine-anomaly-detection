@@ -1,12 +1,12 @@
 import numpy as np
 
-from anomalymarinedetection.utils.assets import (
+from marineanomalydetection.utils.assets import (
     cat_mapping_binary_inv,
     cat_mapping_multi_inv,
     num_labeled_pixels_train_binary,
     num_labeled_pixels_train_multi
 )
-from anomalymarinedetection.dataset.categoryaggregation import (
+from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 
