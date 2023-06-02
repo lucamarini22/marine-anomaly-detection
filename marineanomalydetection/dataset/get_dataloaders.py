@@ -63,14 +63,14 @@ def get_dataloaders_supervised(
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
     dataset_train = MarineAnomalyDataset(
-        DataLoaderType.TRAIN_SUP,
+        DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
     )
     dataset_val = MarineAnomalyDataset(
-        DataLoaderType.VAL,
+        DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -157,7 +157,7 @@ def get_dataloaders_ssl_single_train_set(
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
     dataset_train = MarineAnomalyDataset(
-        DataLoaderType.TRAIN_SSL_SUP,
+        DataLoaderType.TRAIN_SET_SUP_AND_UNSUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -165,7 +165,7 @@ def get_dataloaders_ssl_single_train_set(
         second_transform=weakly_transform
     )
     dataset_val = MarineAnomalyDataset(
-        DataLoaderType.VAL,
+        DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -273,7 +273,7 @@ def get_dataloaders_ssl_separate_train_sets(
 
     # TODO: update (e.g. transformations and other)
     labeled_dataset_train = MarineAnomalyDataset(
-        DataLoaderType.TRAIN_SUP,
+        DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -282,7 +282,7 @@ def get_dataloaders_ssl_separate_train_sets(
         perc_labeled=perc_labeled,
     )
     unlabeled_dataset_train = MarineAnomalyDataset(
-        DataLoaderType.TRAIN_SSL,
+        DataLoaderType.TRAIN_SET_UNSUP,
         transform=weakly_transform,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
@@ -290,7 +290,7 @@ def get_dataloaders_ssl_separate_train_sets(
         path=dataset_path,
     )
     dataset_val = MarineAnomalyDataset(
-        DataLoaderType.VAL,
+        DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,

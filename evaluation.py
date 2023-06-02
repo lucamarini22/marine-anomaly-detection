@@ -52,7 +52,7 @@ def main(options):
     # Construct Data loader
 
     dataset_test = MarineAnomalyDataset(
-        DataLoaderType.TEST,
+        DataLoaderType.TEST_SET,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],

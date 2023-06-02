@@ -25,7 +25,7 @@ from marineanomalydetection.dataset.update_count_labeled_pixels import update_co
 class MarineAnomalyDataset(Dataset):
     def __init__(
         self,
-        mode: DataLoaderType = DataLoaderType.TRAIN_SUP,
+        mode: DataLoaderType = DataLoaderType.TRAIN_SET_SUP,
         transform: transforms.Compose = None,
         standardization : transforms.Normalize =None,
         path: str = None,
@@ -38,7 +38,7 @@ class MarineAnomalyDataset(Dataset):
 
         Args:
             mode (DataLoaderType, optional): data loader mode.
-              Defaults to DataLoaderType.TRAIN_SUP.
+              Defaults to DataLoaderType.TRAIN_SET_SUP.
             transform (transforms.Compose, optional): transformation to apply
               to dataset. Defaults to None.
             standardization (transforms.Normalize, optional): standardization.
@@ -65,9 +65,9 @@ class MarineAnomalyDataset(Dataset):
             Exception: raises an exception if the specified Category 
               Aggregation does not exist.
         """
-        if second_transform is not None and mode is not DataLoaderType.TRAIN_SSL_SUP:
+        if second_transform is not None and mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
             raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
-        if mode == DataLoaderType.TRAIN_SUP:
+        if mode == DataLoaderType.TRAIN_SET_SUP:
             # dict that will contain the number of labeled pixels for each 
             # category.
             self.categories_counter_dict = {}
@@ -75,13 +75,9 @@ class MarineAnomalyDataset(Dataset):
         logger_set = logger.bind(name=LOG_SET)
         self.ROIs = get_rois(path, mode, rois, logger_set)
 
-        # Unlabeled dataloader 
-        # (only when using semi-supervised learning mode with two training 
-        # subsets:
-        #  - an Unlabeled one
-        #  - a Labeled one
-        #  )
-        if mode == DataLoaderType.TRAIN_SSL:
+        if mode == DataLoaderType.TRAIN_SET_UNSUP:
+            # Unlabeled dataloader of the semi-supervised learning case with 
+            # two training subsets
             self.X_u = []
 
             for roi in tqdm(
@@ -92,13 +88,8 @@ class MarineAnomalyDataset(Dataset):
                 min_patch, max_patch = patch.min(), patch.max()
                 patch = normalize_img(patch, min_patch, max_patch)
                 self.X_u.append(patch)
-
-        # Labeled dataloader
-        # (when using:
-        #  - fully-supervised learning mode
-        #  - or semi-supervised learning mode with only one training set.
-        #  )
         else:
+            # All other dataloaders (see the docstring in DataLoaderType)
             # Loaded Images
             self.X = []
             # Loaded Output masks  
@@ -146,8 +137,13 @@ class MarineAnomalyDataset(Dataset):
             # Checks percentage of labeled pixels of each category only 
             # when having the dataloader of the labeled train set and when 
             # perc_label is not None
-            if mode == DataLoaderType.TRAIN_SUP and perc_labeled is not None:
-                assert_percentage_categories(self.categories_counter_dict, perc_labeled, num_pixels_dict)
+            if mode == DataLoaderType.TRAIN_SET_SUP \
+                and perc_labeled is not None:
+                assert_percentage_categories(
+                    self.categories_counter_dict, 
+                    perc_labeled, 
+                    num_pixels_dict
+                )
 
         self.impute_nan = np.tile(
             BANDS_MEAN, (MARIDA_SIZE_X, MARIDA_SIZE_Y, 1)
@@ -156,7 +152,7 @@ class MarineAnomalyDataset(Dataset):
         self.transform = transform
         self.standardization = standardization
         self.second_transform = second_transform
-        if mode == DataLoaderType.TRAIN_SSL:
+        if mode == DataLoaderType.TRAIN_SET_UNSUP:
             self.length = len(self.X_u)
         else:
             self.length = len(self.y)
@@ -174,7 +170,7 @@ class MarineAnomalyDataset(Dataset):
         # considers all pixels (even the labeled ones) as unlabeled. The 
         # patches in this dataloader are excluded from the labeled dataloader
         # when training with SSL.
-        if self.mode == DataLoaderType.TRAIN_SSL:
+        if self.mode == DataLoaderType.TRAIN_SET_UNSUP:
             img = self.X_u[index]
             img = self._CxWxH_to_WxHxC(img)
             nan_mask = np.isnan(img)
@@ -190,9 +186,9 @@ class MarineAnomalyDataset(Dataset):
 
         # Labeled dataloader. To train only on labeled and pixels of each 
         # training patch.
-        elif self.mode == DataLoaderType.TRAIN_SUP \
-            or self.mode == DataLoaderType.VAL \
-            or self.mode == DataLoaderType.TEST:
+        elif self.mode == DataLoaderType.TRAIN_SET_SUP \
+            or self.mode == DataLoaderType.VAL_SET \
+            or self.mode == DataLoaderType.TEST_SET:
             img = self.X[index]
             target = self.y[index]
 
@@ -220,7 +216,7 @@ class MarineAnomalyDataset(Dataset):
         # considers:
         #   - Labeled pixels as labeled.
         #   - Unlabeled pixels as unlabeled.
-        elif self.mode == DataLoaderType.TRAIN_SSL_SUP:
+        elif self.mode == DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
             # Loads patch and its seg map
             img = self.X[index]
             target = self.y[index]
