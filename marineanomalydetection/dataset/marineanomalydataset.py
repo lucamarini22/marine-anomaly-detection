@@ -60,9 +60,9 @@ class MarineAnomalyDataset(Dataset):
         """
         if second_transform is not None and mode is not DataLoaderType.TRAIN_SSL_SUP:
             raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
-        # dict that will contain the number of labeled pixels for each 
-        # category.
         if mode == DataLoaderType.TRAIN_SUP:
+            # dict that will contain the number of labeled pixels for each 
+            # category.
             self.categories_counter_dict = {}
         # Gets the names of the regions of interest
         self.ROIs = get_rois(path, mode, rois)
