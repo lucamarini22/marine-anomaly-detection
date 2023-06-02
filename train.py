@@ -21,6 +21,7 @@ from marineanomalydetection.utils.constants import (
     PADDING_VAL,
     LOG_SET,
     LOG_STD_OUT,
+    LOG_SSL_LOSS,
 )
 from marineanomalydetection.io.file_io import FileIO
 from marineanomalydetection.io.tbwriter import TBWriter
@@ -50,7 +51,6 @@ from marineanomalydetection.utils.train_functions import (
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
-    log_epoch_init,
 )
 from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
@@ -62,6 +62,7 @@ from marineanomalydetection.io.wandb_logger import WandbLogger
 from marineanomalydetection.dataset.augmentation.weakaugmentation import (
     WeakAugmentation,
 )
+from marineanomalydetection.io.log_functions import log_epoch_init
 
 
 def main(options, wandb_logger):
@@ -83,7 +84,12 @@ def main(options, wandb_logger):
         sys.__stdout__, 
         filter=lambda record: record["extra"].get("name") == LOG_STD_OUT
     )
+    logger.add(
+        os.path.join(f"{options['log_folder']}", LOG_SSL_LOSS + ".log"), 
+        filter=lambda record: record["extra"].get("name") == LOG_SSL_LOSS
+    )
     logger_std_out = logger.bind(name=LOG_STD_OUT)
+    logger_ssl_loss = logger.bind(name=LOG_SSL_LOSS)
 
     model_name = get_model_name(
         options["resume_model"],
@@ -375,7 +381,6 @@ def main(options, wandb_logger):
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
                 loss, training_loss = train_step_semi_supervised_separate_batches(
-                    file_io,
                     labeled_train_loader,
                     unlabeled_train_loader,
                     labeled_iter,
@@ -384,14 +389,13 @@ def main(options, wandb_logger):
                     criterion_unsup,
                     training_loss,
                     model,
-                    model_name,
                     optimizer,
-                    epoch,
                     device,
                     options["batch"],
                     classes_channel_idx,
                     options["threshold"],
                     options["lambda_coeff"],
+                    logger_ssl_loss,
                     PADDING_VAL,
                 )
                 training_batches += options["batch"]
@@ -514,19 +518,17 @@ def main(options, wandb_logger):
                     image=image,
                     seg_map=target,
                     weak_aug_img=weakly_aug_image,
-                    file_io=file_io,
                     criterion=criterion,
                     criterion_unsup=criterion_unsup,
                     training_loss=training_loss,
                     model=model,
-                    model_name=model_name,
                     optimizer=optimizer,
-                    epoch=epoch,
                     device=device,
                     batch_size=options["batch"],
                     classes_channel_idx=classes_channel_idx,
                     threshold=options["threshold"],
                     lambda_v=options["lambda_coeff"],
+                    logger_ssl_loss=logger_ssl_loss,
                     padding_val=PADDING_VAL,
                 )
                 training_batches += target.shape[0]

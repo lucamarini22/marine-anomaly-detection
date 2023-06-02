@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+import loguru
 
 from marineanomalydetection.dataset.augmentation.randaugment import (
     RandAugmentMC,
@@ -25,6 +26,7 @@ from marineanomalydetection.utils.constants import (
     PADDING_VAL,
 )
 from marineanomalydetection.io.file_io import FileIO
+from marineanomalydetection.io.log_functions import log_ssl_loss_components
 
 
 def train_step_supervised(
@@ -69,7 +71,6 @@ def train_step_supervised(
 
 
 def train_step_semi_supervised_separate_batches(
-    file_io: FileIO,
     labeled_train_loader: DataLoader,
     unlabeled_train_loader: DataLoader,
     labeled_iter: Iterator,
@@ -78,14 +79,13 @@ def train_step_semi_supervised_separate_batches(
     criterion_unsup: nn.Module,
     training_loss: list[float],
     model: nn.Module,
-    model_name: str,
     optimizer: torch.optim,
-    epoch: int,
     device: torch.device,
     batch_size: int,
     classes_channel_idx: int,
     threshold: float,
     lambda_v: float,
+    logger_ssl_loss: loguru._logger.Logger,
     padding_val: int = PADDING_VAL,
 ) -> tuple[torch.Tensor, list[float]]:
     """Trains the model for one semi-supervised step.
@@ -96,7 +96,6 @@ def train_step_semi_supervised_separate_batches(
     patches and their union is the full training data.
 
     Args:
-        file_io (FileIO): file io.
         labeled_train_loader (DataLoader): dataloader for labeled training set.
         unlabeled_train_loader (DataLoader): dataloader for unlabeled training
           set.
@@ -107,15 +106,14 @@ def train_step_semi_supervised_separate_batches(
         training_loss (list[float]): list of semi-supervised training loss of
           batches.
         model (nn.Module): model.
-        model_name (str): name of the model.
         optimizer (torch.optim): optimizer
-        epoch (int): epoch.
         device (torch.device): device.
         batch_size (int): batch size.
         classes_channel_idx (int): index of the channel of the categories.
         threshold (float): threshold for model+s confidence (threshold for
           softmax values).
         lambda_v (float): coefficient of the unsupervised loss.
+        logger_ssl_loss (loguru._logger.Logger): logger.
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
@@ -229,16 +227,7 @@ def train_step_semi_supervised_separate_batches(
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
-    if Lu > 0:
-        file_io.append(
-            "./lu.txt",
-            f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
-        )
-    print("-" * 20)
-    print(f"Lx: {Lx}")
-    print(f"Lu: {Lu}")
-    print(f"Max prob: {max_probs.max()}")
-    print(f"n_pixels: {len(mask[mask == 1])}")
+    log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss
     loss = Lx + lambda_v * Lu
@@ -255,19 +244,17 @@ def train_step_semi_supervised_one_batch(
     image: torch.Tensor,
     seg_map: torch.Tensor,
     weak_aug_img: torch.Tensor,
-    file_io: FileIO,
     criterion: nn.Module,
     criterion_unsup: nn.Module,
     training_loss: list[float],
     model: nn.Module,
-    model_name: str,
     optimizer: torch.optim,
-    epoch: int,
     device: torch.device,
     batch_size: int,
     classes_channel_idx: int,
     threshold: float,
     lambda_v: float,
+    logger_ssl_loss: loguru._logger.Logger,
     padding_val: int = PADDING_VAL,
 ) -> tuple[torch.Tensor, list[float]]:
     """Trains the model for one semi-supervised step.
@@ -283,21 +270,19 @@ def train_step_semi_supervised_one_batch(
         image (torch.Tensor): image.
         seg_map (torch.Tensor): segmentation map.
         weak_aug_img (torch.Tensor): weakly-augmented image.
-        file_io (FileIO): file io.
         criterion (nn.Module): supervised loss.
         criterion_unsup (nn.Module): unsupervised loss.
         training_loss (list[float]): list of supervised training loss of
           batches.
         model (nn.Module): model.
-        model_name (str): name of the model.
         optimizer (torch.optim): optimizer.
-        epoch (int): epoch.
         device (torch.device): device.
         batch_size (int): batch size.
         classes_channel_idx (int): index of the channel of the categories.
         threshold (float): threshold for model+s confidence (threshold for
           softmax values).
         lambda_v (float): coefficient of the unsupervised loss.
+        logger_ssl_loss (loguru._logger.Logger): logger.
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
@@ -404,16 +389,7 @@ def train_step_semi_supervised_one_batch(
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
-    if Lu > 0:
-        file_io.append(
-            "./lu.txt",
-            f"{model_name}. Lu: {str(Lu)}, epoch {epoch}, n_pixels: {len(mask[mask == 1])} \n",
-        )
-    print("-" * 20)
-    print(f"Lx: {Lx}")
-    print(f"Lu: {Lu}")
-    print(f"Max prob: {max_probs.max()}")
-    print(f"n_pixels: {len(mask[mask == 1])}")
+    log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss
     loss = Lx + lambda_v * Lu
@@ -685,23 +661,3 @@ def check_checkpoint_path_exist(checkpoint_path: str):
         raise Exception(
             f"The checkpoint directory {checkpoint_path} does not exist"
         )
-
-
-def log_epoch_init(
-    epoch: int, 
-    logger: loguru._logger.Logger,
-    separator: str = "_", 
-    num_sep: int = 40
-) -> None:
-    """Logs the epoch number.
-
-    Args:
-        epoch (int): number of epoch.
-        logger (loguru._logger.Logger): logger.
-        separator (str, optional): separator. Defaults to "_".
-        num_sep (int, optional): number of separators. Defaults to 40.
-    """
-    logger.info(
-        separator * num_sep + "Epoch " + str(epoch) + ": " + separator * num_sep
-    )
-    

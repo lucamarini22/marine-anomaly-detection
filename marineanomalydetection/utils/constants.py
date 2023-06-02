@@ -4,6 +4,7 @@ import torch
 # Logger names
 LOG_SET = "log_set"
 LOG_STD_OUT = "log_std_out"
+LOG_SSL_LOSS = "log_ssl_loss"
 
 IGNORE_INDEX = -1
 PADDING_VAL = 0
