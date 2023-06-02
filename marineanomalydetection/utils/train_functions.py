@@ -25,7 +25,6 @@ from marineanomalydetection.utils.constants import (
     IGNORE_INDEX,
     PADDING_VAL,
 )
-from marineanomalydetection.io.file_io import FileIO
 from marineanomalydetection.io.log_functions import log_ssl_loss_components
 
 
