@@ -59,7 +59,7 @@ def train_step_supervised(
     # No backward pass if all pixels in the image are unlabeled.
     # Indeed, if all pixels in the image are unlabeled the loss
     # is set to zero. However, it is not good that the loss is zero.
-    # So, that's why the bacward pass is skipped (this is the supervised loss)
+    # So, that's why the backward pass is skipped (this is the supervised loss)
     if loss.grad_fn is not None:
         loss.backward()
     training_loss.append((loss.data * target.shape[0]).tolist())
