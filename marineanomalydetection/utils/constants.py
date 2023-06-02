@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 
+# Logger names
+LOG_SET = "log_set"
+
 IGNORE_INDEX = -1
 PADDING_VAL = 0
 

@@ -2,8 +2,9 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
+from loguru import logger
 
-from marineanomalydetection.utils.constants import BANDS_MEAN
+from marineanomalydetection.utils.constants import BANDS_MEAN, LOG_SET
 from marineanomalydetection.io.load_data import (
     load_patch,
     load_segmentation_map,
@@ -71,7 +72,8 @@ class MarineAnomalyDataset(Dataset):
             # category.
             self.categories_counter_dict = {}
         # Gets the names of the regions of interest
-        self.ROIs = get_rois(path, mode, rois)
+        log_set = logger.bind(name=LOG_SET)
+        self.ROIs = get_rois(path, mode, rois, log_set)
 
         # Unlabeled dataloader 
         # (only when using semi-supervised learning mode with two training 

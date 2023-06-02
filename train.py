@@ -70,7 +70,11 @@ def main(options, wandb_logger):
     g = torch.Generator()
     g.manual_seed(seed)
     
-    logger.add(os.path.join(f"{options['log_folder']}", "log_set.log"))
+
+    logger.add(
+        os.path.join(f"{options['log_folder']}", "log_set.log"), 
+        filter=lambda record: record["extra"].get("name") == "log_set"
+    )    
 
     model_name = get_model_name(
         options["resume_model"],

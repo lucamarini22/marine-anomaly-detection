@@ -1,5 +1,5 @@
 import os
-from loguru import logger
+import loguru
 import numpy as np
 
 from marineanomalydetection.io.load_roi import load_roi
@@ -9,7 +9,8 @@ from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 def get_rois(
     path: str, 
     mode: DataLoaderType, 
-    rois: list[str]
+    rois: list[str],
+    logger_set: loguru._logger.Logger,
 ) -> np.ndarray | list[str]:
     """Gets the names of the region of interest.
 
@@ -18,6 +19,8 @@ def get_rois(
         mode (DataLoaderType): data loader mode.
         rois (list[str], optional): list of region of interest names to
             consider.
+        logger_set: logger that logs the training patches only in the 
+          supervised training set.
 
     Exception: raises an exception if the specified mode does not
         exist.
@@ -40,8 +43,8 @@ def get_rois(
             #    mode == DataLoaderType.TRAIN_SSL.
             ROIs = rois
         for roi_print in ROIs:
-            logger.info(roi_print)
-        logger.info(f"Total of {len(ROIs)} training patches.")
+            logger_set.info(roi_print)
+        logger_set.info(f"Total of {len(ROIs)} training patches.")
 
     elif mode == DataLoaderType.TRAIN_SSL:
         # Semi-supervised learning case with 2 different training subsets:
