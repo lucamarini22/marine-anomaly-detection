@@ -4,8 +4,14 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 
-from marineanomalydetection.dataset.marineanomalydataset import (
-    MarineAnomalyDataset,
+from marineanomalydetection.dataset.mad_labeled import (
+    MADLabeled,
+)
+from marineanomalydetection.dataset.mad_unlabeled import (
+    MADUnlabeled,
+)
+from marineanomalydetection.dataset.mad_labeled_and_unlabeled import (
+    MADLabeledAndUnlabeled,
 )
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 from marineanomalydetection.dataset.categoryaggregation import (
@@ -62,14 +68,14 @@ def get_dataloaders_supervised(
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
-    dataset_train = MarineAnomalyDataset(
+    dataset_train = MADLabeled(
         DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         path=dataset_path,
     )
-    dataset_val = MarineAnomalyDataset(
+    dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
@@ -156,7 +162,7 @@ def get_dataloaders_ssl_single_train_set(
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
-    dataset_train = MarineAnomalyDataset(
+    dataset_train = MADLabeledAndUnlabeled(
         DataLoaderType.TRAIN_SET_SUP_AND_UNSUP,
         transform=transform_train,
         standardization=standardization,
@@ -164,7 +170,7 @@ def get_dataloaders_ssl_single_train_set(
         path=dataset_path,
         second_transform=weakly_transform
     )
-    dataset_val = MarineAnomalyDataset(
+    dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
@@ -272,7 +278,7 @@ def get_dataloaders_ssl_separate_train_sets(
     )
 
     # TODO: update (e.g. transformations and other)
-    labeled_dataset_train = MarineAnomalyDataset(
+    labeled_dataset_train = MADLabeled(
         DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
@@ -281,7 +287,7 @@ def get_dataloaders_ssl_separate_train_sets(
         path=dataset_path,
         perc_labeled=perc_labeled,
     )
-    unlabeled_dataset_train = MarineAnomalyDataset(
+    unlabeled_dataset_train = MADUnlabeled(
         DataLoaderType.TRAIN_SET_UNSUP,
         transform=weakly_transform,
         standardization=standardization,
@@ -289,7 +295,7 @@ def get_dataloaders_ssl_separate_train_sets(
         rois=ROIs_u,
         path=dataset_path,
     )
-    dataset_val = MarineAnomalyDataset(
+    dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,

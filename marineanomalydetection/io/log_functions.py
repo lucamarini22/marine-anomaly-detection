@@ -15,7 +15,7 @@ def log_patches(
     """
     for roi_print in patches:
         logger.info(roi_print)
-    logger.info(f"Total of {len(patches)} training patches.")
+    logger.info(f"Total of {len(patches)} patches.")
 
 
 def log_epoch_init(

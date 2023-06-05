@@ -1,7 +1,3 @@
-"""
-Initial Implementation: Ioannis Kakogeorgiou
-This modified implementation: Luca Marini
-"""
 import os
 import logging
 import rasterio
@@ -15,8 +11,8 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
 from marineanomalydetection.models.unet import UNet
-from marineanomalydetection.dataset.marineanomalydetection import (
-    MarineAnomalyDataset,
+from marineanomalydetection.dataset.mad_labeled import (
+    MADLabeled
 )
 from marineanomalydetection.utils.constants import BANDS_MEAN, BANDS_STD
 from marineanomalydetection.io.load_roi import load_roi
@@ -51,7 +47,7 @@ def main(options):
 
     # Construct Data loader
 
-    dataset_test = MarineAnomalyDataset(
+    dataset_test = MADLabeled(
         DataLoaderType.TEST_SET,
         transform=transform_test,
         standardization=standardization,

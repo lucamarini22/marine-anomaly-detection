@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from tqdm import tqdm
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 from loguru import logger
@@ -14,10 +13,8 @@ from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
-from marineanomalydetection.dataset.get_patch_tokens import get_patch_tokens
 from marineanomalydetection.imageprocessing.normalize_img import normalize_img
 from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
-from marineanomalydetection.dataset.assert_percentage_categories import assert_percentage_categories
 from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
 from marineanomalydetection.dataset.get_rois import get_rois
 from marineanomalydetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
@@ -68,6 +65,14 @@ class MarineAnomalyDataset(Dataset, ABC):
             Exception: raises an exception if the specified Category 
               Aggregation does not exist.
         """
+        self.mode = mode
+        self.transform = transform
+        self.standardization = standardization
+        self.second_transform = second_transform
+        self.path = path
+        self.aggregate_classes = aggregate_classes
+        self.perc_labeled = perc_labeled
+        
         self._check_second_transform(second_transform, mode)
         
         if mode == DataLoaderType.TRAIN_SET_SUP:
@@ -79,68 +84,16 @@ class MarineAnomalyDataset(Dataset, ABC):
         # Gets the names of the regions of interest
         self.ROIs = get_rois(path, mode, rois, logger_set)
 
-        if mode == DataLoaderType.TRAIN_SET_UNSUP:
-            # Unlabeled dataloader of the semi-supervised learning case with 
-            # two training subsets
-            self.X_u = []
-
-            for roi in tqdm(
-                self.ROIs, desc="Load unlabeled train set to memory"
-            ):
-                patch_path, _ = get_patch_tokens(path, roi)                
-                self._load_and_process_and_add_patch_to_dataset(
-                    patch_path, 
-                    self.X_u
-                )
-        else:
-            # All other dataloaders (see the docstring in DataLoaderType)
-            # Loaded patches
-            self.X = []
-            # Loaded semantic segmentation maps
-            self.y = []
-
-            for roi in tqdm(
-                self.ROIs, desc="Load labeled " + mode.name + " set to memory"
-            ):
-                # Gets patch path and its semantic segmentation map path
-                patch_path, seg_map_path = get_patch_tokens(path, roi)
-                # Loads semantic segmentation map
-                num_pixels_dict = self._load_and_process_and_add_seg_map_to_dataset(
-                    seg_map_path,
-                    self.y,
-                    aggregate_classes,
-                    perc_labeled
-                )
-                # Loads patch
-                self._load_and_process_and_add_patch_to_dataset(
-                    patch_path, 
-                    self.X
-                )
-
-            # Checks percentage of labeled pixels of each category only 
-            # when having the dataloader of the labeled train set and when 
-            # perc_label is not None
-            if mode == DataLoaderType.TRAIN_SET_SUP \
-                and perc_labeled is not None:
-                assert_percentage_categories(
-                    self.categories_counter_dict, 
-                    perc_labeled, 
-                    num_pixels_dict
-                )
+        self.load_data()
 
         self.impute_nan = np.tile(
             BANDS_MEAN, (MARIDA_SIZE_X, MARIDA_SIZE_Y, 1)
         )
-        self.mode = mode
-        self.transform = transform
-        self.standardization = standardization
-        self.second_transform = second_transform
+
         if mode == DataLoaderType.TRAIN_SET_UNSUP:
             self.length = len(self.X_u)
         else:
             self.length = len(self.y)
-        self.path = path
-        self.aggregate_classes = aggregate_classes
 
     def __len__(self):
         return self.length
@@ -148,77 +101,15 @@ class MarineAnomalyDataset(Dataset, ABC):
     def getnames(self):
         return self.ROIs
 
+    @abstractmethod
     def __getitem__(self, index):
-        # Unlabeled dataloader. To train on all pixels of each patch. It 
-        # considers all pixels (even the labeled ones) as unlabeled. The 
-        # patches in this dataloader are excluded from the labeled dataloader
-        # when training with SSL.
-        if self.mode == DataLoaderType.TRAIN_SET_UNSUP:
-            img = self.X_u[index]
-            img = self._CxWxH_to_WxHxC(img)
-            img = self._replace_nan_values(img)
-
-            if self.transform is not None:
-                img = self.transform(img)
-
-            weak = img
-            if self.standardization is not None:
-                weak = self.standardization(weak)
-            return weak
-
-        # Labeled dataloader. To train only on labeled pixels of each 
-        # training patch.
-        elif self.mode == DataLoaderType.TRAIN_SET_SUP \
-            or self.mode == DataLoaderType.VAL_SET \
-            or self.mode == DataLoaderType.TEST_SET:
-            img = self.X[index]
-            target = self.y[index]
-
-            img = self._CxWxH_to_WxHxC(img)
-            img = self._replace_nan_values(img)
-
-            if self.transform is not None:
-                img, target = self._apply_transform_to_patch_and_seg_map(
-                    img, 
-                    target
-                )
-
-            if self.standardization is not None:
-                img = self.standardization(img)
-
-            return img, target
-        # Labeled and unlabeled dataloader. To train on all pixels of each patch. It 
-        # considers:
-        #   - Labeled pixels as labeled.
-        #   - Unlabeled pixels as unlabeled.
-        elif self.mode == DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
-            # Loads patch and its seg map
-            img = self.X[index]
-            target = self.y[index]
-
-            img = self._CxWxH_to_WxHxC(img)
-            img = self._replace_nan_values(img)
-            # Creates a copy of patch to use it for unsupervised loss
-            img_unsup = np.copy(img)
-            
-            if self.second_transform is not None:
-                img_unsup = self.transform(img_unsup)
-            # Weakly-augmented patch
-            weak = img_unsup
-
-            if self.transform is not None:
-                img, target = self._apply_transform_to_patch_and_seg_map(
-                    img, 
-                    target
-                )
-
-            if self.standardization is not None:
-                img = self.standardization(img)
-                weak = self.standardization(weak)
-
-            return img, target, weak
-        else:
-            raise Exception(f"The specified DataLoaderType does not exist.")
+        pass
+        self.get_item(index)
+    
+    
+    @abstractmethod
+    def load_data(self):
+        pass
     
     
     @staticmethod
