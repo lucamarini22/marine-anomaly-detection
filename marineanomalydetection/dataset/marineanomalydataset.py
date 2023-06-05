@@ -94,9 +94,9 @@ class MarineAnomalyDataset(Dataset, ABC):
                 )
         else:
             # All other dataloaders (see the docstring in DataLoaderType)
-            # Loaded Images
+            # Loaded patches
             self.X = []
-            # Loaded Output masks  
+            # Loaded semantic segmentation maps
             self.y = []
 
             for roi in tqdm(
@@ -156,8 +156,7 @@ class MarineAnomalyDataset(Dataset, ABC):
         if self.mode == DataLoaderType.TRAIN_SET_UNSUP:
             img = self.X_u[index]
             img = self._CxWxH_to_WxHxC(img)
-            nan_mask = np.isnan(img)
-            img[nan_mask] = self.impute_nan[nan_mask]
+            img = self._replace_nan_values(img)
 
             if self.transform is not None:
                 img = self.transform(img)
@@ -176,20 +175,13 @@ class MarineAnomalyDataset(Dataset, ABC):
             target = self.y[index]
 
             img = self._CxWxH_to_WxHxC(img)
-            nan_mask = np.isnan(img)
-            img[nan_mask] = self.impute_nan[nan_mask]
+            img = self._replace_nan_values(img)
 
             if self.transform is not None:
-                # (256, 256) -> (256, 256, 1)
-                target = target[:, :, np.newaxis]
-                # In order to rotate-transform both mask and image
-                stack = np.concatenate([img, target], axis=-1).astype("float32")
-
-                stack = self.transform(stack)
-
-                img = stack[:-1, :, :]
-                # Recast target values back to int64 or torch long dtype
-                target = stack[-1, :, :].long()
+                img, target = self._apply_transform_to_patch_and_seg_map(
+                    img, 
+                    target
+                )
 
             if self.standardization is not None:
                 img = self.standardization(img)
@@ -205,8 +197,7 @@ class MarineAnomalyDataset(Dataset, ABC):
             target = self.y[index]
 
             img = self._CxWxH_to_WxHxC(img)
-            nan_mask = np.isnan(img)
-            img[nan_mask] = self.impute_nan[nan_mask]
+            img = self._replace_nan_values(img)
             # Creates a copy of patch to use it for unsupervised loss
             img_unsup = np.copy(img)
             
@@ -216,16 +207,10 @@ class MarineAnomalyDataset(Dataset, ABC):
             weak = img_unsup
 
             if self.transform is not None:
-                # (256, 256) -> (256, 256, 1)
-                target = target[:, :, np.newaxis]
-                # In order to rotate-transform both mask and image
-                stack = np.concatenate([img, target], axis=-1).astype("float32")
-
-                stack = self.transform(stack)
-
-                img = stack[:-1, :, :]
-                # Recast target values back to int64 or torch long dtype
-                target = stack[-1, :, :].long()
+                img, target = self._apply_transform_to_patch_and_seg_map(
+                    img, 
+                    target
+                )
 
             if self.standardization is not None:
                 img = self.standardization(img)
@@ -360,3 +345,46 @@ class MarineAnomalyDataset(Dataset, ABC):
         
         if perc_labeled is not None:
             return num_pixels_dict
+    
+    def _replace_nan_values(self, img: np.ndarray) -> np.ndarray:
+        """Replaces nan values in an image.
+
+        Args:
+            img (np.ndarray): image.
+
+        Returns:
+            np.ndarray: image with replaced nan values.
+        """
+        nan_mask = np.isnan(img)
+        img[nan_mask] = self.impute_nan[nan_mask]
+        return img 
+
+    
+    def _apply_transform_to_patch_and_seg_map(
+        self,
+        patch: np.ndarray, 
+        seg_map: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Applies a transform to a patch and its corresponding segmentation
+        map.
+
+        Args:
+            patch (np.ndarray): patch.
+            seg_map (np.ndarray): segmentation map.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: transformed patch and segmentation
+              map.
+        """
+        # (256, 256) -> (256, 256, 1)
+        seg_map = seg_map[:, :, np.newaxis]
+        # In order to rotate-transform both segmentation map and image
+        stack = np.concatenate([patch, seg_map], axis=-1).astype("float32")
+
+        stack = self.transform(stack)
+
+        patch = stack[:-1, :, :]
+        # Recast seg_map values back to int64 or torch long dtype
+        seg_map = stack[-1, :, :].long()
+        
+        return patch, seg_map
