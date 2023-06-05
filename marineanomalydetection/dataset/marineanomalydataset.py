@@ -65,14 +65,15 @@ class MarineAnomalyDataset(Dataset):
             Exception: raises an exception if the specified Category 
               Aggregation does not exist.
         """
-        if second_transform is not None and mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
-            raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
+        self._check_second_transform(second_transform, mode)
+        
         if mode == DataLoaderType.TRAIN_SET_SUP:
             # dict that will contain the number of labeled pixels for each 
             # category.
             self.categories_counter_dict = {}
-        # Gets the names of the regions of interest
+        
         logger_set = logger.bind(name=LOG_SET)
+        # Gets the names of the regions of interest
         self.ROIs = get_rois(path, mode, rois, logger_set)
 
         if mode == DataLoaderType.TRAIN_SET_UNSUP:
@@ -83,11 +84,11 @@ class MarineAnomalyDataset(Dataset):
             for roi in tqdm(
                 self.ROIs, desc="Load unlabeled train set to memory"
             ):
-                roi_file_path, _ = get_roi_tokens(path, roi)
-                patch = load_patch(roi_file_path)
-                min_patch, max_patch = patch.min(), patch.max()
-                patch = normalize_img(patch, min_patch, max_patch)
-                self.X_u.append(patch)
+                roi_file_path, _ = get_roi_tokens(path, roi)                
+                self._load_and_process_and_add_patch_to_dataset(
+                    roi_file_path, 
+                    self.X_u
+                )
         else:
             # All other dataloaders (see the docstring in DataLoaderType)
             # Loaded Images
@@ -130,10 +131,11 @@ class MarineAnomalyDataset(Dataset):
                 seg_map = np.copy(seg_map - 1)
                 self.y.append(seg_map)
                 # Load Patch
-                patch = load_patch(roi_file_path)
-                min_patch, max_patch = patch.min(), patch.max()
-                patch = normalize_img(patch, min_patch, max_patch)
-                self.X.append(patch)
+                self._load_and_process_and_add_patch_to_dataset(
+                    roi_file_path, 
+                    self.X
+                )
+
             # Checks percentage of labeled pixels of each category only 
             # when having the dataloader of the labeled train set and when 
             # perc_label is not None
@@ -184,7 +186,7 @@ class MarineAnomalyDataset(Dataset):
                 weak = self.standardization(weak)
             return weak
 
-        # Labeled dataloader. To train only on labeled and pixels of each 
+        # Labeled dataloader. To train only on labeled pixels of each 
         # training patch.
         elif self.mode == DataLoaderType.TRAIN_SET_SUP \
             or self.mode == DataLoaderType.VAL_SET \
@@ -252,6 +254,7 @@ class MarineAnomalyDataset(Dataset):
         else:
             raise Exception(f"The specified DataLoaderType does not exist.")
     
+    
     @staticmethod
     def _CxWxH_to_WxHxC(img: np.ndarray, dtype: str = "float32") -> np.ndarray:
         """Swaps the axes of an image from (channels, width, height) to
@@ -267,4 +270,46 @@ class MarineAnomalyDataset(Dataset):
         """
         img = np.moveaxis(img, [0, 1, 2], [2, 0, 1]).astype(dtype)
         return img
-        
+
+
+    @staticmethod
+    def _check_second_transform(
+        second_transform: transforms.Compose, 
+        mode: DataLoaderType
+    ) -> None:
+        """Checks that the second transform is initialized only when having the
+        mode DataLoaderType.TRAIN_SET_SUP_AND_UNSUP. 
+
+        Args:
+            second_transform (transforms.Compose): second transform.
+            mode (DataLoaderType): mode.
+
+        Raises:
+            Exception: raises an exception if the second_transform is not None
+              and the mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP.
+            Exception: raises an exception if the second_transform is None and
+              the mode is DataLoaderType.TRAIN_SET_SUP_AND_UNSUP.
+        """
+        if second_transform is not None \
+        and mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
+            raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
+        if second_transform is None \
+            and mode is DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
+            raise Exception("The second_transform should not be set to None with the chosen mode.")
+
+    @staticmethod
+    def _load_and_process_and_add_patch_to_dataset(
+        patch_path: str, 
+        list_patches: list[np.ndarray]
+    ) -> None:
+        """Loads, normalizes, and append a patch to the list of patches.
+
+        Args:
+            patch_path (str): path of the patch.
+            list_patches (list[np.ndarray]): list of patches that are already 
+              in the dataset.
+        """
+        patch = load_patch(patch_path)
+        min_patch, max_patch = patch.min(), patch.max()
+        patch = normalize_img(patch, min_patch, max_patch)
+        list_patches.append(patch)
