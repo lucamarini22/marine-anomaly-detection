@@ -50,6 +50,8 @@ class MarineAnomalyDataset(Dataset, ABC):
               Defaults to CategoryAggregation.MULTI.
             rois (list[str], optional): list of region of interest names to
               consider. Defaults to None.
+            perc_labeled (float): percentage of the labeled training set (wrt 
+              the full training set).
             second_transform (transforms.Compose, optional): transformation to 
               apply to the patches that will be used in the unsupervised loss. 
               Only to use when mode is TRAIN_SSL_SUP. In particular, the 
@@ -101,38 +103,15 @@ class MarineAnomalyDataset(Dataset, ABC):
                 self.ROIs, desc="Load labeled " + mode.name + " set to memory"
             ):
                 # Gets patch path and its semantic segmentation map path
-                patch_path, roi_file_cl_path = get_patch_tokens(path, roi)
+                patch_path, seg_map_path = get_patch_tokens(path, roi)
                 # Loads semantic segmentation map
-                seg_map = load_segmentation_map(roi_file_cl_path)
-
-                # Aggregation
-                if aggregate_classes == CategoryAggregation.MULTI:
-                    # Aggregates original 15 classes into 5 more 
-                    # coarse-grained classes: 
-                    # Marine Water, Cloud, Ship, Marine Debris, 
-                    # Algae/Organic Material.
-                    seg_map = aggregate_to_multi(seg_map)
-
-                elif aggregate_classes == CategoryAggregation.BINARY:
-                    # Aggregates original 15 classes into 2 more 
-                    # coarse-grained classes: 
-                    # Other, Marine Debris
-                    seg_map = aggregate_to_binary(seg_map)
-                else:
-                    raise Exception("Not Implemented Category Aggregation value.")
-                
-                if perc_labeled is not None:
-                    num_pixels_dict = update_count_labeled_pixels(
-                        seg_map, 
-                        aggregate_classes, 
-                        self.categories_counter_dict
-                    )
-                    
-                # Sets the background class to -1, and all the other classes
-                # start from index 1.
-                seg_map = np.copy(seg_map - 1)
-                self.y.append(seg_map)
-                # Load Patch
+                num_pixels_dict = self._load_and_process_and_add_seg_map_to_dataset(
+                    seg_map_path,
+                    self.y,
+                    aggregate_classes,
+                    perc_labeled
+                )
+                # Loads patch
                 self._load_and_process_and_add_patch_to_dataset(
                     patch_path, 
                     self.X
@@ -299,6 +278,7 @@ class MarineAnomalyDataset(Dataset, ABC):
             and mode is DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
             raise Exception("The second_transform should not be set to None with the chosen mode.")
 
+
     @staticmethod
     def _load_and_process_and_add_patch_to_dataset(
         patch_path: str, 
@@ -315,3 +295,68 @@ class MarineAnomalyDataset(Dataset, ABC):
         min_patch, max_patch = patch.min(), patch.max()
         patch = normalize_img(patch, min_patch, max_patch)
         list_patches.append(patch)
+
+    
+    def _load_and_process_and_add_seg_map_to_dataset(
+        self,
+        seg_map_path: str,
+        list_seg_maps: list[np.ndarray],
+        aggregate_classes: CategoryAggregation,
+        perc_labeled: float,
+    ) -> dict[str, int] | None:
+        """Loads, aggregates classes, and append a segmentation map to the list
+        of segmentation maps.
+
+        Args:
+            seg_map_path (str): path of the segmentation map.
+            list_seg_maps (list[np.ndarray]): list of segmentation maps that 
+              are already in the dataset.
+            aggregate_classes (CategoryAggregation): type of aggregation of 
+              classes.
+            perc_labeled (float): percentage of the labeled training set (wrt 
+              the full training set).
+
+        Raises:
+            Exception: raises an exception if the specified Category 
+              Aggregation does not exist.
+
+        Returns:
+            dict[str, int] | None: 
+              - If perc_labeled is not None, it returns a dictionary with:
+                - key: class name.
+                - value: number of labeled pixels of that category in the full 
+                  training set of the data.
+              - Otherwise returns None.
+        """
+        seg_map = load_segmentation_map(seg_map_path)
+
+        # Aggregation
+        if aggregate_classes == CategoryAggregation.MULTI:
+            # Aggregates original 15 classes into 5 more 
+            # coarse-grained classes: 
+            # Marine Water, Cloud, Ship, Marine Debris, 
+            # Algae/Organic Material.
+            seg_map = aggregate_to_multi(seg_map)
+
+        elif aggregate_classes == CategoryAggregation.BINARY:
+            # Aggregates original 15 classes into 2 more 
+            # coarse-grained classes: 
+            # Other, Marine Debris
+            seg_map = aggregate_to_binary(seg_map)
+        else:
+            raise Exception("Not Implemented Category Aggregation value.")
+        
+        if perc_labeled is not None:
+            num_pixels_dict = update_count_labeled_pixels(
+                seg_map, 
+                aggregate_classes, 
+                self.categories_counter_dict
+            )
+            
+        # Sets the background class to -1, and all the other classes
+        # start from index 1.
+        seg_map = np.copy(seg_map - 1)
+        list_seg_maps.append(seg_map)
+        
+        if perc_labeled is not None:
+            return num_pixels_dict
