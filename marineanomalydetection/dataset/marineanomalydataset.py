@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -13,7 +14,7 @@ from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
-from marineanomalydetection.dataset.get_roi_tokens import get_roi_tokens
+from marineanomalydetection.dataset.get_patch_tokens import get_patch_tokens
 from marineanomalydetection.imageprocessing.normalize_img import normalize_img
 from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
 from marineanomalydetection.dataset.assert_percentage_categories import assert_percentage_categories
@@ -22,7 +23,7 @@ from marineanomalydetection.dataset.get_rois import get_rois
 from marineanomalydetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
 
 
-class MarineAnomalyDataset(Dataset):
+class MarineAnomalyDataset(Dataset, ABC):
     def __init__(
         self,
         mode: DataLoaderType = DataLoaderType.TRAIN_SET_SUP,
@@ -84,9 +85,9 @@ class MarineAnomalyDataset(Dataset):
             for roi in tqdm(
                 self.ROIs, desc="Load unlabeled train set to memory"
             ):
-                roi_file_path, _ = get_roi_tokens(path, roi)                
+                patch_path, _ = get_patch_tokens(path, roi)                
                 self._load_and_process_and_add_patch_to_dataset(
-                    roi_file_path, 
+                    patch_path, 
                     self.X_u
                 )
         else:
@@ -100,7 +101,7 @@ class MarineAnomalyDataset(Dataset):
                 self.ROIs, desc="Load labeled " + mode.name + " set to memory"
             ):
                 # Gets patch path and its semantic segmentation map path
-                roi_file_path, roi_file_cl_path = get_roi_tokens(path, roi)
+                patch_path, roi_file_cl_path = get_patch_tokens(path, roi)
                 # Loads semantic segmentation map
                 seg_map = load_segmentation_map(roi_file_cl_path)
 
@@ -127,12 +128,13 @@ class MarineAnomalyDataset(Dataset):
                         self.categories_counter_dict
                     )
                     
-                # Categories from 1 to 0
+                # Sets the background class to -1, and all the other classes
+                # start from index 1.
                 seg_map = np.copy(seg_map - 1)
                 self.y.append(seg_map)
                 # Load Patch
                 self._load_and_process_and_add_patch_to_dataset(
-                    roi_file_path, 
+                    patch_path, 
                     self.X
                 )
 
