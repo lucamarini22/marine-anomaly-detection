@@ -11,8 +11,8 @@ def assert_percentage_categories(
     additional_perc_upper_limit: float = 0.05
 ) -> None:
     """Asserts that each category has:
-      - at least (perc_labeled)% labeled pixels of its total number of labeled 
-        pixels;
+      - at least (perc_labeled - additional_perc_lower_limit)% labeled pixels 
+        of its total number of labeled pixels;
       - no more than (perc_labeled + additional_perc_upper_limit)% labeled 
         pixels of its total number of labeled pixels.
 

@@ -34,8 +34,8 @@ def update_count_labeled_pixels(
     Returns:
         dict[str, int]: dictionary with:
           - key: category name.
-          - value: number of labeled pixels of that category in the total set 
-            of the data.
+          - value: number of labeled pixels of that category in the in the full 
+            training set of the data.
     """
     # Counts the # pixels only if it is the ssl setting
                     
