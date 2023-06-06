@@ -141,15 +141,11 @@ def train_step_semi_supervised_separate_batches(
         randaugment=randaugment, mean=None, std=None
     )
     # Applies strong augmentation on weakly augmented images
-    img_u_s = np.zeros((img_u_w.shape), dtype=np.float32)
-    for i in range(img_u_w.shape[0]):
-        img_u_w_i = img_u_w[i, :, :, :]
-        img_u_w_i = img_u_w_i.cpu().detach().numpy()
-        img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
-        # Strongly-augmented image
-        img_u_s_i = strong_transform(img_u_w_i)
-        img_u_s[i, :, :, :] = img_u_s_i
-    img_u_s = torch.from_numpy(img_u_s)
+    img_u_s = strong_aug_on_tensor(
+        img_u_w, 
+        strong_transform, 
+        out_as_torch_tensor=True
+    )
     # Moves data to device
     inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
     seg_map = seg_map.to(device)
@@ -166,36 +162,20 @@ def train_step_semi_supervised_separate_batches(
     # It is only an augmentation on the inputs.
     randaugment.use_cutout(False)
     # Applies strong augmentation to pseudo label map
-    tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
-    for i in range(logits_u_w.shape[0]):
-        # When you debug visually: check that the strongly augmented
-        # weak images correspond to the strongly augmented images
-        # (e.g. the same ship should be at the same position in both
-        # images).
-        logits_u_w_i = logits_u_w[i, :, :, :]
-        logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
-        logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-        logits_u_w_i = strong_transform(logits_u_w_i)
-        tmp[i, :, :, :] = logits_u_w_i
+    tmp = strong_aug_on_tensor(
+        logits_u_w,
+        strong_transform,
+        out_as_torch_tensor=False
+    )
     logits_u_w = tmp
     logits_u_s = logits_u_s.cpu().detach().numpy()
     # Sets all pixels that were added due to padding to a
     # constant value to later ignore them when computing the loss
-    batch_size = logits_u_w.shape[0]
-    num_categories = logits_u_w.shape[1]
-    for idx_b in range(batch_size):
-        for idx_cat in range(num_categories):
-            # - logits_u_w_patch -> logits of the prediction of model
-            #   on a weakly augmented image. Shape: (img_h, img_w)
-            # - logits_u_s_patch -> logits of the prediction of model
-            #   on a strongly augmented image. Shape: (img_h, img_w)
-            logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
-            logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
-            logits_u_s_patch[
-                np.where(logits_u_w_patch == padding_val)
-            ] = IGNORE_INDEX
-            logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
-            logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
+    set_padding_pixels_to_val(
+        logits_u_w=logits_u_w, 
+        logits_u_s=logits_u_s, 
+        padding_val=padding_val,
+    )
     # Moves new logits to device
     # Weak-aug ones
     logits_u_w = torch.from_numpy(logits_u_w)
@@ -297,15 +277,11 @@ def train_step_semi_supervised_one_batch(
         randaugment=randaugment, mean=None, std=None
     )
     # Applies strong augmentation on weakly augmented images
-    img_u_s = np.zeros((weak_aug_img.shape), dtype=np.float32)
-    for i in range(weak_aug_img.shape[0]):
-        img_u_w_i = weak_aug_img[i, :, :, :]
-        img_u_w_i = img_u_w_i.cpu().detach().numpy()
-        img_u_w_i = np.moveaxis(img_u_w_i, 0, -1)
-        # Strongly-augmented image
-        img_u_s_i = strong_transform(img_u_w_i)
-        img_u_s[i, :, :, :] = img_u_s_i
-    img_u_s = torch.from_numpy(img_u_s)
+    img_u_s = strong_aug_on_tensor(
+        weak_aug_img, 
+        strong_transform, 
+        out_as_torch_tensor=True
+    )
     # Moves data to device
     inputs = torch.cat((image, weak_aug_img, img_u_s)).to(device)
     seg_map = seg_map.to(device)
@@ -324,36 +300,20 @@ def train_step_semi_supervised_one_batch(
     # It is only an augmentation on the inputs.
     randaugment.use_cutout(False)
     # Applies strong augmentation to pseudo label map
-    tmp = np.zeros((logits_u_w.shape), dtype=np.float32)
-    for i in range(logits_u_w.shape[0]):
-        # When you debug visually: check that the strongly augmented
-        # weak images correspond to the strongly augmented images
-        # (e.g. the same ship should be at the same position in both
-        # images).
-        logits_u_w_i = logits_u_w[i, :, :, :]
-        logits_u_w_i = logits_u_w_i.cpu().detach().numpy()
-        logits_u_w_i = np.moveaxis(logits_u_w_i, 0, -1)
-        logits_u_w_i = strong_transform(logits_u_w_i)
-        tmp[i, :, :, :] = logits_u_w_i
+    tmp = strong_aug_on_tensor(
+        logits_u_w,
+        strong_transform,
+        out_as_torch_tensor=False
+    )
     logits_u_w = tmp
     logits_u_s = logits_u_s.cpu().detach().numpy()
     # Sets all pixels that were added due to padding to a
     # constant value to later ignore them when computing the loss
-    batch_size = logits_u_w.shape[0]
-    num_categories = logits_u_w.shape[1]
-    for idx_b in range(batch_size):
-        for idx_cat in range(num_categories):
-            # - logits_u_w_patch -> logits of the prediction of model
-            #   on a weakly augmented image. Shape: (img_h, img_w)
-            # - logits_u_s_patch -> logits of the prediction of model
-            #   on a strongly augmented image. Shape: (img_h, img_w)
-            logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
-            logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
-            logits_u_s_patch[
-                np.where(logits_u_w_patch == padding_val)
-            ] = IGNORE_INDEX
-            logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
-            logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
+    set_padding_pixels_to_val(
+        logits_u_w=logits_u_w, 
+        logits_u_s=logits_u_s, 
+        padding_val=padding_val,
+    )
     # Moves new logits to device
     # Weak-aug ones
     logits_u_w = torch.from_numpy(logits_u_w)
@@ -660,3 +620,62 @@ def check_checkpoint_path_exist(checkpoint_path: str):
         raise Exception(
             f"The checkpoint directory {checkpoint_path} does not exist"
         )
+
+
+def strong_aug_on_tensor(
+    tensor: torch.Tensor,
+    strong_transform: StrongAugmentation,
+    out_as_torch_tensor: bool
+) -> torch.Tensor:
+    """Applies strong augmentations on a tensor. 
+
+    Args:
+        img_w (torch.Tensor): tensor.
+        strong_transform (StrongAugmentation): strong augmentation.
+        out_as_torch_tensor (bool): True to return the output as a 
+          Torch.tensor. False to return it as a np.ndarray.
+
+    Returns:
+        torch.Tensor | np.ndarray: strongly-augmented tensor.
+    """
+    tensor_s = np.zeros((tensor.shape), dtype=np.float32)
+    for i in range(tensor.shape[0]):
+        tensor_i = tensor[i, :, :, :]
+        tensor_i = tensor_i.cpu().detach().numpy()
+        tensor_i = np.moveaxis(tensor_i, 0, -1)
+        # Strongly-augmented image
+        tensor_s_i = strong_transform(tensor_i)
+        tensor_s[i, :, :, :] = tensor_s_i
+    if out_as_torch_tensor:
+        tensor_s = torch.from_numpy(tensor_s)
+    return tensor_s
+
+
+def set_padding_pixels_to_val(
+    logits_u_w: np.ndarray, 
+    logits_u_s: np.ndarray, 
+    padding_val: int,
+    constant_val: int = IGNORE_INDEX
+) -> None:
+    """Sets all pixels that were added due to padding to a constant value to
+    later ignore them when computing the loss.
+
+    Args:
+        logits_u_w (np.ndarray): strongly-augmented logits of the prediction of
+          the model on a weakly-augmented image. Shape: (img_h, img_w).
+        logits_u_s (np.ndarray): logits of the prediction of the model on a 
+          strongly augmented image.
+        padding_val (int): value of padding pixels.
+        constant_val (int, optional): Constant. Defaults to IGNORE_INDEX.
+    """
+    batch_size = logits_u_w.shape[0]
+    num_categories = logits_u_w.shape[1]
+    for idx_b in range(batch_size):
+        for idx_cat in range(num_categories):
+            logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
+            logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
+            logits_u_s_patch[
+                np.where(logits_u_w_patch == padding_val)
+            ] = constant_val
+            logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
+            logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
