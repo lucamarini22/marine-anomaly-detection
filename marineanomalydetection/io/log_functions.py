@@ -63,7 +63,6 @@ def log_ssl_loss_components(
         separator (str, optional): separator. Defaults to "-".
         num_sep (int, optional): num of separators. Defaults to 20.
     """
-    print(max_probs[:, 0, 0])
     logger.info(separator * num_sep)
     logger.info(f"Lx: {supervised_loss}")
     logger.info(f"Lu: {unsupervised_loss}")
