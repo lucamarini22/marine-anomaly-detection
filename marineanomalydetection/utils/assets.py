@@ -64,6 +64,10 @@ labels_multi = [
     "Marine Water",
 ]
 
+# Number of labeled pixels of training set for each class when having the 
+# original splits of the MARIDA dataset:
+
+# - With CategoryAggregation.MULTI
 num_labeled_pixels_train_multi = {
     "Not labeled": 45052572,
     "Ship": 3289,
@@ -72,15 +76,52 @@ num_labeled_pixels_train_multi = {
     "Algae/Natural Organic Material": 2684,
     "Clouds": 65295,
 }
-
+# - With CategoryAggregation.BINARY
 num_labeled_pixels_train_binary = {
     "Not labeled": 45052572,
     "Other": 427469,
     "Marine Debris": 1943,
 }
 
+# Number of labeled pixels of training set for each class when having the 
+# original splits of the MARIDA dataset but excluding the following patches:
+# - From training split: 
+#   - 21-2-17_16PCC_0
+# - From validation split:
+#   - 18-9-20_16PCC_47
+#   - 18-9-20_16PCC_48
+#   - 18-9-20_16PCC_50
+# - From test split:
+#   - 30-8-18_16PCC_0
+#   - 30-8-18_16PCC_1
+#   - 30-8-18_16PCC_2
+# because they contain only nan values:
+# (of course excluding validation and test patches does not affect the number
+# of labeled training pixels, but I mention them to document them).
+
+# - With CategoryAggregation.MULTI
+num_labeled_pixels_train_multi_no_nan_patch = {
+    'Not labeled': 44987255, 
+    'Ship': 3289, 
+    'Marine Water': 355982, 
+    'Marine Debris': 1943, 
+    'Algae/Natural Organic Material': 2684, 
+    'Clouds': 65295
+}
+# - With CategoryAggregation.BINARY
+num_labeled_pixels_train_binary_no_nan_patch = {
+    'Not labeled': 44987255, 
+    'Other': 427250, 
+    'Marine Debris': 1943
+}
+
+
 assert sum(num_labeled_pixels_train_binary.values()) == sum(
     num_labeled_pixels_train_multi.values()
+)
+
+assert sum(num_labeled_pixels_train_binary_no_nan_patch.values()) == sum(
+    num_labeled_pixels_train_multi_no_nan_patch.values()
 )
 
 categories_to_ignore_perc_labeled = [
