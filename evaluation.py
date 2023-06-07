@@ -52,7 +52,8 @@ def main(options):
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
-        path=options["dataset_path"],
+        patches_path=options["patches_path"],
+        splits_path=options["splits_path"],
     )
 
     test_loader = DataLoader(
@@ -239,7 +240,14 @@ if __name__ == "__main__":
         help="Number of hidden features",
     )
     parser.add_argument(
-        "--dataset_path", help="path of dataset", default="data"
+        "--patches_path", 
+        help="path of the folder containing the patches", 
+        default=os.path.join("data", "patches")
+    )
+    parser.add_argument(
+        "--splits_path",
+        help="path of the folder containing the splits files", 
+        default=os.path.join("data", "splits")
     )
     # Unet model path
     parser.add_argument(

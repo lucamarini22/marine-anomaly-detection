@@ -23,7 +23,7 @@ from marineanomalydetection.dataset.get_labeled_and_unlabeled_rois import (
 
 
 def get_dataloaders_supervised(
-    dataset_path: str,
+    splits_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     standardization: transforms.Normalize,
@@ -39,7 +39,7 @@ def get_dataloaders_supervised(
     """Gets the dataloaders for supervised training.
 
     Args:
-        dataset_path (str): path of the dataset.
+        splits_path (str): path of the folder containing the splits files.
         transform_train (transforms.Compose): transformations to be applied
           to training set.
         transform_val (transforms.Compose): transformations to be applied
@@ -73,14 +73,14 @@ def get_dataloaders_supervised(
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
-        path=dataset_path,
+        splits_path=splits_path,
     )
     dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
-        path=dataset_path,
+        splits_path=splits_path,
     )
 
     train_loader = DataLoader(
@@ -110,7 +110,8 @@ def get_dataloaders_supervised(
 
 
 def get_dataloaders_ssl_single_train_set(
-    dataset_path: str,
+    splits_path: str,
+    patches_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     weakly_transform:transforms.Compose,
@@ -131,7 +132,8 @@ def get_dataloaders_ssl_single_train_set(
       - its unlabeled pixels will be used to compute the unsupervised loss.
 
     Args:
-        dataset_path (str): path of the dataset.
+        splits_path (str): path of the folder containing the splits files.
+        patches_path (str): path of the folder containing the patches.
         transform_train (transforms.Compose): transformations to be applied
           to training set for the supervised loss.
         transform_val (transforms.Compose): transformations to be applied
@@ -167,7 +169,8 @@ def get_dataloaders_ssl_single_train_set(
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
-        path=dataset_path,
+        patches_path=patches_path,
+        splits_path=splits_path,
         second_transform=weakly_transform
     )
     dataset_val = MADLabeled(
@@ -175,7 +178,8 @@ def get_dataloaders_ssl_single_train_set(
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
-        path=dataset_path,
+        patches_path=patches_path,
+        splits_path=splits_path,
     )
 
     train_loader = DataLoader(
@@ -206,7 +210,8 @@ def get_dataloaders_ssl_single_train_set(
 
 
 def get_dataloaders_ssl_separate_train_sets(
-    dataset_path: str,
+    splits_path: str,
+    patches_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     weakly_transform: transforms.Compose,
@@ -234,7 +239,8 @@ def get_dataloaders_ssl_separate_train_sets(
      - Patches in D_u are used to compute the unsupervised loss.
      
     Args:
-        dataset_path (str): path of the dataset.
+        splits_path (str): path of the folder containing the splits files.
+        patches_path (str): path of the folder containing the patches.
         transform_train (transforms.Compose): transformations to be applied
           to the D_s training set.
         transform_val (transforms.Compose): transformations to be applied
@@ -274,7 +280,7 @@ def get_dataloaders_ssl_separate_train_sets(
     """
     # Split training data into labeled and unlabeled sets
     ROIs, ROIs_u = get_labeled_and_unlabeled_rois(
-        perc_labeled=perc_labeled, path=dataset_path
+        perc_labeled=perc_labeled, splits_path=splits_path
     )
 
     # TODO: update (e.g. transformations and other)
@@ -284,7 +290,8 @@ def get_dataloaders_ssl_separate_train_sets(
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs,
-        path=dataset_path,
+        patches_path=patches_path,
+        splits_path=splits_path,
         perc_labeled=perc_labeled,
     )
     unlabeled_dataset_train = MADUnlabeled(
@@ -293,16 +300,17 @@ def get_dataloaders_ssl_separate_train_sets(
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs_u,
-        path=dataset_path,
+        patches_path=patches_path,
+        splits_path=splits_path,
     )
     dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
-        path=dataset_path,
+        patches_path=patches_path,
+        splits_path=splits_path,
     )
-    # TODO: fix batch size for labeled and unlabeled data loaders
     labeled_train_loader = DataLoader(
         labeled_dataset_train,
         batch_size=batch,

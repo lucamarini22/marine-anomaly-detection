@@ -101,7 +101,14 @@ def parse_args_train(config):
         help="Number of hidden features",
     )
     parser.add_argument(
-        "--dataset_path", help="path of dataset", default="data"
+        "--patches_path", 
+        help="path of the folder containing the patches", 
+        default=os.path.join("data", "patches")
+    )
+    parser.add_argument(
+        "--splits_path",
+        help="path of the folder containing the splits files", 
+        default=os.path.join("data", "splits")
     )
     # Optimization
     parser.add_argument("--lr", type=float, help="learning rate")

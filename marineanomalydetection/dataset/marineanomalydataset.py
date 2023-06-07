@@ -25,8 +25,9 @@ class MarineAnomalyDataset(Dataset, ABC):
         self,
         mode: DataLoaderType = DataLoaderType.TRAIN_SET_SUP,
         transform: transforms.Compose = None,
-        standardization : transforms.Normalize =None,
-        path: str = None,
+        standardization : transforms.Normalize = None,
+        patches_path: str = None,
+        splits_path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
         perc_labeled: float = None,
@@ -41,7 +42,9 @@ class MarineAnomalyDataset(Dataset, ABC):
               to dataset. Defaults to None.
             standardization (transforms.Normalize, optional): standardization.
               Defaults to None.
-            path (str, optional): dataset path.
+            patches_path (str): path of the folder containing the patches.
+            splits_path (str, optional): path of the folder containing the 
+              splits files.
             aggregate_classes (CategoryAggregation, optional): type
               of aggregation of categories.
               Defaults to CategoryAggregation.MULTI.
@@ -69,7 +72,8 @@ class MarineAnomalyDataset(Dataset, ABC):
         self.transform = transform
         self.standardization = standardization
         self.second_transform = second_transform
-        self.path = path
+        self.patches_path = patches_path
+        self.splits_path = splits_path
         self.aggregate_classes = aggregate_classes
         self.perc_labeled = perc_labeled
         
@@ -82,7 +86,7 @@ class MarineAnomalyDataset(Dataset, ABC):
         
         logger_set = logger.bind(name=LOG_SET)
         # Gets the names of the regions of interest
-        self.ROIs = get_rois(path, mode, rois, logger_set)
+        self.ROIs = get_rois(self.splits_path, mode, rois, logger_set)
 
         self.load_data()
 
@@ -104,7 +108,6 @@ class MarineAnomalyDataset(Dataset, ABC):
     @abstractmethod
     def __getitem__(self, index):
         pass
-        self.get_item(index)
     
     
     @abstractmethod
@@ -170,6 +173,7 @@ class MarineAnomalyDataset(Dataset, ABC):
         patch = load_patch(patch_path)
         min_patch, max_patch = patch.min(), patch.max()
         patch = normalize_img(patch, min_patch, max_patch)
+        nan_mask = np.isnan(patch)
         list_patches.append(patch)
 
     

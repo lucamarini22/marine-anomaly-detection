@@ -122,7 +122,8 @@ def main(options, wandb_logger):
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN:
         train_loader, val_loader = get_dataloaders_supervised(
-            dataset_path=options["dataset_path"],
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             standardization=standardization,
@@ -141,7 +142,8 @@ def main(options, wandb_logger):
             unlabeled_train_loader,
             val_loader,
         ) = get_dataloaders_ssl_separate_train_sets(
-            dataset_path=options["dataset_path"],
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             weakly_transform=weakly_transform,
@@ -160,7 +162,8 @@ def main(options, wandb_logger):
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         train_loader, val_loader = get_dataloaders_ssl_single_train_set(
-            dataset_path=options["dataset_path"],
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             weakly_transform=weakly_transform,  
