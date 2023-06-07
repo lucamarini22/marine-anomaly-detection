@@ -24,6 +24,7 @@ from marineanomalydetection.dataset.get_labeled_and_unlabeled_rois import (
 
 def get_dataloaders_supervised(
     splits_path: str,
+    patches_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     standardization: transforms.Normalize,
@@ -40,6 +41,7 @@ def get_dataloaders_supervised(
 
     Args:
         splits_path (str): path of the folder containing the splits files.
+        patches_path (str): path of the folder containing the patches.
         transform_train (transforms.Compose): transformations to be applied
           to training set.
         transform_val (transforms.Compose): transformations to be applied
@@ -73,6 +75,7 @@ def get_dataloaders_supervised(
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
+        patches_path=patches_path,
         splits_path=splits_path,
     )
     dataset_val = MADLabeled(
@@ -80,6 +83,7 @@ def get_dataloaders_supervised(
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
+        patches_path=patches_path,
         splits_path=splits_path,
     )
 
