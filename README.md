@@ -59,7 +59,7 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
    ```
 
 ### Set up dataset
-To launch the training on MARIDA, it is necessary to download the dataset. The `patches_path` and `splits_path` arguments in `marineanomalydetection/parse_args_train.py` file shall be respectively adjusted according to the path of the folder containing the patches and the path of the folder containing the split files.
+To launch the training on MARIDA, it is necessary to download the dataset. The dataset can be downloaded [here](https://zenodo.org/record/5151941). The `patches_path` and `splits_path` arguments in `marineanomalydetection/parse_args_train.py` file shall be respectively adjusted according to the path of the folder containing the patches and the path of the folder containing the split files.
 
 
 <!-- USAGE EXAMPLES -->
