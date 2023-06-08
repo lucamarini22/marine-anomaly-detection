@@ -29,16 +29,24 @@ from marineanomalydetection.utils.seed import set_seed
 
 root_path = dirname(os.path.abspath(__file__))
 
-logging.basicConfig(
-    filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
-    filemode="a",
-    level=logging.INFO,
-    format="%(name)s - %(levelname)s - %(message)s",
-)
-logging.info("*" * 10)
-
 
 def main(options):
+    
+    if not os.path.isdir(options["log_folder"]):
+        raise Exception(f"The log folder '{options['log_folder']}' does not exist. Please create it.")
+    
+    logging.basicConfig(
+        filename=os.path.join(
+            root_path, 
+            options["log_folder"], 
+            options["log_file"]
+        ),
+        filemode="a",
+        level=logging.INFO,
+        format="%(name)s - %(levelname)s - %(message)s",
+    )
+    logging.info("*" * 10)
+    
     set_seed(options["seed"])
     # Transformations
 
@@ -255,9 +263,9 @@ if __name__ == "__main__":
         default=os.path.join(
             "results",
             "trained_models",
-            "semi-supervised-one-train-set",
-            "2023_06_01_H_11_19_30_TRAIN_SSL_ONE_TRAIN_SET_MULTI_x9cs392u_northern-sweep-8",
-            "638",
+            "supervised",
+            "2023_05_10_H_20_20_21_TRAIN_MULTI",
+            "978",
             "model.pth",
         ),
         help="Path to trained model",
@@ -275,7 +283,20 @@ if __name__ == "__main__":
         default=os.path.join(root_path, "data", "predicted_unet"),
         help="Path to where to produce store predictions",
     )
-
+    
+    parser.add_argument(
+        "--log_folder",
+        default="logs",
+        type=str,
+        help="Path of the log folder",
+    )
+    parser.add_argument(
+        "--log_file",
+        default="evaluating_unet.log",
+        type=str,
+        help="Name of log file.",
+    )
+    
     args = parser.parse_args()
     options = vars(args)  # convert to ordinary dict
 
