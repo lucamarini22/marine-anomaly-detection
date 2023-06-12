@@ -184,9 +184,9 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
-    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
-        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
-        options["batch"] = int(options["batch"])
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         options["mu"] = int(options["mu"])
+
+    options["batch"] = int(options["batch"])
 
     return options
