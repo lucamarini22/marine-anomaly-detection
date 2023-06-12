@@ -1,7 +1,6 @@
 import os
 import ast
 from typing import Iterator
-import loguru
 import numpy as np
 import torch
 from torch import nn
