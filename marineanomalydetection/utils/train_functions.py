@@ -210,7 +210,8 @@ def train_step_semi_supervised_separate_batches(
 
     # Final loss
     loss = Lx + lambda_v * Lu
-    loss.backward()
+    if Lx != 0.0 or Lu != 0.0:
+        loss.backward()
 
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
@@ -353,7 +354,8 @@ def train_step_semi_supervised_one_batch(
 
     # Final loss
     loss = Lx + lambda_v * Lu
-    loss.backward()
+    if Lx != 0.0 or Lu != 0.0:
+        loss.backward()
 
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
