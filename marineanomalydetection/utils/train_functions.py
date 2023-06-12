@@ -174,6 +174,7 @@ def train_step_semi_supervised_separate_batches(
         logits_u_w=logits_u_w, 
         logits_u_s=logits_u_s, 
         padding_val=padding_val,
+        constant_val=IGNORE_INDEX
     )
     # Moves new logits to device
     # Weak-aug ones
@@ -312,6 +313,7 @@ def train_step_semi_supervised_one_batch(
         logits_u_w=logits_u_w, 
         logits_u_s=logits_u_s, 
         padding_val=padding_val,
+        constant_val=IGNORE_INDEX
     )
     # Moves new logits to device
     # Weak-aug ones
