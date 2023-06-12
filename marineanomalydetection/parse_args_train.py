@@ -184,8 +184,23 @@ def parse_args_train(config):
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
     
-    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
+    """For Debugging
+    options["lr"] = 2e-4
+    options["threshold"] = 0.0
+    options["epochs"] = 900
+    options["batch"] = 5
+    options["seed"] = 0
+    options["reduce_lr_on_plateau"] = 0
+    options["lambda_coeff"] = 1
+    options["mu"] = 5
+    options["perc_labeled"] = 0.9
+    """
+    
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  
         options["mu"] = int(options["mu"])
+        if options["perc_labeled"] <= 0.0 or options["perc_labeled"] >= 1.0:
+            raise Exception("The parameter 'perc_labeled' should have a value in the interval ]0.0, 1.0[")
+
 
     options["batch"] = int(options["batch"])
 
