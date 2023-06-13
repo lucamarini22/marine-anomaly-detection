@@ -29,8 +29,11 @@ def parse_args_train(config):
         type=str,
         help="Aggregate classes into:\
             multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
-                binary (Marine Debris and Other); \
-                    no (keep the original 15 classes)",
+            binary (Marine Debris and Other); \
+            eleven (Marine Debris, Dense Sargassum, Sparse Sargassum, \
+                Natural Organic Material, Ship, Clouds, Marine Water, \
+                Sediment-Laden Water, Foam, Turbid Water, Shallow Water); \
+            None (keep the original 15 classes)",
     )
     # Training mode
     parser.add_argument(
@@ -193,7 +196,7 @@ def parse_args_train(config):
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1
     options["mu"] = 5
-    options["perc_labeled"] = 0.9
+    options["perc_labeled"] = 0.1
     """
     
     if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  

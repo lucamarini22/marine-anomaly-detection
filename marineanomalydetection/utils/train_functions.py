@@ -14,7 +14,7 @@ from marineanomalydetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
 )
 from marineanomalydetection.trainmode import TrainMode
-from marineanomalydetection.utils.assets import labels_binary, labels_multi
+from marineanomalydetection.utils.assets import labels_binary, labels_multi, labels_11_classes
 from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
@@ -579,10 +579,8 @@ def get_output_channels(aggregate_classes: CategoryAggregation) -> int:
         output_channels = len(labels_multi)
     elif aggregate_classes == CategoryAggregation.BINARY:
         output_channels = len(labels_binary)
-    else:
-        raise Exception(
-            "The aggregated_classes option should be binary or multi"
-        )
+    elif aggregate_classes == CategoryAggregation.ELEVEN:
+        output_channels = len(labels_11_classes)
     return output_channels
 
 

@@ -7,6 +7,7 @@ from marineanomalydetection.utils.assets import (
     labels,
     labels_binary,
     labels_multi,
+    labels_11_classes
 )
 
 
@@ -42,7 +43,7 @@ def update_class_distribution(
         class_distr[
             labels_multi.index("Algae/Natural Organic Material")
         ] = agg_distr_algae_nom
-        class_distr[labels_multi.index("Marine Water")] = agg_distr_water
+        class_distr[labels_multi.index("Marine Water")] += agg_distr_water
 
         class_distr[labels_multi.index("Ship")] = agg_distr_ship
         class_distr[labels_multi.index("Clouds")] = agg_distr_cloud
@@ -58,4 +59,11 @@ def update_class_distribution(
         class_distr[labels_binary.index("Other")] = agg_distr
         # Drop class distribution of the aggregated classes
         class_distr = class_distr[: len(labels_binary)]
+    elif aggregate_classes == CategoryAggregation.ELEVEN:
+        # Aggregate Distributions:
+        # - 'Waves', 'Cloud Shadows','Wakes', 'Mixed Water' with 'Marine Water'
+        agg_distr_water = sum(class_distr[-4:])
+        class_distr[labels_11_classes.index("Marine Water")] += agg_distr_water
+        # Drop class distribution of the aggregated classes
+        class_distr = class_distr[: len(labels_11_classes)]
     return class_distr
