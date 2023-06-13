@@ -20,6 +20,7 @@ from marineanomalydetection.utils.metrics import Evaluation, confusion_matrix
 from marineanomalydetection.utils.assets import (
     labels_binary,
     labels_multi,
+    labels_11_classes
 )
 from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
@@ -76,10 +77,12 @@ def main(options):
         # Keep only Marine Debris and Others classes
         labels = labels_binary
         output_channels = len(labels_binary)
-    else:
-        raise Exception(
-            "The aggregated_classes option should be binary or multi"
-        )
+    elif options["aggregate_classes"] == CategoryAggregation.ELEVEN:
+        # Keep Marine Debris, Dense Sargassum, Sparse Sargassum, 
+        # Natural Organic Material, Ship, Clouds, Marine Water, 
+        # Sediment-Laden Water, Foam, Turbid Water, Shallow Water classes.
+        labels = labels_11_classes
+        output_channels = len(labels_11_classes)
 
     # Use gpu or cpu
     if torch.cuda.is_available():
@@ -263,9 +266,9 @@ if __name__ == "__main__":
         default=os.path.join(
             "results",
             "trained_models",
-            "supervised",
-            "2023_05_10_H_20_20_21_TRAIN_MULTI",
-            "978",
+            "semi-supervised-one-train-set",
+            "2023_06_12_H_07_58_04_TRAIN_SSL_ONE_TRAIN_SET_MULTI_xu4zx56t_fragrant-sweep-3",
+            "1107",
             "model.pth",
         ),
         help="Path to trained model",
