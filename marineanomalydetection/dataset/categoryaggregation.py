@@ -9,3 +9,8 @@ class CategoryAggregation(IntEnum):
     MULTI = 2
     """Multi category aggregation,: 'Marine Debris', 
     'Algae/Natural Organic Material', 'Ship', 'Clouds', 'Marine Water'."""
+    ELEVEN = 3
+    """Multi category aggregation,: 'Marine Debris', 'Dense Sargassum', 
+    'Sparse Sargassum', 'Natural Organic Material', 'Ship', 'Clouds',
+    'Marine Water', 'Sediment-Laden Water', 'Foam', 'Turbid Water',
+    'Shallow Water',."""
