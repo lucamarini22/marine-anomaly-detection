@@ -263,9 +263,9 @@ if __name__ == "__main__":
         default=os.path.join(
             "results",
             "trained_models",
-            "supervised",
-            "2023_05_10_H_20_20_21_TRAIN_MULTI",
-            "978",
+            "semi-supervised-one-train-set",
+            "2023_07_05_H_08_50_44_TRAIN_SSL_ONE_TRAIN_SET_MULTI_jisg3mrz_drawn-sweep-1",
+            "1133",
             "model.pth",
         ),
         help="Path to trained model",
