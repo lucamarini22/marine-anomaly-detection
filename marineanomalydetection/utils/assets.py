@@ -1,3 +1,5 @@
+from marineanomalydetection.dataset.categoryaggregation import CategoryAggregation
+
 cat_mapping = {
     "Marine Debris": 1,
     "Dense Sargassum": 2,
@@ -81,19 +83,7 @@ labels_multi = [
     "Marine Water",
 ]
 
-labels_11_classes = [
-    "Marine Debris",
-    "Dense Sargassum",
-    "Sparse Sargassum",
-    "Natural Organic Material",
-    "Ship",
-    "Clouds",
-    "Marine Water",
-    "Sediment-Laden Water",
-    "Foam",
-    "Turbid Water",
-    "Shallow Water",
-]
+labels_11_classes = labels[:CategoryAggregation.ELEVEN.value]
 
 # Number of labeled pixels of training set for each class when having the 
 # original splits of the MARIDA dataset:
@@ -176,7 +166,8 @@ num_labeled_pixels_train_eleven_no_nan_patch = {
     'Dense Sargassum': 870
 }
 
-
+# Check that the total number of pre-computed labeled pixels is equal among 
+# different CategoryAggregation settings 
 assert (
     sum(num_labeled_pixels_train_binary.values()) \
         == sum(num_labeled_pixels_train_multi.values()) \
