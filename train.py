@@ -639,7 +639,7 @@ if __name__ == "__main__":
     wandb_logger.login()
     config = wandb_logger.get_config("./config.yaml")
 
-    options = parse_args_train(config)
+    options = parse_args_train()
     options["checkpoint_path"] = update_checkpoint_path(
         options["mode"], options["checkpoint_path"]
     )

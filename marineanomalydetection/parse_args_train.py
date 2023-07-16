@@ -9,7 +9,7 @@ from marineanomalydetection.dataset.categoryaggregation import (
 from marineanomalydetection.trainmode import TrainMode
 
 
-def parse_args_train(config):
+def parse_args_train():
     os.environ["WANDB_AGENT_MAX_INITIAL_FAILURES"] = "1000"
     os.environ["WANDB_AGENT_DISABLE_FLAPPING"] = "true"
     parser = argparse.ArgumentParser()
