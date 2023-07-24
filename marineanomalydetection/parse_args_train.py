@@ -38,8 +38,6 @@ def parse_args_train():
     # Training mode
     parser.add_argument(
         "--mode",
-        choices=list(TrainMode),
-        default=TrainMode.TRAIN_SSL_ONE_TRAIN_SET,
         help="Mode",
     )
     # SSL hyperparameters
@@ -186,6 +184,8 @@ def parse_args_train():
     options = vars(args)
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
+    options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
+    print(options["mode"])
     
     """For Debugging
     options["lr"] = 2e-4
