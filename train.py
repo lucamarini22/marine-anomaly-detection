@@ -51,7 +51,9 @@ from marineanomalydetection.utils.train_functions import (
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
+    update_min_val_loss,
     update_max_val_miou,
+    init_max_val_mIoU,
 )
 from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
@@ -238,7 +240,8 @@ def main(options, wandb_logger):
     if options["mode"] == TrainMode.TRAIN:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
-        max_val_miou_among_epochs = 0.0
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
         epoch_max_val_miou = start
         
         dataiter = iter(train_loader)
@@ -319,9 +322,13 @@ def main(options, wandb_logger):
                     train_loss = sum(training_loss) / training_batches
                     val_loss = sum(val_losses) / val_batches
                     val_losses_avg_all_epochs.append(val_loss)
-                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
-                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
-                        epoch_min_val_loss = epoch
+                    
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
                     
                     max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
                         acc, 
@@ -383,7 +390,8 @@ def main(options, wandb_logger):
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
-        max_val_miou_among_epochs = 0.0
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
         epoch_max_val_miou = start
         classes_channel_idx = 1
 
@@ -467,9 +475,12 @@ def main(options, wandb_logger):
                     acc = Evaluation(y_predicted, y_true)
                     val_loss = sum(val_losses) / val_batches
                     val_losses_avg_all_epochs.append(val_loss)
-                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
-                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
-                        epoch_min_val_loss = epoch
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
                                                
                     max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
                         acc, 
@@ -530,7 +541,8 @@ def main(options, wandb_logger):
     elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
-        max_val_miou_among_epochs = 0.0
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
         epoch_max_val_miou = start
         classes_channel_idx = 1
         
@@ -620,9 +632,13 @@ def main(options, wandb_logger):
                     train_loss = sum(training_loss) / training_batches
                     val_loss = sum(val_losses) / val_batches
                     val_losses_avg_all_epochs.append(val_loss)
-                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
-                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
-                        epoch_min_val_loss = epoch
+                    
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
                                         
                     max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
                         acc, 

@@ -686,3 +686,66 @@ def set_padding_pixels_to_val(
             ] = constant_val
             logits_u_s_patch = torch.from_numpy(logits_u_s_patch)
             logits_u_s[idx_b, idx_cat, :, :] = logits_u_s_patch
+
+
+def update_min_val_loss(
+    val_losses_avg_all_epochs: list[float], 
+    min_val_loss_among_epochs: float,
+    epoch_min_val_loss: int,
+    epoch: int
+) -> tuple[float, int]:
+    """Updates the minimum value of the loss on the validation set and the 
+    epoch at which it was reached.
+
+    Args:
+        val_losses_avg_all_epochs (dict): list of validation losses.
+        min_val_loss_among_epochs (float): minimum val loss that was reached.
+        epoch (int): epoch at which the min val loss was reached.
+        epoch (int): current epoch.
+
+    Returns:
+        tuple[float, int]: updated:
+          - minimum val loss that was reached,
+          - epoch at which the min val loss was reached.
+          
+    """
+    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
+        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
+        epoch_min_val_loss = epoch
+    return min_val_loss_among_epochs, epoch_min_val_loss
+
+
+def update_max_val_miou(
+    eval: dict, 
+    max_val_miou_among_epochs: float,
+    epoch_max_val_miou: int,
+    epoch: int
+) -> tuple[float, int]:
+    """Updates the maximum value of mIoU on the validation set and the epoch at
+    which it was reached.
+
+    Args:
+        eval (dict): dictionary containing different evaluation metrics.
+        max_val_miou_among_epochs (float): maximum val mIoU that was reached.
+        epoch (int): epoch at which the max val mIoU was reached.
+        epoch (int): current epoch.
+
+    Returns:
+        tuple[float, int]: updated:
+          - maximum val mIoU that was reached,
+          - epoch at which the max val mIoU was reached.
+          
+    """
+    if eval["IoU"] > max_val_miou_among_epochs:
+        max_val_miou_among_epochs = eval["IoU"]
+        epoch_max_val_miou = epoch
+    return max_val_miou_among_epochs, epoch_max_val_miou
+
+
+def init_max_val_mIoU() -> float:
+    """Initializes the max mIoU reached on the validation set. 
+
+    Returns:
+        float: starting max val mIoU score.
+    """
+    return 0.0
