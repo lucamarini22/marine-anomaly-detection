@@ -65,8 +65,8 @@ class WandbLogger():
             val_loss (int): validation loss.
             min_val_loss_among_epochs (float): minimum validation loss across 
               all the epochs.
-            epoch (int): epoch
-            epoch_least_val_loss (int): epoch at which the val loss was the 
+            epoch (int): epoch.
+            epoch_min_val_loss (int): epoch at which the val loss was the 
               minimum.
         """
         wandb.log(
@@ -76,6 +76,30 @@ class WandbLogger():
                 "val_loss": val_loss,
                 "min_val_loss_among_epochs": min_val_loss_among_epochs,
                 "epoch_min_val_loss": epoch_min_val_loss
+            }
+        )
+    
+    
+    @staticmethod
+    def log_val_mIoU(
+        eval: dict, 
+        max_val_miou_among_epochs: float,
+        epoch_max_val_miou: int
+    ) -> None:
+        """Logs val mIoU in an evaluation step and max val mIoU.
+
+        Args:
+            eval (dict): dictionary containing different evaluation metrics.
+            max_val_miou_among_epochs (float): max validation mIoU among all 
+              the epochs.
+            epoch_max_val_miou (int): epoch at which the val mIoU was the 
+              maximum.
+        """
+        wandb.log(
+            {
+                "Val mIoU": eval["IoU"],
+                "Max Val mIou": max_val_miou_among_epochs,
+                "epoch_max_val_miou": epoch_max_val_miou
             }
         )
 

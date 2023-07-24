@@ -51,6 +51,7 @@ from marineanomalydetection.utils.train_functions import (
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
+    update_max_val_miou,
 )
 from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
@@ -237,6 +238,8 @@ def main(options, wandb_logger):
     if options["mode"] == TrainMode.TRAIN:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
+        max_val_miou_among_epochs = 0.0
+        epoch_max_val_miou = start
         
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
@@ -319,6 +322,14 @@ def main(options, wandb_logger):
                     if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
                         min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
                         epoch_min_val_loss = epoch
+                    
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou, 
+                        epoch
+                    )
+                    
                     logging.info("\n")
                     logging.info(
                         "Val loss was: " + str(val_loss)
@@ -355,6 +366,12 @@ def main(options, wandb_logger):
                         epoch_min_val_loss
                     )
                     
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
+                    )
+                    
                 #val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(val_loss)
@@ -366,6 +383,8 @@ def main(options, wandb_logger):
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
+        max_val_miou_among_epochs = 0.0
+        epoch_max_val_miou = start
         classes_channel_idx = 1
 
         labeled_iter = iter(labeled_train_loader)
@@ -451,6 +470,13 @@ def main(options, wandb_logger):
                     if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
                         min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
                         epoch_min_val_loss = epoch
+                                               
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou,
+                        epoch
+                    )
                     
                     logging.info("\n")
                     logging.info(
@@ -487,6 +513,12 @@ def main(options, wandb_logger):
                         epoch,
                         epoch_min_val_loss
                     )
+                    
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
+                    )
 
                 val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
@@ -498,6 +530,8 @@ def main(options, wandb_logger):
     elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
+        max_val_miou_among_epochs = 0.0
+        epoch_max_val_miou = start
         classes_channel_idx = 1
         
         #dataiter = iter(train_loader)
@@ -589,6 +623,14 @@ def main(options, wandb_logger):
                     if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
                         min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
                         epoch_min_val_loss = epoch
+                                        
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou,
+                        epoch
+                    )
+                    
                     logging.info("\n")
                     logging.info(
                         "Val loss was: " + str(val_loss)
@@ -623,6 +665,12 @@ def main(options, wandb_logger):
                         min_val_loss_among_epochs, 
                         epoch,
                         epoch_min_val_loss
+                    )
+                    
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
                     )
                     
                 #val_loss = sum(val_losses) / val_batches #TODO ?
