@@ -116,6 +116,10 @@ def main(options):
 
     with torch.no_grad():
         for image, target in tqdm(test_loader, desc="testing"):
+            if options["channel_to_mask"] is not None:
+                image[:, options["channel_to_mask"], :, :] = \
+                    options["mask_value"]
+            
             image = image.to(device)
             target = target.to(device)
 
@@ -234,9 +238,22 @@ if __name__ == "__main__":
                 binary (Marine Debris and Other); \
                     no (keep the original 15 classes)",
     )
-
     parser.add_argument(
         "--batch", default=5, type=int, help="Number of epochs to run"
+    )
+    
+    # Channel importance parameters
+    parser.add_argument(
+        "--channel_to_mask",
+        default=None,
+        type=int,
+        help="Index of the channel to mask, to study which channels are the most important for the prediction",
+    )
+    parser.add_argument(
+        "--mask_value",
+        default=0,
+        type=float,
+        help="Value used to mask the channel having index equal to --channel_to_mask",
     )
 
     # Unet parameters
