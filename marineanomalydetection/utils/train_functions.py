@@ -603,11 +603,11 @@ def update_checkpoint_path(mode: TrainMode, checkpoint_path: str) -> str:
     Returns:
         str: the updated path of the checkpoint.
     """
-    if mode == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
+    if mode is TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         checkpoint_path = os.path.join(checkpoint_path, "semi-supervised-two-train-sets")
-    elif mode == TrainMode.TRAIN:
+    elif mode is TrainMode.TRAIN:
         checkpoint_path = os.path.join(checkpoint_path, "supervised")
-    elif mode == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+    elif mode is TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         checkpoint_path = os.path.join(checkpoint_path, "semi-supervised-one-train-set")
     else:
         raise Exception("Mode is not known.")
