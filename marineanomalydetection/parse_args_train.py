@@ -184,10 +184,10 @@ def parse_args_train():
     options = vars(args)
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
-    options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
-    print(options["mode"])
+    
     
     """For Debugging
+    options["mode"] = TrainMode.TRAIN
     options["lr"] = 2e-4
     options["threshold"] = 0.0
     options["epochs"] = 900
@@ -198,13 +198,36 @@ def parse_args_train():
     options["mu"] = 5
     options["perc_labeled"] = 0.1
     """
-    
+
+    if options["mode"] == "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS" \
+        or options["mode"] == "TrainMode.TRAIN_SSL_ONE_TRAIN_SET":
+            options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
     if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  
         options["mu"] = int(options["mu"])
         if options["perc_labeled"] <= 0.0 or options["perc_labeled"] >= 1.0:
             raise Exception("The parameter 'perc_labeled' should have a value in the interval ]0.0, 1.0[")
 
-
+    if options["perc_labeled"] == 0.9:
+        options["seed"] = 498
+    elif options["perc_labeled"] == 0.8:
+        options["seed"] = 931
+    elif options["perc_labeled"] == 0.7:
+        options["seed"] = 212
+    elif options["perc_labeled"] == 0.6:
+        options["seed"] = 450
+    elif options["perc_labeled"] == 0.2:
+        options["seed"] = 318
+    elif options["perc_labeled"] == 0.1:
+        options["seed"] = 949
+    """
+    elif options["perc_labeled"] == 0.3:
+        options["seed"] = 1312
+    elif options["perc_labeled"] == 0.4:
+        options["seed"] = 5647
+    """
+        
+    print(options["seed"])    
+    
     options["batch"] = int(options["batch"])
 
     return options
