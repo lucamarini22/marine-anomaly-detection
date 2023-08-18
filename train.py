@@ -71,7 +71,6 @@ from marineanomalydetection.io.log_functions import log_epoch_init
 def main(options, wandb_logger):
     # Use gpu or cpu
     device = get_device()
-    file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
     set_seed(seed)
