@@ -1,6 +1,7 @@
 import os
 import argparse
 import wandb
+import random
 
 from marineanomalydetection.utils.string import get_today_str
 from marineanomalydetection.dataset.categoryaggregation import (
@@ -187,21 +188,20 @@ def parse_args_train():
     
     
     """For Debugging
-    options["mode"] = TrainMode.TRAIN
+    options["mode"] = "TrainMode.TRAIN_SSL_ONE_TRAIN_SET"
     options["lr"] = 2e-4
     options["threshold"] = 0.0
-    options["epochs"] = 900
+    options["epochs"] = 2000
     options["batch"] = 5
-    options["seed"] = 0
+    options["seed"] = random.randint(0, 1000)
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1
     options["mu"] = 5
-    options["perc_labeled"] = 0.1
+    options["perc_labeled"] = 0.50
     """
 
-    if options["mode"] == "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS" \
-        or options["mode"] == "TrainMode.TRAIN_SSL_ONE_TRAIN_SET":
-            options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
+    options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
+    
     if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  
         options["mu"] = int(options["mu"])
         if options["perc_labeled"] <= 0.0 or options["perc_labeled"] >= 1.0:
@@ -215,18 +215,22 @@ def parse_args_train():
         options["seed"] = 212
     elif options["perc_labeled"] == 0.6:
         options["seed"] = 450
+    elif options["perc_labeled"] == 0.5:
+        options["seed"] = 148
+    elif options["perc_labeled"] == 0.4:
+        options["seed"] = 243
+    elif options["perc_labeled"] == 0.3:
+        options["seed"] = 332
     elif options["perc_labeled"] == 0.2:
         options["seed"] = 318
     elif options["perc_labeled"] == 0.1:
         options["seed"] = 949
-    """
-    elif options["perc_labeled"] == 0.3:
-        options["seed"] = 1312
-    elif options["perc_labeled"] == 0.4:
-        options["seed"] = 5647
-    """
-        
-    print(options["seed"])    
+    elif options["perc_labeled"] == 0.05:
+        options["seed"] = 640
+
+    #with open("/data/anomaly-marine-detection/data/splits/seed.txt", "a") as myfile:
+    #    myfile.write(str(options["seed"]) + "\n")
+    #print(options["seed"])    
     
     options["batch"] = int(options["batch"])
 
