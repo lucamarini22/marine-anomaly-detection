@@ -160,6 +160,7 @@ def train_step_semi_supervised_separate_batches(
     # learn to interpolate when part of the image is missing.
     # It is only an augmentation on the inputs.
     randaugment.use_cutout(False)
+    randaugment.not_use_change_intensity_augs(True)
     # Applies strong augmentation to pseudo label map
     tmp = strong_aug_on_tensor(
         logits_u_w,
@@ -184,7 +185,7 @@ def train_step_semi_supervised_separate_batches(
     logits_u_s = torch.from_numpy(logits_u_s)
     logits_u_s = logits_u_s.to(device)
     # Applies softmax
-    pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
+    pseudo_label = torch.softmax(logits_u_w.detach(), dim=classes_channel_idx)
     # target_u is the segmentation map containing the idx of the
     # class having the highest probability (for all pixels and for
     # all images in the batch)
@@ -195,7 +196,7 @@ def train_step_semi_supervised_separate_batches(
     # Mask to ignore all padding pixels
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
     # Merge the two masks
-    mask[padding_mask] = 0
+    mask[padding_mask] = 0.0
     
     logits_u_s.requires_grad = True
     # Unsupervised loss
@@ -300,6 +301,7 @@ def train_step_semi_supervised_one_batch(
     # learn to interpolate when part of the image is missing.
     # It is only an augmentation on the inputs.
     randaugment.use_cutout(False)
+    randaugment.not_use_change_intensity_augs(True)
     # Applies strong augmentation to pseudo label map
     tmp = strong_aug_on_tensor(
         logits_u_w,
@@ -324,7 +326,7 @@ def train_step_semi_supervised_one_batch(
     logits_u_s = torch.from_numpy(logits_u_s)
     logits_u_s = logits_u_s.to(device)
     # Applies softmax
-    pseudo_label = torch.softmax(logits_u_w.detach(), dim=-1)
+    pseudo_label = torch.softmax(logits_u_w.detach(), dim=classes_channel_idx)
     # target_u is the segmentation map containing the idx of the
     # class having the highest probability (for all pixels and for
     # all images in the batch)
@@ -335,7 +337,7 @@ def train_step_semi_supervised_one_batch(
     # Mask to ignore all padding pixels
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
     # Merges threshold mask and padding mask 
-    mask[padding_mask] = 0
+    mask[padding_mask] = 0.0
     # Ignores pixels that are labeled when computing the unsupervised loss 
     unlabeled_pixels_mask = unlabeled_pixels_mask.float()
     # Merges labeled pixels mask and threshold + padding mask
