@@ -210,7 +210,7 @@ def train_step_semi_supervised_separate_batches(
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
     if (loss_u).sum() == 0:
-        Lu = 0.0
+        Lu = torch.tensor(0.0)
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
