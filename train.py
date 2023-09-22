@@ -405,28 +405,33 @@ def main(options, wandb_logger):
             log_epoch_init(epoch, logger_std_out)
 
             training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
             training_batches = 0
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                loss, training_loss = train_step_semi_supervised_separate_batches(
-                    labeled_train_loader,
-                    unlabeled_train_loader,
-                    labeled_iter,
-                    unlabeled_iter,
-                    criterion,
-                    criterion_unsup,
-                    training_loss,
-                    model,
-                    optimizer,
-                    device,
-                    options["batch"],
-                    classes_channel_idx,
-                    options["threshold"],
-                    options["lambda_coeff"],
-                    logger_ssl_loss,
-                    PADDING_VAL,
-                )
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_separate_batches(
+                        labeled_train_loader,
+                        unlabeled_train_loader,
+                        labeled_iter,
+                        unlabeled_iter,
+                        criterion,
+                        criterion_unsup,
+                        training_loss,
+                        supervised_component_loss,
+                        unsupervised_component_loss,
+                        model,
+                        optimizer,
+                        device,
+                        options["batch"],
+                        classes_channel_idx,
+                        options["threshold"],
+                        options["lambda_coeff"],
+                        logger_ssl_loss,
+                        PADDING_VAL,
+                    )
                 training_batches += options["batch"]
                 # Write running loss
                 tb_writer.add_scalar(
@@ -521,7 +526,9 @@ def main(options, wandb_logger):
                         val_loss, 
                         min_val_loss_among_epochs, 
                         epoch,
-                        epoch_min_val_loss
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
                     )
                     
                     wandb_logger.log_val_mIoU(
