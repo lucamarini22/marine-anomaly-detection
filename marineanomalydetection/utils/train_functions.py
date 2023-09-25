@@ -220,7 +220,22 @@ def train_step_semi_supervised_separate_batches(
     loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
-
+    # Code to visually debug results
+    # Uncomment to visually debug
+    """
+    img_x_viz = img_x[0, 3, :, :]
+    seg_map_viz = seg_map[0, :, :]
+    log_x_viz = logits_x[0, 0, :, :]
+    
+    img_u_w_viz = img_u_w[0, 4, :, :]
+    img_u_s_viz = img_u_s[0, 4, :, :]
+    log_u_w_viz = logits_u_w[0, 0, :, :]
+    log_u_s_viz = logits_u_s[0, 0, :, :]
+    pseudo_map_viz = targets_u[0, :, :]
+    padd_mask_viz = padding_mask[0, :, :]
+    mask_viz = mask[0, :, :]
+    """
+    
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
     supervised_component_loss.append((Lx.data).tolist())
