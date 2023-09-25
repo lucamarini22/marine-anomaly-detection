@@ -188,7 +188,7 @@ def parse_args_train():
     
     
     """For Debugging
-    options["mode"] = "TrainMode.TRAIN_SSL_ONE_TRAIN_SET"
+    options["mode"] = "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS"
     options["lr"] = 2e-4
     options["threshold"] = 0.0
     options["epochs"] = 2000
