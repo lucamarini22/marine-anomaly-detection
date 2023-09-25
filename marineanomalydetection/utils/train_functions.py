@@ -252,6 +252,8 @@ def train_step_semi_supervised_one_batch(
     criterion: nn.Module,
     criterion_unsup: nn.Module,
     training_loss: list[float],
+    supervised_component_loss: list[float],
+    unsupervised_component_loss: list[float],
     model: nn.Module,
     optimizer: torch.optim,
     device: torch.device,
@@ -261,7 +263,7 @@ def train_step_semi_supervised_one_batch(
     lambda_v: float,
     logger_ssl_loss: loguru._logger.Logger,
     padding_val: int = PADDING_VAL,
-) -> tuple[torch.Tensor, list[float]]:
+) -> tuple[torch.Tensor, list[float], list[float], list[float]]:
     """Trains the model for one semi-supervised step.
     It computes:
       - Supervised loss on the labeled pixels of a batch of the training set.
@@ -279,6 +281,10 @@ def train_step_semi_supervised_one_batch(
         criterion_unsup (nn.Module): unsupervised loss.
         training_loss (list[float]): list of supervised training loss of
           batches.
+        supervised_component_loss (list[float]): list of supervised component 
+          of semi-supervised training loss of batches.
+        unsupervised_component_loss (list[float]): list of unsupervised 
+          component of semi-supervised training loss of batches.
         model (nn.Module): model.
         optimizer (torch.optim): optimizer.
         device (torch.device): device.
@@ -291,8 +297,13 @@ def train_step_semi_supervised_one_batch(
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
-        tuple[torch.Tensor, list[float]]: last superivsed loss, list of all
-          supervised losses of the current step.
+        tuple[torch.Tensor, list[float], list[float], list[float]]: 
+          - last semi-superivsed loss, 
+          - list of all semi-supervised losses of the current step,
+          - list of all supervised components of the semi-supervised losses of
+            the current step,
+          - list of all unsupervised components of the semi-supervised losses 
+            of the current step.
     """
     # Initializes RandAugment with n random augmentations.
     # So, every batch will have different random augmentations.
@@ -333,22 +344,19 @@ def train_step_semi_supervised_one_batch(
         out_as_torch_tensor=False
     )
     logits_u_w = tmp
-    logits_u_s = logits_u_s.cpu().detach().numpy()
     # Sets all pixels that were added due to padding to a
     # constant value to later ignore them when computing the loss
-    set_padding_pixels_to_val(
+    logits_u_s = set_padding_pixels_to_val(
         logits_u_w=logits_u_w, 
         logits_u_s=logits_u_s, 
         padding_val=padding_val,
+        device=device,
         constant_val=IGNORE_INDEX
     )
     # Moves new logits to device
     # Weak-aug ones
     logits_u_w = torch.from_numpy(logits_u_w)
     logits_u_w = logits_u_w.to(device)
-    # Strong-aug ones
-    logits_u_s = torch.from_numpy(logits_u_s)
-    logits_u_s = logits_u_s.to(device)
     # Applies softmax
     pseudo_label = torch.softmax(logits_u_w.detach(), dim=classes_channel_idx)
     # target_u is the segmentation map containing the idx of the
@@ -367,12 +375,11 @@ def train_step_semi_supervised_one_batch(
     # Merges labeled pixels mask and threshold + padding mask
     mask = torch.logical_and(mask, unlabeled_pixels_mask).float()
     
-    logits_u_s.requires_grad = True
     # Unsupervised loss
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
     if (loss_u).sum() == 0:
-        Lu = 0.0
+        Lu = torch.Tensor(0.0)
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
@@ -382,13 +389,31 @@ def train_step_semi_supervised_one_batch(
     loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
+        
+    # Code to visually debug results
+    # Uncomment to visually debug
+    """
+    img_x_viz = image[0, 3, :, :]
+    seg_map_viz = seg_map[0, :, :]
+    log_x_viz = logits_x[0, 0, :, :]
+    
+    img_u_w_viz = weak_aug_img[0, 4, :, :]
+    img_u_s_viz = img_u_s[0, 4, :, :]
+    log_u_w_viz = logits_u_w[0, 0, :, :]
+    log_u_s_viz = logits_u_s[0, 0, :, :]
+    pseudo_map_viz = targets_u[0, :, :]
+    padd_mask_viz = padding_mask[0, :, :]
+    mask_viz = mask[0, :, :]
+    """
 
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
+    supervised_component_loss.append((Lx.data).tolist())
+    unsupervised_component_loss.append((Lu.data).tolist())
 
     optimizer.step()
 
-    return loss, training_loss
+    return loss, training_loss, supervised_component_loss, unsupervised_component_loss
 
 def eval_step(
     image: torch.Tensor,

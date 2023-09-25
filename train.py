@@ -565,27 +565,32 @@ def main(options, wandb_logger):
         for epoch in range(start, epochs + 1):
             log_epoch_init(epoch, logger_std_out)
             training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
             training_batches = 0
 
             i_board = 0
             for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
-                loss, training_loss = train_step_semi_supervised_one_batch(
-                    image=image,
-                    seg_map=target,
-                    weak_aug_img=weakly_aug_image,
-                    criterion=criterion,
-                    criterion_unsup=criterion_unsup,
-                    training_loss=training_loss,
-                    model=model,
-                    optimizer=optimizer,
-                    device=device,
-                    batch_size=options["batch"],
-                    classes_channel_idx=classes_channel_idx,
-                    threshold=options["threshold"],
-                    lambda_v=options["lambda_coeff"],
-                    logger_ssl_loss=logger_ssl_loss,
-                    padding_val=PADDING_VAL,
-                )
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_one_batch(
+                        image=image,
+                        seg_map=target,
+                        weak_aug_img=weakly_aug_image,
+                        criterion=criterion,
+                        criterion_unsup=criterion_unsup,
+                        training_loss=training_loss,
+                        supervised_component_loss=supervised_component_loss, 
+                        unsupervised_component_loss=unsupervised_component_loss,
+                        model=model,
+                        optimizer=optimizer,
+                        device=device,
+                        batch_size=options["batch"],
+                        classes_channel_idx=classes_channel_idx,
+                        threshold=options["threshold"],
+                        lambda_v=options["lambda_coeff"],
+                        logger_ssl_loss=logger_ssl_loss,
+                        padding_val=PADDING_VAL,
+                    )
                 training_batches += target.shape[0]
                 # Write running loss
                 tb_writer.add_scalar(
@@ -686,7 +691,9 @@ def main(options, wandb_logger):
                         val_loss, 
                         min_val_loss_among_epochs, 
                         epoch,
-                        epoch_min_val_loss
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
                     )
                     
                     wandb_logger.log_val_mIoU(
