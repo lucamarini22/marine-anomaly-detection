@@ -66,7 +66,7 @@ def CutoutAbs(img, v1, v2, **kwarg):
     x1 = int(min(w, x0 + v1))
     y1 = int(min(h, y0 + v2))
 
-    black_color = 0
+    black_color = 0.1
     img = img.clone()
     img[:, y0:y1, x0:x1] = black_color
 
