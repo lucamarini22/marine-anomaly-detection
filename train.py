@@ -137,6 +137,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
@@ -178,6 +179,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True
         )
     else:
         raise Exception("The specified mode option does not exist.")
@@ -222,6 +224,7 @@ def main(options, wandb_logger):
             supervised=False,
             alphas=alphas,
             device=device,
+            use_ce_in_unsup_comp=options["use_ce_in_unsup_component"],
             gamma=options["gamma"],
         )
     # Optimizer
