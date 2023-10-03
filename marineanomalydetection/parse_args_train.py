@@ -59,7 +59,7 @@ def parse_args_train():
     )
     parser.add_argument(
         "--threshold",
-        help=("Confidence threshold for pseudo-labels."),
+        help=("Confidence (probability) threshold for pseudo-labels."),
         type=float,
     )
     parser.add_argument(
@@ -72,13 +72,29 @@ def parse_args_train():
         "--gamma",
         default=2.0,
         type=float,
-        help="Gamma coefficient of the focal loss.",
+        help=("Gamma coefficient of the focal loss of only the supervised "
+              "component of the loss. The unsupervised component of the loss "
+              "has gamma = 0, which correspond to computing the weighted " 
+              "cross-entropy."),
     )
     parser.add_argument(
         "--alphas",
-        default=[0.50, 0.125, 0.125, 0.125, 0.125],
+        default=[1.0, 1.0, 1.0, 1.0, 1.0], # [0.50, 0.125, 0.125, 0.125, 0.125], #
         type=list[float],
         help="Alpha coefficients of the focal loss.",
+    )
+    parser.add_argument(
+        "--use_ce_in_unsup_component",
+        default=True,
+        type=bool,
+        help=("Only to consider when training with semi-supervised learning. "
+        "True to use the Cross Entropy loss in the unsupervised component "
+        "of the loss. False to use the Focal loss. The Focal loss is not "
+        "ideal for the unsupervised component when used with a high "
+        "probability threshold (--threshold) because the Focal loss gives "
+        "more importance to predictions with a low probability, which are "
+        "ignored when having a high confidence (probability) threshold."
+        ),
     )
     # Training hyperparameters
     parser.add_argument(
@@ -188,16 +204,16 @@ def parse_args_train():
     
     
     """For Debugging
-    options["mode"] = "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS"
+    options["mode"] = "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS" #TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_TWO_TRAIN_SETS" # TRAIN_SSL_ONE_TRAIN_SET" #
     options["lr"] = 2e-4
     options["threshold"] = 0.0
     options["epochs"] = 2000
     options["batch"] = 5
     options["seed"] = random.randint(0, 1000)
     options["reduce_lr_on_plateau"] = 0
-    options["lambda_coeff"] = 1
+    options["lambda_coeff"] = 1.0
     options["mu"] = 5
-    options["perc_labeled"] = 0.50
+    options["perc_labeled"] = 0.1
     """
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
