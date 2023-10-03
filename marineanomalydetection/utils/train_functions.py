@@ -63,6 +63,18 @@ def train_step_supervised(
     # So, that's why the backward pass is skipped (this is the supervised loss)
     if loss.grad_fn is not None:
         loss.backward()
+        
+    create_vars_to_visually_debug_imgs_and_preds(
+        visual_debug=False,
+        supervised=True,
+        img_x=image, 
+        seg_map=target,
+        logits_x=logits,
+        idx_batch=0,
+        idx_band=3,
+        idx_class=0,
+    )
+    
     training_loss.append((loss.data * target.shape[0]).tolist())
     optimizer.step()
     return loss, training_loss
@@ -220,22 +232,25 @@ def train_step_semi_supervised_separate_batches(
     loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
-    # Code to visually debug results
-    # Uncomment to visually debug
-    """
-    img_x_viz = img_x[0, 3, :, :]
-    seg_map_viz = seg_map[0, :, :]
-    log_x_viz = logits_x[0, 0, :, :]
     
-    img_u_w_viz = img_u_w[0, 4, :, :]
-    img_u_s_viz = img_u_s[0, 4, :, :]
-    log_u_w_viz = logits_u_w[0, 0, :, :]
-    log_u_s_viz = logits_u_s[0, 0, :, :]
-    pseudo_map_viz = targets_u[0, :, :]
-    padd_mask_viz = padding_mask[0, :, :]
-    mask_viz = mask[0, :, :]
-    """
-    
+    create_vars_to_visually_debug_imgs_and_preds(
+        visual_debug=False,
+        supervised=False,
+        img_x=img_x, 
+        seg_map=seg_map,
+        logits_x=logits_x,
+        idx_batch=0,
+        idx_band=3,
+        idx_class=0,
+        img_u_w=img_u_w,
+        img_u_s=img_u_s,
+        logits_u_w=logits_u_w,
+        logits_u_s=logits_u_s,
+        pseudo_map=targets_u,
+        padd_mask=padding_mask,
+        final_mask=mask,
+    )
+
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
     supervised_component_loss.append((Lx.data).tolist())
@@ -379,7 +394,7 @@ def train_step_semi_supervised_one_batch(
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
     if (loss_u).sum() == 0:
-        Lu = torch.Tensor(0.0)
+        Lu = torch.tensor(0.0)
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
@@ -389,22 +404,24 @@ def train_step_semi_supervised_one_batch(
     loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
-        
-    # Code to visually debug results
-    # Uncomment to visually debug
-    """
-    img_x_viz = image[0, 3, :, :]
-    seg_map_viz = seg_map[0, :, :]
-    log_x_viz = logits_x[0, 0, :, :]
     
-    img_u_w_viz = weak_aug_img[0, 4, :, :]
-    img_u_s_viz = img_u_s[0, 4, :, :]
-    log_u_w_viz = logits_u_w[0, 0, :, :]
-    log_u_s_viz = logits_u_s[0, 0, :, :]
-    pseudo_map_viz = targets_u[0, :, :]
-    padd_mask_viz = padding_mask[0, :, :]
-    mask_viz = mask[0, :, :]
-    """
+    create_vars_to_visually_debug_imgs_and_preds(
+        visual_debug=False,
+        supervised=False,
+        img_x=image, 
+        seg_map=seg_map,
+        logits_x=logits_x,
+        idx_batch=0,
+        idx_band=3,
+        idx_class=0,
+        img_u_w=weak_aug_img,
+        img_u_s=img_u_s,
+        logits_u_w=logits_u_w,
+        logits_u_s=logits_u_s,
+        pseudo_map=targets_u,
+        padd_mask=padding_mask,
+        final_mask=mask,
+    )
 
     # training_batches += logits_x.shape[0]  # TODO check
     training_loss.append((loss.data).tolist())
@@ -471,6 +488,7 @@ def get_criterion(
     supervised: bool,
     alphas: list[float],
     device: torch.device,
+    use_ce_in_unsup_comp: bool = True,
     gamma: float = 2.0,
 ) -> nn.Module:
     """Gets the instance to compute the loss.
@@ -480,6 +498,9 @@ def get_criterion(
           False to return unsupervised criterion.
         alphas (list[float]): alpha coefficients of the Focal loss.
         device (torch.device): device.
+        use_ce_in_unsup_comp (bool): Only to consider when 'supervised' is 
+          False. Set it to True to use the Cross Entropy loss in the 
+          unsupervised component of the loss. To False to use the Focal loss.
         gamma (float): gamma coefficient of the Focal loss.
 
     Returns:
@@ -493,6 +514,10 @@ def get_criterion(
             ignore_index=IGNORE_INDEX,
         )
     else:
+        if use_ce_in_unsup_comp:
+            # Cross Entropy corresponds to the Focal loss when the coefficient
+            # gamma = 0
+            gamma = 0
         criterion = FocalLoss(
             alpha=alphas.to(device),
             gamma=gamma,
@@ -819,3 +844,65 @@ def init_max_val_mIoU() -> float:
         float: starting max val mIoU score.
     """
     return 0.0
+
+def create_vars_to_visually_debug_imgs_and_preds(
+    visual_debug: bool,
+    supervised: bool,
+    img_x: torch.Tensor, 
+    seg_map: torch.Tensor,
+    logits_x: torch.Tensor,
+    idx_batch: int,
+    idx_band: int,
+    idx_class: int,
+    img_u_w: torch.Tensor = None,
+    img_u_s: torch.Tensor = None,
+    logits_u_w: torch.Tensor = None,
+    logits_u_s: torch.Tensor = None,
+    pseudo_map: torch.Tensor = None,
+    padd_mask: torch.Tensor = None,
+    final_mask: torch.Tensor = None,
+) -> None:
+    """Creates variables to visually debug images and predictions.
+
+    Args:
+        visual_debug (bool): True to create the variables. False otherwise.
+        supervised (bool): True with fully-supervised training. False with 
+          semi-supervised training.
+        img_x (torch.Tensor): batch of images.
+        seg_map (torch.Tensor): batch of segmentation maps.
+        logits_x (torch.Tensor): batch of predictions of the images.
+        img_u_w (torch.Tensor): batch of weakly-augmented images.
+        img_u_s (torch.Tensor): batch of strongly-augmented images.
+        logits_u_w (torch.Tensor): batch of predictions of weakly-augmented 
+          images.
+        logits_u_s (torch.Tensor): batch of predictions of strongly-augmented 
+          images.
+        pseudo_map (torch.Tensor): pseudo-labels.0
+        padd_mask (torch.Tensor): padding mask (i.e. pixels to be ignored due 
+          to padding when computing the loss using the pseudo-labels).
+        final_mask (torch.Tensor): final mask that ignores both pixels due to 
+          padding and pixels whose probability is less than a threshold when
+          computing the unsupervised component of the semi-supervised loss.
+        idx_batch (int, optional): index of the batch.
+        idx_band (int, optional): index of the band to visualize of the 
+          multispectral image.
+        idx_class (int, optional): index of the predictions of the class to 
+          visualize.
+    """
+    if visual_debug:
+        if supervised:
+            img_x_viz = img_x[idx_batch, idx_band, :, :]
+            seg_map_viz = seg_map[idx_batch, :, :]
+            log_x_viz = logits_x[idx_batch, idx_class, :, :]
+        else:
+            img_x_viz = img_x[idx_batch, idx_band, :, :]
+            seg_map_viz = seg_map[idx_batch, :, :]
+            log_x_viz = logits_x[idx_batch, idx_class, :, :]
+            
+            img_u_w_viz = img_u_w[idx_batch, idx_band, :, :]
+            img_u_s_viz = img_u_s[idx_batch, idx_band, :, :]
+            log_u_w_viz = logits_u_w[idx_batch, idx_class, :, :]
+            log_u_s_viz = logits_u_s[idx_batch, idx_class, :, :]
+            pseudo_map_viz = pseudo_map[idx_batch, :, :]
+            padd_mask_viz = padd_mask[idx_batch, :, :]
+            mask_viz = final_mask[idx_batch, :, :]
