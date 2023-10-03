@@ -81,6 +81,7 @@ def train_step_supervised(
 
 
 def train_step_semi_supervised_separate_batches(
+    only_supervised: bool,
     labeled_train_loader: DataLoader,
     unlabeled_train_loader: DataLoader,
     labeled_iter: Iterator,
@@ -108,6 +109,10 @@ def train_step_semi_supervised_separate_batches(
     patches and their union is the full training data.
 
     Args:
+        only_supervised (bool): True to train only on the supervised commponent
+          of the loss.  This is done to make a fair comparison between a 
+          semi-supervised model and a fully-supervised one. 
+          False to train on both supervised and unsupervised components.
         labeled_train_loader (DataLoader): dataloader for labeled training set.
         unlabeled_train_loader (DataLoader): dataloader for unlabeled training
           set.
@@ -229,7 +234,10 @@ def train_step_semi_supervised_separate_batches(
     log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss
-    loss = Lx + lambda_v * Lu
+    if only_supervised:
+        loss = Lx
+    else:
+        loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
     
@@ -261,6 +269,7 @@ def train_step_semi_supervised_separate_batches(
     return loss, training_loss, supervised_component_loss, unsupervised_component_loss
 
 def train_step_semi_supervised_one_batch(
+    only_supervised: bool,
     image: torch.Tensor,
     seg_map: torch.Tensor,
     weak_aug_img: torch.Tensor,
@@ -289,6 +298,10 @@ def train_step_semi_supervised_one_batch(
       - Unlabeled pixels contribute only to the unsupervised loss.
 
     Args:
+        only_supervised (bool): True to train only on the supervised commponent
+          of the loss.  This is done to make a fair comparison between a 
+          semi-supervised model and a fully-supervised one. 
+          False to train on both supervised and unsupervised components.
         image (torch.Tensor): image.
         seg_map (torch.Tensor): segmentation map.
         weak_aug_img (torch.Tensor): weakly-augmented image.
@@ -401,7 +414,10 @@ def train_step_semi_supervised_one_batch(
     log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss
-    loss = Lx + lambda_v * Lu
+    if only_supervised:
+        loss = Lx
+    else:
+        loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
     

@@ -28,19 +28,37 @@ def parse_args_train():
         choices=list(CategoryAggregation),
         default=CategoryAggregation.MULTI,
         type=str,
-        help="Aggregate classes into:\
-            multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud);\
-            binary (Marine Debris and Other); \
-            eleven (Marine Debris, Dense Sargassum, Sparse Sargassum, \
-                Natural Organic Material, Ship, Clouds, Marine Water, \
-                Sediment-Laden Water, Foam, Turbid Water, Shallow Water); \
-            None (keep the original 15 classes)",
+        help=(
+            "Aggregate classes into: "
+            "multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud); "
+            "binary (Marine Debris and Other); "
+            "eleven (Marine Debris, Dense Sargassum, Sparse Sargassum, "
+                "Natural Organic Material, Ship, Clouds, Marine Water, "
+                "Sediment-Laden Water, Foam, Turbid Water, Shallow Water); " 
+            "None (keep the original 15 classes)"
+        ),
     )
     # Training mode
     parser.add_argument(
         "--mode",
         help="Mode",
     )
+    
+    parser.add_argument(
+        "--only_supervised",
+        help=(
+            "Set to True to train only on the supervised commponent when "
+            "using a semi-supervised learnig scheme. This is done to make a "
+            "fair comparison between a semi-supervised model and a " 
+            "fully-supervised one. Only effective when --mode is one of the "
+            "following: "
+            "  - TrainMode.TRAIN_SSL_TWO_TRAIN_SETS"
+            "  - TrainMode.TRAIN_SSL_ONE_TRAIN_SET"
+        ),
+        type=bool,
+        default=False
+    )
+    
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",

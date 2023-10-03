@@ -416,6 +416,7 @@ def main(options, wandb_logger):
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
                 loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
                     train_step_semi_supervised_separate_batches(
+                        options["only_supervised"],
                         labeled_train_loader,
                         unlabeled_train_loader,
                         labeled_iter,
@@ -576,6 +577,7 @@ def main(options, wandb_logger):
             for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
                 loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
                     train_step_semi_supervised_one_batch(
+                        only_supervised=options["only_supervised"],
                         image=image,
                         seg_map=target,
                         weak_aug_img=weakly_aug_image,
