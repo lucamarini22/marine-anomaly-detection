@@ -11,6 +11,7 @@ import albumentations as A
 from imgaug import augmenters as iaaa
 
 from marineanomalydetection.utils.constants import MARIDA_SIZE_X, PADDING_VAL
+from marineanomalydetection.imageprocessing.normalize_img import normalize_img
 
 
 logger = logging.getLogger(__name__)
@@ -65,9 +66,11 @@ def CutoutAbs(img, v1, v2, **kwarg):
     x1 = int(min(w, x0 + v1))
     y1 = int(min(h, y0 + v2))
 
-    black_color = 0
+    black_color = 0.0
     img = img.clone()
     img[:, y0:y1, x0:x1] = black_color
+    
+    #a = img[3, :, :]
 
     return img
 
@@ -104,8 +107,10 @@ def Posterize(img, v):
 def Rotate(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = A.rotate(img, v, border_mode=0, value=PADDING_VAL)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -113,17 +118,24 @@ def Rotate(img, v):
 def Sharpness(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = A.Sharpen(alpha=v, always_apply=True)(image=img)["image"]
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
-    return aug
+    min_aug, max_aug = aug.min(), aug.max()
+    norm_aug = normalize_img(aug, min_aug, max_aug)
+    #c = np.moveaxis(aug, 0, -1)[:, :, 0]
+    return norm_aug
 
 
 def ShearX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = iaaa.ShearX(shear=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -131,8 +143,10 @@ def ShearX(img, v):
 def ShearY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = iaaa.ShearY(shear=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -140,8 +154,10 @@ def ShearY(img, v):
 def Solarize(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    v = _int_parameter(v)
+    #a = img[:, :, 3]
+    v = _truncate_float(v)
     aug = A.solarize(img, v)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -149,8 +165,10 @@ def Solarize(img, v):
 def TranslateX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = iaaa.TranslateX(percent=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -158,8 +176,10 @@ def TranslateX(img, v):
 def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = iaaa.TranslateY(percent=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -223,7 +243,7 @@ def _truncate_float(v: float, num_decimals: int = 2) -> float:
     Returns:
         float: Truncated number.
     """
-    return round(v, 2)
+    return round(v, num_decimals)
 
 
 def _fixmatch_augment_pool():
@@ -236,11 +256,11 @@ def _fixmatch_augment_pool():
         # (Equalize, None, None), # too drastic changes
         (Identity, None, None),
         # (Posterize, 4, 6), # no
-        (Rotate, 0, 30),  # ok
+        (Rotate, 5, 30),  # ok
         (Sharpness, 0.2, 0.5),  # ok
         (ShearX, 5, 30),  # ok
         (ShearY, 5, 30),  # ok
-        (Solarize, 0, 256),  # ok
+        (Solarize, 0.01, 0.99),  # ok
         (TranslateX, 0.1, 0.2),  # ok
         (TranslateY, 0.1, 0.2),  # ok
     ]
@@ -264,7 +284,8 @@ class RandAugmentMC(object):
             np.random.randint(1, self._m) for _ in range(len(self._ops))
         ]
         self._cutout = True
-        # List of operations that can invert the value
+        self._not_use_change_intensity_augs = False
+        # List of augmentations that can invert the value
         self._ops_can_invert_value = [
             "Rotate",
             "ShearX",
@@ -272,6 +293,12 @@ class RandAugmentMC(object):
             "TranslateX",
             "TranslateY",
         ]
+        # List of augmentations that change pixel intensity
+        self._ops_change_pixel_intensity = [
+            "Sharpness",
+            "Solarize"
+        ]
+        
         self._probs_invert_value = [
             random.uniform(0, 1) for _ in range(len(self._ops))
         ]
@@ -283,28 +310,55 @@ class RandAugmentMC(object):
             use (bool): True to apply CutOut. False otherwise.
         """
         self._cutout = use
+    
+    def not_use_change_intensity_augs(self, use: bool):
+        """Sets if augmentations that can change the intensity of pixels have
+        to be used.
+
+        Args:
+            use (bool): True to possibly apply augmentations that can change 
+              the intensity of pixels. False otherwise.
+        """
+        self._not_use_change_intensity_augs = use
 
     def __call__(self, img):
         idx_op = 0
 
         for op, min_v, max_v in self._ops:
-            v = self._values_op[idx_op]
-            if min_v is not None and max_v is not None:
-                # Interpolates value v from interval [self.min_m, self.m] to
-                # interval [min_v, max_v].
-                v = np.interp(v, [self._min_m, self._m], [min_v, max_v])
-                self._assert_value_in_interval(v, min_v, max_v)
-                if (
-                    op.__name__ in self._ops_can_invert_value
-                    and self._probs_invert_value[idx_op] < 0.5
-                ):
-                    # Inverts the sign of value v if the operation supports
-                    # negative values and if prob of inverting the sign is < 0.5.
-                    v = -v
-            img_np = img.cpu().detach().numpy()
-            # Applies the selected augmentation.
-            img_np = op(img_np, v=v)
-            img = torch.from_numpy(img_np)
+            if (
+                op.__name__ in self._ops_change_pixel_intensity
+                and self._not_use_change_intensity_augs
+            ):
+                # Do not apply augmentations that change the intensities of 
+                # the pixels. This is used to not apply these augmentations 
+                # when augmenting pseudo-labels
+                pass
+            elif idx_op > 0 and op.__name__ in self._ops_change_pixel_intensity:
+                # This if statement makes sure that the augmentations that 
+                # change the intensities of the pixels are applied only as 
+                # first augmentation because otherwise they would change the
+                # values of the padding pixels added by geometric 
+                # augmentations, which should not change because the model 
+                # won't be able to ignore them anymore
+                pass
+            else:
+                v = self._values_op[idx_op]
+                if min_v is not None and max_v is not None:
+                    # Interpolates value v from interval [self.min_m, self.m] to
+                    # interval [min_v, max_v].
+                    v = np.interp(v, [self._min_m, self._m], [min_v, max_v])
+                    self._assert_value_in_interval(v, min_v, max_v)
+                    if (
+                        op.__name__ in self._ops_can_invert_value
+                        and self._probs_invert_value[idx_op] < 0.5
+                    ):
+                        # Inverts the sign of value v if the operation supports
+                        # negative values and if prob of inverting the sign is < 0.5.
+                        v = -v
+                img_np = img.cpu().detach().numpy()
+                # Applies the selected augmentation.
+                img_np = op(img_np, v=v)
+                img = torch.from_numpy(img_np)
 
             idx_op += 1
         if self._cutout:
