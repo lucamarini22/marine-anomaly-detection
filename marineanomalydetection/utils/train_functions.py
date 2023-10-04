@@ -717,7 +717,7 @@ def check_checkpoint_path_exist(checkpoint_path: str):
     """
     if not os.path.isdir(checkpoint_path):
         raise Exception(
-            f"The checkpoint directory {checkpoint_path} does not exist"
+            f"The checkpoint directory {checkpoint_path} does not exist. Please create it."
         )
 
 
