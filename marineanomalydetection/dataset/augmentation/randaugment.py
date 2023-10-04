@@ -66,9 +66,11 @@ def CutoutAbs(img, v1, v2, **kwarg):
     x1 = int(min(w, x0 + v1))
     y1 = int(min(h, y0 + v2))
 
-    black_color = 0
+    black_color = 0.0
     img = img.clone()
     img[:, y0:y1, x0:x1] = black_color
+    
+    #a = img[3, :, :]
 
     return img
 
@@ -105,10 +107,10 @@ def Posterize(img, v):
 def Rotate(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    #a = img[:, :, 0]
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = A.rotate(img, v, border_mode=0, value=PADDING_VAL)
-    #b = aug[:, :, 0]
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -116,10 +118,10 @@ def Rotate(img, v):
 def Sharpness(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    #a = img[:, :, 0]
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = A.Sharpen(alpha=v, always_apply=True)(image=img)["image"]
-    #b = aug[:, :, 0]
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     min_aug, max_aug = aug.min(), aug.max()
     norm_aug = normalize_img(aug, min_aug, max_aug)
@@ -130,10 +132,10 @@ def Sharpness(img, v):
 def ShearX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    #a = img[:, :, 0]
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = iaaa.ShearX(shear=v, cval=PADDING_VAL)(image=img)
-    #b = aug[:, :, 0]
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -141,8 +143,10 @@ def ShearX(img, v):
 def ShearY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _int_parameter(v)
     aug = iaaa.ShearY(shear=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -150,10 +154,10 @@ def ShearY(img, v):
 def Solarize(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
-    #a = img[:, :, 0]
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = A.solarize(img, v)
-    #b = aug[:, :, 0]
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -161,8 +165,10 @@ def Solarize(img, v):
 def TranslateX(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = iaaa.TranslateX(percent=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
@@ -170,8 +176,10 @@ def TranslateX(img, v):
 def TranslateY(img, v):
     prev_shape = img.shape
     img = _change_shape_for_augmentation(img)
+    #a = img[:, :, 3]
     v = _truncate_float(v)
     aug = iaaa.TranslateY(percent=v, cval=PADDING_VAL)(image=img)
+    #b = aug[:, :, 3]
     aug = _change_shape_for_dataloader(prev_shape, img.shape, aug)
     return aug
 
