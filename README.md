@@ -71,17 +71,18 @@ The `--patches_path` and `--splits_path` arguments in `marineanomalydetection/pa
 ## Usage
 
 ### Training
-1. Create a [Weight and Biases](https://wandb.ai) account to keep track of the experiments.
+1. Create a [Weight and Biases](https://wandb.ai) account to keep track of the runs.
 2. Set the values of the hyperparameters in this [config.yaml](https://github.com/lucamarini22/marine-anomaly-detection/blob/main/config.yaml) file.
-3. Enter in the main folder
+3. Enter the main folder.
    ```sh
    cd /marine-anomaly-detection/
    ```
 4. Create a [Sweep](https://docs.wandb.ai/guides/sweeps) to keep track of your training runs.
    ```
-   wandb sweep --project <project-name> config.yaml
+   wandb sweep --project <project-name> <config-file.yaml>
    ```
-5. Start an agent and execute $NUM training runs.
+5. Specify all the values of the arguments in `marineanomalydetection/parse_args_train.py` you did not specify in `<config-file.yaml>`.
+6. Start an agent and execute $NUM training runs.
    ```
    wandb agent --count $NUM <your-entity/sweep-demo-cli/sweepID>
    ```
