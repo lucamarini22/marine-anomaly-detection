@@ -23,7 +23,7 @@ parameters:
   lambda_coeff:
     values: [1] #[0.25, 1]
   perc_labeled:
-    values: [0.6, 0.7, 0.8, 0.9] # perc_labeled = 0.9 only works with mu = 5, mu= 9 gives error
+    values: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] # perc_labeled = 0.9 only works with mu = 5, mu= 9 gives error
   #seed:
   #  min: 0
   #  max: 1000
