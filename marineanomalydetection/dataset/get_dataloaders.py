@@ -36,6 +36,7 @@ def get_dataloaders_supervised(
     persistent_workers: bool,
     seed_worker_fn: Callable,
     generator: torch.Generator,
+    drop_last: bool = True,
 ) -> tuple[DataLoader, DataLoader]:
     """Gets the dataloaders for supervised training.
 
@@ -66,6 +67,10 @@ def get_dataloaders_supervised(
         generator (torch.Generator): If not ``None``, this RNG will be used
           by RandomSampler to generate random indexes and multiprocessing to
           generate `base_seed` for workers.
+        drop_last (bool, optional): set to True to drop the last incomplete
+          batch, if the dataset size is not divisible by the batch size.
+          If False and the size of dataset is not divisible by the batch size,
+          then the last batch will be smaller. Defaults to True.
 
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
@@ -97,6 +102,7 @@ def get_dataloaders_supervised(
         persistent_workers=persistent_workers,
         worker_init_fn=seed_worker_fn,
         generator=generator,
+        drop_last=drop_last
     )
 
     val_loader = DataLoader(
@@ -164,6 +170,10 @@ def get_dataloaders_ssl_single_train_set(
         generator (torch.Generator): If not ``None``, this RNG will be used
           by RandomSampler to generate random indexes and multiprocessing to
           generate `base_seed` for workers.
+        drop_last (bool, optional): set to True to drop the last incomplete
+          batch, if the dataset size is not divisible by the batch size.
+          If False and the size of dataset is not divisible by the batch size,
+          then the last batch will be smaller. Defaults to True.
 
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.

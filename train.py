@@ -137,6 +137,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
@@ -178,6 +179,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True
         )
     else:
         raise Exception("The specified mode option does not exist.")
@@ -222,6 +224,7 @@ def main(options, wandb_logger):
             supervised=False,
             alphas=alphas,
             device=device,
+            use_ce_in_unsup_comp=options["use_ce_in_unsup_component"],
             gamma=options["gamma"],
         )
     # Optimizer
@@ -413,6 +416,7 @@ def main(options, wandb_logger):
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
                 loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
                     train_step_semi_supervised_separate_batches(
+                        options["only_supervised"],
                         labeled_train_loader,
                         unlabeled_train_loader,
                         labeled_iter,
@@ -573,6 +577,7 @@ def main(options, wandb_logger):
             for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
                 loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
                     train_step_semi_supervised_one_batch(
+                        only_supervised=options["only_supervised"],
                         image=image,
                         seg_map=target,
                         weak_aug_img=weakly_aug_image,

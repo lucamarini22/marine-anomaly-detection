@@ -1,8 +1,8 @@
 program: train.py
-method: random
+method: grid
 metric:
-  goal: minimize
-  name: min_val_loss_among_epochs
+  goal: maximize
+  name: Max Val mIou
 parameters:
   # See the description of the following hyperparameters here: 
   # https://github.com/lucamarini22/anomaly-marine-detection/blob/main/marineanomalydetection/parse_args_train.py 
@@ -16,9 +16,6 @@ parameters:
     values: [5]
   reduce_lr_on_plateau:
     values: [0]
-
-  #perc_labeled:
-  #  values: [0.6, 0.7, 0.8, 0.9]
   seed:
     min: 0
     max: 1000
