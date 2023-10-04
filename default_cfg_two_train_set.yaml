@@ -1,0 +1,29 @@
+program: train.py
+method: random
+metric:
+  goal: minimize
+  name: min_val_loss_among_epochs
+parameters:
+  # See the description of the following hyperparameters here: 
+  # https://github.com/lucamarini22/anomaly-marine-detection/blob/main/marineanomalydetection/parse_args_train.py 
+  mode:
+    value: TrainMode.TRAIN_SSL_TWO_TRAIN_SETS
+  lr:
+    values: [0.0002, 0.001, 0.01] #, 0.1]
+  threshold:
+    values: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  epochs:
+    value: 2000
+  batch:
+    values: [5, 10]
+  mu:
+    values: [5, 9]
+  reduce_lr_on_plateau:
+    values: [0, 1]
+  lambda_coeff:
+    values: [1] #[0.25, 1]
+  perc_labeled:
+    values: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] # perc_labeled = 0.9 only works with mu = 5, mu= 9 gives error
+  #seed:
+  #  min: 0
+  #  max: 1000

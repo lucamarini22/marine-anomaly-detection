@@ -15,7 +15,7 @@ from marineanomalydetection.dataset.categoryaggregation import (
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 from marineanomalydetection.imageprocessing.normalize_img import normalize_img
 from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
-from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
+from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary, aggregate_to_11_classes
 from marineanomalydetection.dataset.get_rois import get_rois
 from marineanomalydetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
 
@@ -173,7 +173,6 @@ class MarineAnomalyDataset(Dataset, ABC):
         patch = load_patch(patch_path)
         min_patch, max_patch = patch.min(), patch.max()
         patch = normalize_img(patch, min_patch, max_patch)
-        nan_mask = np.isnan(patch)
         list_patches.append(patch)
 
     
@@ -223,8 +222,11 @@ class MarineAnomalyDataset(Dataset, ABC):
             # coarse-grained classes: 
             # Other, Marine Debris
             seg_map = aggregate_to_binary(seg_map)
+        elif aggregate_classes == CategoryAggregation.ELEVEN:
+            seg_map = aggregate_to_11_classes(seg_map)
         else:
-            raise Exception("Not Implemented Category Aggregation value.")
+            # Use 15 classes
+            pass
         
         if perc_labeled is not None:
             num_pixels_dict = update_count_labeled_pixels(

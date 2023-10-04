@@ -3,8 +3,10 @@ import numpy as np
 from marineanomalydetection.utils.assets import (
     cat_mapping_binary_inv,
     cat_mapping_multi_inv,
+    cat_mapping_11_classes_inv,
     num_labeled_pixels_train_binary_no_nan_patch,
-    num_labeled_pixels_train_multi_no_nan_patch
+    num_labeled_pixels_train_multi_no_nan_patch,
+    num_labeled_pixels_train_eleven_no_nan_patch
 )
 from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
@@ -47,6 +49,9 @@ def update_count_labeled_pixels(
     elif aggregate_classes == CategoryAggregation.BINARY:
         cat_mapping_inv = cat_mapping_binary_inv
         num_pixels_dict = num_labeled_pixels_train_binary_no_nan_patch
+    elif aggregate_classes == CategoryAggregation.ELEVEN:
+        cat_mapping_inv = cat_mapping_11_classes_inv
+        num_pixels_dict = num_labeled_pixels_train_eleven_no_nan_patch
     else:
         raise Exception("Not Implemented Category Aggregation value.")
     
