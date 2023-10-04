@@ -9,19 +9,19 @@ parameters:
   lr:
     values: [0.0002, 0.001, 0.01, 0.1]
   threshold:
-    values: [0.6, 0.7, 0.8, 0.9]
+    values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
   epochs:
-    value: 900
+    value: 3000
   batch:
-    values: [5, 10]
+    values: [2, 8, 16, 32]
   seed:
     min: 0
     max: 1000
-  mu:
-    values: [5, 9]
+  #mu:
+  #  values: [5, 9]
   reduce_lr_on_plateau:
     values: [0, 1]
   lambda_coeff:
     values: [1] #[0.25, 1]
-  perc_labeled:
-    values: [0.5]
+  #perc_labeled:
+  #  values: [0.5]
