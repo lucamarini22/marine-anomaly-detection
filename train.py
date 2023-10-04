@@ -137,6 +137,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True,
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
@@ -178,6 +179,7 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True
         )
     else:
         raise Exception("The specified mode option does not exist.")
@@ -222,6 +224,7 @@ def main(options, wandb_logger):
             supervised=False,
             alphas=alphas,
             device=device,
+            use_ce_in_unsup_comp=options["use_ce_in_unsup_component"],
             gamma=options["gamma"],
         )
     # Optimizer
@@ -405,28 +408,34 @@ def main(options, wandb_logger):
             log_epoch_init(epoch, logger_std_out)
 
             training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
             training_batches = 0
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                loss, training_loss = train_step_semi_supervised_separate_batches(
-                    labeled_train_loader,
-                    unlabeled_train_loader,
-                    labeled_iter,
-                    unlabeled_iter,
-                    criterion,
-                    criterion_unsup,
-                    training_loss,
-                    model,
-                    optimizer,
-                    device,
-                    options["batch"],
-                    classes_channel_idx,
-                    options["threshold"],
-                    options["lambda_coeff"],
-                    logger_ssl_loss,
-                    PADDING_VAL,
-                )
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_separate_batches(
+                        options["only_supervised"],
+                        labeled_train_loader,
+                        unlabeled_train_loader,
+                        labeled_iter,
+                        unlabeled_iter,
+                        criterion,
+                        criterion_unsup,
+                        training_loss,
+                        supervised_component_loss,
+                        unsupervised_component_loss,
+                        model,
+                        optimizer,
+                        device,
+                        options["batch"],
+                        classes_channel_idx,
+                        options["threshold"],
+                        options["lambda_coeff"],
+                        logger_ssl_loss,
+                        PADDING_VAL,
+                    )
                 training_batches += options["batch"]
                 # Write running loss
                 tb_writer.add_scalar(
@@ -521,7 +530,9 @@ def main(options, wandb_logger):
                         val_loss, 
                         min_val_loss_among_epochs, 
                         epoch,
-                        epoch_min_val_loss
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
                     )
                     
                     wandb_logger.log_val_mIoU(
@@ -558,27 +569,33 @@ def main(options, wandb_logger):
         for epoch in range(start, epochs + 1):
             log_epoch_init(epoch, logger_std_out)
             training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
             training_batches = 0
 
             i_board = 0
             for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
-                loss, training_loss = train_step_semi_supervised_one_batch(
-                    image=image,
-                    seg_map=target,
-                    weak_aug_img=weakly_aug_image,
-                    criterion=criterion,
-                    criterion_unsup=criterion_unsup,
-                    training_loss=training_loss,
-                    model=model,
-                    optimizer=optimizer,
-                    device=device,
-                    batch_size=options["batch"],
-                    classes_channel_idx=classes_channel_idx,
-                    threshold=options["threshold"],
-                    lambda_v=options["lambda_coeff"],
-                    logger_ssl_loss=logger_ssl_loss,
-                    padding_val=PADDING_VAL,
-                )
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_one_batch(
+                        only_supervised=options["only_supervised"],
+                        image=image,
+                        seg_map=target,
+                        weak_aug_img=weakly_aug_image,
+                        criterion=criterion,
+                        criterion_unsup=criterion_unsup,
+                        training_loss=training_loss,
+                        supervised_component_loss=supervised_component_loss, 
+                        unsupervised_component_loss=unsupervised_component_loss,
+                        model=model,
+                        optimizer=optimizer,
+                        device=device,
+                        batch_size=options["batch"],
+                        classes_channel_idx=classes_channel_idx,
+                        threshold=options["threshold"],
+                        lambda_v=options["lambda_coeff"],
+                        logger_ssl_loss=logger_ssl_loss,
+                        padding_val=PADDING_VAL,
+                    )
                 training_batches += target.shape[0]
                 # Write running loss
                 tb_writer.add_scalar(
@@ -679,7 +696,9 @@ def main(options, wandb_logger):
                         val_loss, 
                         min_val_loss_among_epochs, 
                         epoch,
-                        epoch_min_val_loss
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
                     )
                     
                     wandb_logger.log_val_mIoU(
