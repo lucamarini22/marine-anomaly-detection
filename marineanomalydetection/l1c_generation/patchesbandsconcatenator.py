@@ -128,4 +128,4 @@ class PatchesBandsConcatenator:
             self._init_patch(patch_name)
             self.patches_dict[patch_name][:, :, band_cop_hub_idx] = band_img
         else:
-            logger.info(patch_name)
+            logger.info(f"Patch {patch_name} had wrong size. Shape was {band_img.shape}, expected {(MARIDA_SIZE_X, MARIDA_SIZE_Y)}.")
