@@ -23,7 +23,7 @@ class MADLabeledOrLabeledAndUnlabeled(MarineAnomalyDataset, ABC):
             self.ROIs, desc="Load labeled " + self.mode.name + " set to memory"
         ):
             # Gets patch path and its semantic segmentation map path
-            patch_path, seg_map_path = get_patch_tokens(self.path, roi)
+            patch_path, seg_map_path = get_patch_tokens(self.patches_path, roi)
             # Loads semantic segmentation map
             num_pixels_dict = self._load_and_process_and_add_seg_map_to_dataset(
                 seg_map_path,

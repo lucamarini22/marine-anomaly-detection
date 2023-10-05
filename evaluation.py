@@ -20,6 +20,7 @@ from marineanomalydetection.utils.metrics import Evaluation, confusion_matrix
 from marineanomalydetection.utils.assets import (
     labels_binary,
     labels_multi,
+    labels_11_classes
 )
 from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
@@ -29,16 +30,24 @@ from marineanomalydetection.utils.seed import set_seed
 
 root_path = dirname(os.path.abspath(__file__))
 
-logging.basicConfig(
-    filename=os.path.join(root_path, "logs", "evaluating_unet.log"),
-    filemode="a",
-    level=logging.INFO,
-    format="%(name)s - %(levelname)s - %(message)s",
-)
-logging.info("*" * 10)
-
 
 def main(options):
+    
+    if not os.path.isdir(options["log_folder"]):
+        raise Exception(f"The log folder '{options['log_folder']}' does not exist. Please create it.")
+    
+    logging.basicConfig(
+        filename=os.path.join(
+            root_path, 
+            options["log_folder"], 
+            options["log_file"]
+        ),
+        filemode="a",
+        level=logging.INFO,
+        format="%(name)s - %(levelname)s - %(message)s",
+    )
+    logging.info("*" * 10)
+    
     set_seed(options["seed"])
     # Transformations
 
@@ -52,7 +61,8 @@ def main(options):
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
-        path=options["dataset_path"],
+        patches_path=options["patches_path"],
+        splits_path=options["splits_path"],
     )
 
     test_loader = DataLoader(
@@ -67,10 +77,12 @@ def main(options):
         # Keep only Marine Debris and Others classes
         labels = labels_binary
         output_channels = len(labels_binary)
-    else:
-        raise Exception(
-            "The aggregated_classes option should be binary or multi"
-        )
+    elif options["aggregate_classes"] == CategoryAggregation.ELEVEN:
+        # Keep Marine Debris, Dense Sargassum, Sparse Sargassum, 
+        # Natural Organic Material, Ship, Clouds, Marine Water, 
+        # Sediment-Laden Water, Foam, Turbid Water, Shallow Water classes.
+        labels = labels_11_classes
+        output_channels = len(labels_11_classes)
 
     # Use gpu or cpu
     if torch.cuda.is_available():
@@ -104,6 +116,10 @@ def main(options):
 
     with torch.no_grad():
         for image, target in tqdm(test_loader, desc="testing"):
+            if options["channel_to_mask"] is not None:
+                image[:, options["channel_to_mask"], :, :] = \
+                    options["mask_value"]
+            
             image = image.to(device)
             target = target.to(device)
 
@@ -222,9 +238,22 @@ if __name__ == "__main__":
                 binary (Marine Debris and Other); \
                     no (keep the original 15 classes)",
     )
-
     parser.add_argument(
         "--batch", default=5, type=int, help="Number of epochs to run"
+    )
+    
+    # Channel importance parameters
+    parser.add_argument(
+        "--channel_to_mask",
+        default=None,
+        type=int,
+        help="Index of the channel to mask, to study which channels are the most important for the prediction",
+    )
+    parser.add_argument(
+        "--mask_value",
+        default=0,
+        type=float,
+        help="Value used to mask the channel having index equal to --channel_to_mask",
     )
 
     # Unet parameters
@@ -239,7 +268,14 @@ if __name__ == "__main__":
         help="Number of hidden features",
     )
     parser.add_argument(
-        "--dataset_path", help="path of dataset", default="data"
+        "--patches_path", 
+        help="path of the folder containing the patches", 
+        default=os.path.join("data", "patches")
+    )
+    parser.add_argument(
+        "--splits_path",
+        help="path of the folder containing the splits files", 
+        default=os.path.join("data", "splits")
     )
     # Unet model path
     parser.add_argument(
@@ -248,8 +284,8 @@ if __name__ == "__main__":
             "results",
             "trained_models",
             "semi-supervised-one-train-set",
-            "2023_06_01_H_11_19_30_TRAIN_SSL_ONE_TRAIN_SET_MULTI_x9cs392u_northern-sweep-8",
-            "638",
+            "2023_06_12_H_07_58_04_TRAIN_SSL_ONE_TRAIN_SET_MULTI_xu4zx56t_fragrant-sweep-3",
+            "1107",
             "model.pth",
         ),
         help="Path to trained model",
@@ -267,7 +303,20 @@ if __name__ == "__main__":
         default=os.path.join(root_path, "data", "predicted_unet"),
         help="Path to where to produce store predictions",
     )
-
+    
+    parser.add_argument(
+        "--log_folder",
+        default="logs",
+        type=str,
+        help="Path of the log folder",
+    )
+    parser.add_argument(
+        "--log_file",
+        default="evaluating_unet.log",
+        type=str,
+        help="Name of log file.",
+    )
+    
     args = parser.parse_args()
     options = vars(args)  # convert to ordinary dict
 

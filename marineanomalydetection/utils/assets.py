@@ -1,3 +1,5 @@
+from marineanomalydetection.dataset.categoryaggregation import CategoryAggregation
+
 cat_mapping = {
     "Marine Debris": 1,
     "Dense Sargassum": 2,
@@ -33,6 +35,23 @@ cat_mapping_multi = {
 
 cat_mapping_multi_inv = {v: k for k, v in cat_mapping_multi.items()}
 
+cat_mapping_11_classes = {
+    "Marine Debris": 1,
+    "Dense Sargassum": 2,
+    "Sparse Sargassum": 3,
+    "Natural Organic Material": 4,
+    "Ship": 5,
+    "Clouds": 6,
+    "Marine Water": 7,
+    "Sediment-Laden Water": 8,
+    "Foam": 9,
+    "Turbid Water": 10,
+    "Shallow Water": 11,
+}
+
+cat_mapping_11_classes_inv = {v: k for k, v in cat_mapping_11_classes.items()}
+
+
 labels = [
     "Marine Debris",
     "Dense Sargassum",
@@ -64,6 +83,12 @@ labels_multi = [
     "Marine Water",
 ]
 
+labels_11_classes = labels[:CategoryAggregation.ELEVEN.value]
+
+# Number of labeled pixels of training set for each class when having the 
+# original splits of the MARIDA dataset:
+
+# - With CategoryAggregation.MULTI
 num_labeled_pixels_train_multi = {
     "Not labeled": 45052572,
     "Ship": 3289,
@@ -72,15 +97,87 @@ num_labeled_pixels_train_multi = {
     "Algae/Natural Organic Material": 2684,
     "Clouds": 65295,
 }
-
+# - With CategoryAggregation.BINARY
 num_labeled_pixels_train_binary = {
     "Not labeled": 45052572,
     "Other": 427469,
     "Marine Debris": 1943,
 }
+# - With CategoryAggregation.ELEVEN
+num_labeled_pixels_train_eleven = {
+    'Not labeled': 45052572, 
+    'Ship': 3289, 
+    'Marine Water': 100725, 
+    'Marine Debris': 1943, 
+    'Natural Organic Material': 723, 
+    'Turbid Water': 86820, 
+    'Shallow Water': 13852, 
+    'Sparse Sargassum': 1091, 
+    'Foam': 469, 
+    'Sediment-Laden Water': 154335, 
+    'Clouds': 65295, 
+    'Dense Sargassum': 870
+}
 
-assert sum(num_labeled_pixels_train_binary.values()) == sum(
-    num_labeled_pixels_train_multi.values()
+# Number of labeled pixels of training set for each class when having the 
+# original splits of the MARIDA dataset but excluding the following patches:
+# - From training split: 
+#   - 21-2-17_16PCC_0
+# - From validation split:
+#   - 18-9-20_16PCC_47
+#   - 18-9-20_16PCC_48
+#   - 18-9-20_16PCC_50
+# - From test split:
+#   - 30-8-18_16PCC_0
+#   - 30-8-18_16PCC_1
+#   - 30-8-18_16PCC_2
+# because they contain only nan values:
+# (of course excluding validation and test patches does not affect the number
+# of labeled training pixels, but I mention them to document them).
+
+# - With CategoryAggregation.MULTI
+num_labeled_pixels_train_multi_no_nan_patch = {
+    'Not labeled': 44987255, 
+    'Ship': 3289, 
+    'Marine Water': 355982, 
+    'Marine Debris': 1943, 
+    'Algae/Natural Organic Material': 2684, 
+    'Clouds': 65295
+}
+# - With CategoryAggregation.BINARY
+num_labeled_pixels_train_binary_no_nan_patch = {
+    'Not labeled': 44987255, 
+    'Other': 427250, 
+    'Marine Debris': 1943
+}
+# - With CategoryAggregation.ELEVEN
+num_labeled_pixels_train_eleven_no_nan_patch = {
+    'Not labeled': 44987255, 
+    'Ship': 3289, 
+    'Marine Water': 100725, 
+    'Marine Debris': 1943, 
+    'Natural Organic Material': 723, 
+    'Turbid Water': 86601, 
+    'Shallow Water': 13852, 
+    'Sparse Sargassum': 1091, 
+    'Foam': 469, 
+    'Sediment-Laden Water': 154335, 
+    'Clouds': 65295, 
+    'Dense Sargassum': 870
+}
+
+# Check that the total number of pre-computed labeled pixels is equal among 
+# different CategoryAggregation settings 
+assert (
+    sum(num_labeled_pixels_train_binary.values()) \
+        == sum(num_labeled_pixels_train_multi.values()) \
+            == sum(num_labeled_pixels_train_eleven.values())
+)
+
+assert ( 
+    sum(num_labeled_pixels_train_binary_no_nan_patch.values()) \
+        == sum(num_labeled_pixels_train_multi_no_nan_patch.values()) \
+            ==  sum(num_labeled_pixels_train_eleven_no_nan_patch.values())
 )
 
 categories_to_ignore_perc_labeled = [

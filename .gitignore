@@ -277,3 +277,5 @@ wandb/*
 config-*.yaml
 conda-*.yaml
 req*.txt
+*.txt
+*.json

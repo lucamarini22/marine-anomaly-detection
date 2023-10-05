@@ -15,7 +15,7 @@ from marineanomalydetection.dataset.categoryaggregation import (
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 from marineanomalydetection.imageprocessing.normalize_img import normalize_img
 from marineanomalydetection.utils.constants import MARIDA_SIZE_X, MARIDA_SIZE_Y
-from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary
+from marineanomalydetection.dataset.aggregator import aggregate_to_multi, aggregate_to_binary, aggregate_to_11_classes
 from marineanomalydetection.dataset.get_rois import get_rois
 from marineanomalydetection.dataset.update_count_labeled_pixels import update_count_labeled_pixels
 
@@ -25,8 +25,9 @@ class MarineAnomalyDataset(Dataset, ABC):
         self,
         mode: DataLoaderType = DataLoaderType.TRAIN_SET_SUP,
         transform: transforms.Compose = None,
-        standardization : transforms.Normalize =None,
-        path: str = None,
+        standardization : transforms.Normalize = None,
+        patches_path: str = None,
+        splits_path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
         perc_labeled: float = None,
@@ -41,7 +42,9 @@ class MarineAnomalyDataset(Dataset, ABC):
               to dataset. Defaults to None.
             standardization (transforms.Normalize, optional): standardization.
               Defaults to None.
-            path (str, optional): dataset path.
+            patches_path (str): path of the folder containing the patches.
+            splits_path (str, optional): path of the folder containing the 
+              splits files.
             aggregate_classes (CategoryAggregation, optional): type
               of aggregation of categories.
               Defaults to CategoryAggregation.MULTI.
@@ -69,7 +72,8 @@ class MarineAnomalyDataset(Dataset, ABC):
         self.transform = transform
         self.standardization = standardization
         self.second_transform = second_transform
-        self.path = path
+        self.patches_path = patches_path
+        self.splits_path = splits_path
         self.aggregate_classes = aggregate_classes
         self.perc_labeled = perc_labeled
         
@@ -82,7 +86,7 @@ class MarineAnomalyDataset(Dataset, ABC):
         
         logger_set = logger.bind(name=LOG_SET)
         # Gets the names of the regions of interest
-        self.ROIs = get_rois(path, mode, rois, logger_set)
+        self.ROIs = get_rois(self.splits_path, mode, rois, logger_set)
 
         self.load_data()
 
@@ -104,7 +108,6 @@ class MarineAnomalyDataset(Dataset, ABC):
     @abstractmethod
     def __getitem__(self, index):
         pass
-        self.get_item(index)
     
     
     @abstractmethod
@@ -219,8 +222,11 @@ class MarineAnomalyDataset(Dataset, ABC):
             # coarse-grained classes: 
             # Other, Marine Debris
             seg_map = aggregate_to_binary(seg_map)
+        elif aggregate_classes == CategoryAggregation.ELEVEN:
+            seg_map = aggregate_to_11_classes(seg_map)
         else:
-            raise Exception("Not Implemented Category Aggregation value.")
+            # Use 15 classes
+            pass
         
         if perc_labeled is not None:
             num_pixels_dict = update_count_labeled_pixels(
