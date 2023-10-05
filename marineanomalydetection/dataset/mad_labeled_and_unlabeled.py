@@ -19,7 +19,7 @@ class MADLabeledAndUnlabeled(MADLabeledOrLabeledAndUnlabeled):
         # Creates a copy of patch to use it for unsupervised loss
         img_unsup = np.copy(img)
         
-        if self.second_transform is not None:
+        if self.weak_transform_unlabeled_version_one_train_set is not None:
             img_unsup = self.transform(img_unsup)
         # Weakly-augmented patch
         weak = img_unsup
