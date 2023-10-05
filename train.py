@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 from loguru import logger
@@ -6,35 +7,40 @@ import numpy as np
 from tqdm import tqdm
 import torch
 
-from anomalymarinedetection.dataset.get_dataloaders import (
+from marineanomalydetection.dataset.get_dataloaders import (
     get_dataloaders_supervised,
-    get_dataloaders_ssl,
+    get_dataloaders_ssl_separate_train_sets,
+    get_dataloaders_ssl_single_train_set,
 )
-from anomalymarinedetection.utils.metrics import Evaluation
-from anomalymarinedetection.utils.constants import (
+from marineanomalydetection.utils.metrics import Evaluation
+from marineanomalydetection.utils.constants import (
     CLASS_DISTR,
     BANDS_MEAN,
     BANDS_STD,
     SEPARATOR,
     PADDING_VAL,
+    LOG_SET,
+    LOG_STD_OUT,
+    LOG_SSL_LOSS,
 )
-from anomalymarinedetection.io.file_io import FileIO
-from anomalymarinedetection.io.tbwriter import TBWriter
-from anomalymarinedetection.trainmode import TrainMode
-from anomalymarinedetection.parse_args_train import parse_args_train
-from anomalymarinedetection.io.model_handler import (
+from marineanomalydetection.io.file_io import FileIO
+from marineanomalydetection.io.tbwriter import TBWriter
+from marineanomalydetection.trainmode import TrainMode
+from marineanomalydetection.parse_args_train import parse_args_train
+from marineanomalydetection.io.model_handler import (
     load_model,
     save_model,
     get_model_name,
 )
-from anomalymarinedetection.utils.seed import set_seed, set_seed_worker
-from anomalymarinedetection.dataset.update_class_distribution import (
+from marineanomalydetection.utils.seed import set_seed, set_seed_worker
+from marineanomalydetection.dataset.update_class_distribution import (
     update_class_distribution,
 )
-from anomalymarinedetection.utils.device import get_device, empty_cache
-from anomalymarinedetection.utils.train_functions import (
+from marineanomalydetection.utils.device import get_device, empty_cache
+from marineanomalydetection.utils.train_functions import (
     train_step_supervised,
-    train_step_semi_supervised,
+    train_step_semi_supervised_separate_batches,
+    train_step_semi_supervised_one_batch,
     eval_step,
     get_criterion,
     get_optimizer,
@@ -45,29 +51,47 @@ from anomalymarinedetection.utils.train_functions import (
     get_lr_steps,
     update_checkpoint_path,
     check_checkpoint_path_exist,
+    update_min_val_loss,
+    update_max_val_miou,
+    init_max_val_mIoU,
 )
-from anomalymarinedetection.dataset.augmentation.get_transform_train import (
+from marineanomalydetection.dataset.augmentation.get_transform_train import (
     get_transform_train,
 )
-from anomalymarinedetection.dataset.augmentation.get_transform_val import (
+from marineanomalydetection.dataset.augmentation.get_transform_val import (
     get_transform_val,
 )
-from anomalymarinedetection.io.wandb_logger import WandbLogger
+from marineanomalydetection.io.wandb_logger import WandbLogger
+from marineanomalydetection.dataset.augmentation.weakaugmentation import (
+    WeakAugmentation,
+)
+from marineanomalydetection.io.log_functions import log_epoch_init
 
 
 def main(options, wandb_logger):
     # Use gpu or cpu
     device = get_device()
-    file_io = FileIO()
     # Reproducibility
     seed = options["seed"]
-    options["batch"] = int(options["batch"])
-    options["mu"] = int(options["mu"])
     set_seed(seed)
     g = torch.Generator()
     g.manual_seed(seed)
     
-    logger.add(os.path.join(f"{options['log_folder']}", "log_set.log"))
+
+    logger.add(
+        os.path.join(f"{options['log_folder']}", LOG_SET + ".log"), 
+        filter=lambda record: record["extra"].get("name") == LOG_SET
+    )
+    logger.add(
+        sys.__stdout__, 
+        filter=lambda record: record["extra"].get("name") == LOG_STD_OUT
+    )
+    logger.add(
+        os.path.join(f"{options['log_folder']}", LOG_SSL_LOSS + ".log"), 
+        filter=lambda record: record["extra"].get("name") == LOG_SSL_LOSS
+    )
+    logger_std_out = logger.bind(name=LOG_STD_OUT)
+    logger_ssl_loss = logger.bind(name=LOG_SSL_LOSS)
 
     model_name = get_model_name(
         options["resume_model"],
@@ -89,6 +113,9 @@ def main(options, wandb_logger):
     # Transformations
     transform_train = get_transform_train()
     transform_val = get_transform_val()
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
+        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        weakly_transform = WeakAugmentation(mean=None, std=None)
     # TODO: modify class_distr when using ssl
     # (because you take a percentage of labels so the class distr of pixels
     # will change)
@@ -97,7 +124,8 @@ def main(options, wandb_logger):
     # Construct Data loader
     if options["mode"] == TrainMode.TRAIN:
         train_loader, val_loader = get_dataloaders_supervised(
-            dataset_path=options["dataset_path"],
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             standardization=standardization,
@@ -109,16 +137,19 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
+            drop_last=True,
         )
-    elif options["mode"] == TrainMode.TRAIN_SSL:
+    elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
             labeled_train_loader,
             unlabeled_train_loader,
             val_loader,
-        ) = get_dataloaders_ssl(
-            dataset_path=options["dataset_path"],
+        ) = get_dataloaders_ssl_separate_train_sets(
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
             transform_train=transform_train,
             transform_val=transform_val,
+            weakly_transform=weakly_transform,
             standardization=standardization,
             aggregate_classes=options["aggregate_classes"],
             batch=options["batch"],
@@ -132,8 +163,26 @@ def main(options, wandb_logger):
             mu=options["mu"],
             drop_last=True,
         )
+    elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        train_loader, val_loader = get_dataloaders_ssl_single_train_set(
+            splits_path=options["splits_path"],
+            patches_path=options["patches_path"],
+            transform_train=transform_train,
+            transform_val=transform_val,
+            weakly_transform=weakly_transform,  
+            standardization=standardization,
+            aggregate_classes=options["aggregate_classes"],
+            batch=options["batch"],
+            num_workers=options["num_workers"],
+            pin_memory=options["pin_memory"],
+            prefetch_factor=options["prefetch_factor"],
+            persistent_workers=options["persistent_workers"],
+            seed_worker_fn=set_seed_worker,
+            generator=g,
+            drop_last=True
+        )
     else:
-        raise Exception("The mode option should be train, train_ssl, or test")
+        raise Exception("The specified mode option does not exist.")
 
     output_channels = get_output_channels(options["aggregate_classes"])
     # Init model
@@ -168,12 +217,14 @@ def main(options, wandb_logger):
     criterion = get_criterion(
         supervised=True, alphas=alphas, device=device, gamma=options["gamma"]
     )
-    if options["mode"] == TrainMode.TRAIN_SSL:
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS \
+        or options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         # Init of unsupervised loss
         criterion_unsup = get_criterion(
             supervised=False,
             alphas=alphas,
             device=device,
+            use_ce_in_unsup_comp=options["use_ce_in_unsup_component"],
             gamma=options["gamma"],
         )
     # Optimizer
@@ -191,6 +242,9 @@ def main(options, wandb_logger):
     if options["mode"] == TrainMode.TRAIN:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
+        epoch_max_val_miou = start
         
         dataiter = iter(train_loader)
         image_temp, _ = next(dataiter)
@@ -203,7 +257,7 @@ def main(options, wandb_logger):
         model.train()
 
         for epoch in range(start, epochs + 1):
-            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            log_epoch_init(epoch, logger_std_out)
             training_loss = []
             training_batches = 0
 
@@ -270,9 +324,21 @@ def main(options, wandb_logger):
                     train_loss = sum(training_loss) / training_batches
                     val_loss = sum(val_losses) / val_batches
                     val_losses_avg_all_epochs.append(val_loss)
-                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
-                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
-                        epoch_min_val_loss = epoch
+                    
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
+                    
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou, 
+                        epoch
+                    )
+                    
                     logging.info("\n")
                     logging.info(
                         "Val loss was: " + str(val_loss)
@@ -309,6 +375,12 @@ def main(options, wandb_logger):
                         epoch_min_val_loss
                     )
                     
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
+                    )
+                    
                 #val_loss = sum(val_losses) / val_batches
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(val_loss)
@@ -317,9 +389,12 @@ def main(options, wandb_logger):
 
                 model.train()
 
-    elif options["mode"] == TrainMode.TRAIN_SSL:
+    elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         val_losses_avg_all_epochs = []
         min_val_loss_among_epochs = float("inf")
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
+        epoch_max_val_miou = start
         classes_channel_idx = 1
 
         labeled_iter = iter(labeled_train_loader)
@@ -330,33 +405,37 @@ def main(options, wandb_logger):
         model.train()
 
         for epoch in range(start, epochs + 1):
-            print("_" * 40 + "Epoch " + str(epoch) + ": " + "_" * 40)
+            log_epoch_init(epoch, logger_std_out)
 
             training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
             training_batches = 0
 
             i_board = 0
             for _ in tqdm(range(len(labeled_iter)), desc="training"):
-                loss, training_loss = train_step_semi_supervised(
-                    file_io,
-                    labeled_train_loader,
-                    unlabeled_train_loader,
-                    labeled_iter,
-                    unlabeled_iter,
-                    criterion,
-                    criterion_unsup,
-                    training_loss,
-                    model,
-                    model_name,
-                    optimizer,
-                    epoch,
-                    device,
-                    options["batch"],
-                    classes_channel_idx,
-                    options["threshold"],
-                    options["lambda_coeff"],
-                    PADDING_VAL,
-                )
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_separate_batches(
+                        options["only_supervised"],
+                        labeled_train_loader,
+                        unlabeled_train_loader,
+                        labeled_iter,
+                        unlabeled_iter,
+                        criterion,
+                        criterion_unsup,
+                        training_loss,
+                        supervised_component_loss,
+                        unsupervised_component_loss,
+                        model,
+                        optimizer,
+                        device,
+                        options["batch"],
+                        classes_channel_idx,
+                        options["threshold"],
+                        options["lambda_coeff"],
+                        logger_ssl_loss,
+                        PADDING_VAL,
+                    )
                 training_batches += options["batch"]
                 # Write running loss
                 tb_writer.add_scalar(
@@ -404,9 +483,19 @@ def main(options, wandb_logger):
                     acc = Evaluation(y_predicted, y_true)
                     val_loss = sum(val_losses) / val_batches
                     val_losses_avg_all_epochs.append(val_loss)
-                    if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
-                        min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
-                        epoch_min_val_loss = epoch
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
+                                               
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou,
+                        epoch
+                    )
                     
                     logging.info("\n")
                     logging.info(
@@ -441,10 +530,184 @@ def main(options, wandb_logger):
                         val_loss, 
                         min_val_loss_among_epochs, 
                         epoch,
-                        epoch_min_val_loss
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
+                    )
+                    
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
                     )
 
                 val_loss = sum(val_losses) / val_batches
+                if options["reduce_lr_on_plateau"] == 1:
+                    scheduler.step(val_loss)
+                else:
+                    scheduler.step()
+
+                model.train()
+    elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
+        val_losses_avg_all_epochs = []
+        min_val_loss_among_epochs = float("inf")
+        epoch_min_val_loss = start
+        max_val_miou_among_epochs = init_max_val_mIoU()
+        epoch_max_val_miou = start
+        classes_channel_idx = 1
+        
+        #dataiter = iter(train_loader)
+        #image_temp, _ = next(dataiter)
+        # Write model-graph to Tensorboard
+        #tb_writer.add_graph(model, image_temp.to(device))
+
+        ###############################################################
+        # Start Supervised Training                                   #
+        ###############################################################
+        model.train()
+
+        for epoch in range(start, epochs + 1):
+            log_epoch_init(epoch, logger_std_out)
+            training_loss = []
+            supervised_component_loss = []
+            unsupervised_component_loss = []
+            training_batches = 0
+
+            i_board = 0
+            for image, target, weakly_aug_image in tqdm(train_loader, desc="training"):
+                loss, training_loss, supervised_component_loss, unsupervised_component_loss = \
+                    train_step_semi_supervised_one_batch(
+                        only_supervised=options["only_supervised"],
+                        image=image,
+                        seg_map=target,
+                        weak_aug_img=weakly_aug_image,
+                        criterion=criterion,
+                        criterion_unsup=criterion_unsup,
+                        training_loss=training_loss,
+                        supervised_component_loss=supervised_component_loss, 
+                        unsupervised_component_loss=unsupervised_component_loss,
+                        model=model,
+                        optimizer=optimizer,
+                        device=device,
+                        batch_size=options["batch"],
+                        classes_channel_idx=classes_channel_idx,
+                        threshold=options["threshold"],
+                        lambda_v=options["lambda_coeff"],
+                        logger_ssl_loss=logger_ssl_loss,
+                        padding_val=PADDING_VAL,
+                    )
+                training_batches += target.shape[0]
+                # Write running loss
+                tb_writer.add_scalar(
+                    "training loss",
+                    loss,
+                    (epoch - 1) * len(train_loader) + i_board,
+                )
+
+                wandb_logger.log_train_loss(
+                    loss, 
+                    epoch, 
+                    len(train_loader), 
+                    i_board
+                )
+                i_board += 1
+
+            logging.info(
+                "Training loss was: "
+                + str(sum(training_loss) / training_batches)
+            )
+
+            # Evaluation
+            if epoch % eval_every == 0 or epoch == 1:
+                model.eval()
+
+                val_losses = []
+                val_batches = 0
+                y_true = []
+                y_predicted = []
+
+                with torch.no_grad():
+                    for image, target in tqdm(val_loader, desc="validation"):
+                        y_predicted, y_true = eval_step(
+                            image,
+                            target,
+                            criterion,
+                            val_losses,
+                            y_predicted,
+                            y_true,
+                            model,
+                            output_channels,
+                            device,
+                        )
+                        val_batches += target.shape[0]
+                    y_predicted = np.asarray(y_predicted)
+                    y_true = np.asarray(y_true)
+                    # Save Scores to the .log file and visualize also with tensorboard
+                    acc = Evaluation(y_predicted, y_true)
+                    
+                    train_loss = sum(training_loss) / training_batches
+                    val_loss = sum(val_losses) / val_batches
+                    val_losses_avg_all_epochs.append(val_loss)
+                    
+                    min_val_loss_among_epochs, epoch_min_val_loss = update_min_val_loss(
+                        val_losses_avg_all_epochs, 
+                        min_val_loss_among_epochs,
+                        epoch_min_val_loss,
+                        epoch
+                    )
+                                        
+                    max_val_miou_among_epochs, epoch_max_val_miou = update_max_val_miou(
+                        acc, 
+                        max_val_miou_among_epochs,
+                        epoch_max_val_miou,
+                        epoch
+                    )
+                    
+                    logging.info("\n")
+                    logging.info(
+                        "Val loss was: " + str(val_loss)
+                    )
+                    logging.info(
+                        "STATISTICS AFTER EPOCH " + str(epoch) + ": \n"
+                    )
+                    logging.info("Evaluation: " + str(acc))
+
+                    logging.info("Saving models")
+                    model_dir = os.path.join(
+                        options["checkpoint_path"],
+                        model_name,
+                        str(epoch),
+                    )
+                    os.makedirs(model_dir, exist_ok=True)
+                    save_model(model, os.path.join(model_dir, "model.pth"))
+
+                    tb_writer.add_scalars(
+                        "Loss per epoch",
+                        {
+                            "Val loss": val_loss,
+                            "Train loss": train_loss,
+                        },
+                        epoch,
+                    )
+                    tb_writer.add_eval_metrics(acc, epoch)
+                    
+                    wandb_logger.log_eval_losses(
+                        train_loss, 
+                        val_loss, 
+                        min_val_loss_among_epochs, 
+                        epoch,
+                        epoch_min_val_loss,
+                        np.mean(supervised_component_loss),
+                        np.mean(unsupervised_component_loss)
+                    )
+                    
+                    wandb_logger.log_val_mIoU(
+                        acc, 
+                        max_val_miou_among_epochs, 
+                        epoch_max_val_miou
+                    )
+                    
+                #val_loss = sum(val_losses) / val_batches #TODO ?
                 if options["reduce_lr_on_plateau"] == 1:
                     scheduler.step(val_loss)
                 else:
@@ -458,7 +721,7 @@ if __name__ == "__main__":
     wandb_logger.login()
     config = wandb_logger.get_config("./config.yaml")
 
-    options = parse_args_train(config)
+    options = parse_args_train()
     options["checkpoint_path"] = update_checkpoint_path(
         options["mode"], options["checkpoint_path"]
     )

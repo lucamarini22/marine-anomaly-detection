@@ -2,7 +2,7 @@ import os
 import argparse
 from loguru import logger
 
-from anomalymarinedetection.l1c_generation.patchesbandsconcatenator import (
+from marineanomalydetection.l1c_generation.patchesbandsconcatenator import (
     PatchesBandsConcatenator,
 )
 
