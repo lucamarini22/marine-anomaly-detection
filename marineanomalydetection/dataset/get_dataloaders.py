@@ -185,7 +185,7 @@ def get_dataloaders_ssl_single_train_set(
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
         splits_path=splits_path,
-        second_transform=weakly_transform
+        weak_transform_unlabeled_version_one_train_set=weakly_transform
     )
     dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
