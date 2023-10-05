@@ -8,7 +8,7 @@ from marineanomalydetection.io.log_functions import log_patches
 
 
 def get_rois(
-    path: str, 
+    splits_path: str, 
     mode: DataLoaderType, 
     roi: list[str],
     logger_set: loguru._logger.Logger,
@@ -16,7 +16,7 @@ def get_rois(
     """Gets the names of the region of interest.
 
     Args:
-        path (str): dataset path.
+        splits_path (str): path of the folder containing the splits files.
         mode (DataLoaderType): data loader mode.
         roi (list[str], optional): list of region of interest names to
           consider. 
@@ -31,10 +31,10 @@ def get_rois(
     """
     if roi is None:
         file_to_load = {
-            DataLoaderType.TRAIN_SET_SUP: os.path.join(path, "splits", "train_X.txt"),
-            DataLoaderType.TRAIN_SET_SUP_AND_UNSUP: os.path.join(path, "splits", "train_X.txt"),
-            DataLoaderType.VAL_SET: os.path.join(path, "splits", "val_X.txt"),
-            DataLoaderType.TEST_SET: os.path.join(path, "splits", "test_X.txt"),
+            DataLoaderType.TRAIN_SET_SUP: os.path.join(splits_path, "train_X.txt"),
+            DataLoaderType.TRAIN_SET_SUP_AND_UNSUP: os.path.join(splits_path, "train_X.txt"),
+            DataLoaderType.VAL_SET: os.path.join(splits_path, "val_X.txt"),
+            DataLoaderType.TEST_SET: os.path.join(splits_path, "test_X.txt"),
         }
         roi = load_roi(file_to_load[mode])
     else:

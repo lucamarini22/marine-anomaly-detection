@@ -4,9 +4,11 @@ from marineanomalydetection.utils.assets import (
     cat_mapping,
     cat_mapping_binary,
     cat_mapping_multi,
+    cat_mapping_11_classes,
     labels,
     labels_binary,
     labels_multi,
+    labels_11_classes,
 )
 
 
@@ -112,6 +114,44 @@ def aggregate_to_binary(seg_map: np.ndarray) -> np.ndarray:
         cat_mapping,
         cat_mapping_binary,
     )
+    return seg_map
+
+
+def aggregate_to_11_classes(seg_map: np.ndarray) -> np.ndarray:
+    """Aggregates the original 15 classes into 11 more coarse-grained classes, 
+    which are:
+      - Marine Debris,
+      - Dense Sargassum,
+      - Sparse Sargassum,
+      - Natural Organic Material,
+      - Ship,
+      - Clouds,
+      - Marine Water,
+      - Sediment-Laden Water,
+      - Foam,
+      - Turbid Water,
+      - Shallow Water,
+
+    Args:
+        seg_map (np.ndarray): original segmentation map.
+
+    Returns:
+        np.ndarray: segmentation map with more coarse-grained classes.
+    """
+    # Aggregate 'Waves', 'Cloud Shadows', 'Wakes', 'Mixed Water'
+    # to Marine Water.
+    marine_water_classes_names = labels[
+        labels.index("Waves") : labels.index("Mixed Water") + 1
+    ]
+    super_marine_water_class_name = labels_11_classes[labels.index("Marine Water")]
+    seg_map = aggregate_classes_to_super_class(
+        seg_map,
+        marine_water_classes_names,
+        super_marine_water_class_name,
+        cat_mapping,
+        cat_mapping_11_classes,
+    )
+
     return seg_map
 
 

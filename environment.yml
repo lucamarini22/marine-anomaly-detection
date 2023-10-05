@@ -1,4 +1,4 @@
-name: anomaly-marine-detection
+name: marine-anomaly-detection
 #channel_priority: strict
 channels:
   - conda-forge

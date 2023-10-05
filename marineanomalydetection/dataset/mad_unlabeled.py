@@ -19,8 +19,8 @@ class MADUnlabeled(MarineAnomalyDataset):
         for roi in tqdm(
             self.ROIs, desc="Load unlabeled train set to memory"
         ):
-            patch_path, _ = get_patch_tokens(self.path, roi)                
-            super()._load_and_process_and_add_patch_to_dataset(
+            patch_path, _ = get_patch_tokens(self.patches_path, roi)                
+            self._load_and_process_and_add_patch_to_dataset(
                 patch_path, 
                 self.X_u
             )

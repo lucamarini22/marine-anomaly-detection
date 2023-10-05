@@ -42,6 +42,25 @@ class TifIO:
         img_rgb = np.concatenate((img_r, img_g, img_b), 2)
         img_rgb = img_rgb / img_rgb.max()
         return img_rgb, coords
+    
+    @staticmethod
+    def tif_2_rgb_img(img: np.ndarray) -> np.ndarray:
+        """Converts a tif image stored in a numpy array into a rgb image stored
+        in a numpy array.
+
+        Args:
+            img (np.ndarray): .tif image stored in a numpy array.
+
+        Returns:
+            np.ndarray: rgb image stored in a numpy array.
+        """
+        img_b = img[1, :, :].reshape(img.shape[-1], img.shape[-2], 1)
+        img_g = img[2, :, :].reshape(img.shape[-1], img.shape[-2], 1)
+        img_r = img[3, :, :].reshape(img.shape[-1], img.shape[-2], 1)
+
+        img_rgb = np.concatenate((img_r, img_g, img_b), 2)
+        img_rgb = img_rgb / img_rgb.max()
+        return img_rgb
 
     def tif_2_swir(self, file_path: str) -> np.ndarray:
         img, _ = self.acquire_data(file_path)
