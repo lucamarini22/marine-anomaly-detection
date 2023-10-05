@@ -59,24 +59,30 @@ It is recommended to use [conda](https://docs.conda.io/en/latest/) to set-up the
    ```
 
 ### Set up dataset
-To launch the training on MARIDA, it is necessary to download the dataset. The dataset can be downloaded [here](https://zenodo.org/record/5151941). The `patches_path` and `splits_path` arguments in `marineanomalydetection/parse_args_train.py` file shall be respectively adjusted according to the path of the folder containing the patches and the path of the folder containing the split files.
+To launch the training on MARIDA, it is necessary to download the dataset. The dataset can be downloaded [here](https://zenodo.org/record/5151941) and has the following structure:
+   
+   - `patches`: folder containing the patches (multispectral images).
+   - `splits`: folder containing split files of the training, validation, and test sets.
+
+The `--patches_path` and `--splits_path` arguments in `marineanomalydetection/parse_args_train.py` file shall be respectively point to the `patches` and `splits` folders.
 
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
 ### Training
-1. Create a [Weight and Biases](https://wandb.ai) account to keep track of the experiments.
+1. Create a [Weight and Biases](https://wandb.ai) account to keep track of the runs.
 2. Set the values of the hyperparameters in this [config.yaml](https://github.com/lucamarini22/marine-anomaly-detection/blob/main/config.yaml) file.
-3. Enter in the main folder
+3. Enter the main folder.
    ```sh
    cd /marine-anomaly-detection/
    ```
 4. Create a [Sweep](https://docs.wandb.ai/guides/sweeps) to keep track of your training runs.
    ```
-   wandb sweep --project <project-name> config.yaml
+   wandb sweep --project <project-name> <config-file.yaml>
    ```
-5. Start an agent and execute $NUM training runs.
+5. Specify all the values of the arguments in `marineanomalydetection/parse_args_train.py` you did not specify in `<config-file.yaml>`.
+6. Start an agent and execute $NUM training runs.
    ```
    wandb agent --count $NUM <your-entity/sweep-demo-cli/sweepID>
    ```
