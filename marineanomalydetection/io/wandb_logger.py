@@ -82,7 +82,7 @@ class WandbLogger():
             wandb.log(
                 {
                     "epoch": epoch,
-                    "train_loss": train_loss,
+                    "train_loss_mean": train_loss,
                     "val_loss": val_loss,
                     "min_val_loss_among_epochs": min_val_loss_among_epochs,
                     "epoch_min_val_loss": epoch_min_val_loss,
@@ -94,7 +94,7 @@ class WandbLogger():
             wandb.log(
                 {
                     "epoch": epoch,
-                    "train_loss": train_loss,
+                    "train_loss_mean": train_loss,
                     "val_loss": val_loss,
                     "min_val_loss_among_epochs": min_val_loss_among_epochs,
                     "epoch_min_val_loss": epoch_min_val_loss
