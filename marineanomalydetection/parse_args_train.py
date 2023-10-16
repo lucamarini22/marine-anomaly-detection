@@ -97,7 +97,7 @@ def parse_args_train():
     )
     parser.add_argument(
         "--alphas",
-        default=[1.0, 1.0, 1.0, 1.0, 1.0], # [0.50, 0.125, 0.125, 0.125, 0.125], #
+        default=[1.0, 1.0, 1.0, 1.0, 1.0], #[0.50, 0.125, 0.125, 0.125, 0.125],
         type=list[float],
         help="Alpha coefficients of the focal loss.",
     )
@@ -231,7 +231,7 @@ def parse_args_train():
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1.0
     options["mu"] = 5
-    options["perc_labeled"] = 0.1
+    options["perc_labeled"] = 0.01
     """
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
@@ -261,6 +261,8 @@ def parse_args_train():
         options["seed"] = 949
     elif options["perc_labeled"] == 0.05:
         options["seed"] = 640
+    elif options["perc_labeled"] == 0.01:
+        options["seed"] = 606
 
     #with open("/data/anomaly-marine-detection/data/splits/seed.txt", "a") as myfile:
     #    myfile.write(str(options["seed"]) + "\n")
