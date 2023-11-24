@@ -102,7 +102,7 @@ def get_dataloaders_supervised(
         persistent_workers=persistent_workers,
         worker_init_fn=seed_worker_fn,
         generator=generator,
-        drop_last=drop_last
+        drop_last=drop_last,
     )
 
     val_loader = DataLoader(
@@ -124,7 +124,7 @@ def get_dataloaders_ssl_single_train_set(
     patches_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
-    weakly_transform:transforms.Compose,
+    weakly_transform: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
@@ -134,9 +134,10 @@ def get_dataloaders_ssl_single_train_set(
     persistent_workers: bool,
     seed_worker_fn: Callable,
     generator: torch.Generator,
+    perc_data: float,
     drop_last: bool = True,
 ) -> tuple[DataLoader, DataLoader]:
-    """Gets dataloaders to perform semi-supervised learning with one unique 
+    """Gets dataloaders to perform semi-supervised learning with one unique
     training set. Having a patch of the training set:
       - its labeled pixels will be used to compute the supervised loss.
       - its unlabeled pixels will be used to compute the unsupervised loss.
@@ -170,6 +171,7 @@ def get_dataloaders_ssl_single_train_set(
         generator (torch.Generator): If not ``None``, this RNG will be used
           by RandomSampler to generate random indexes and multiprocessing to
           generate `base_seed` for workers.
+        perc_data (float): Percentage of training data to use.
         drop_last (bool, optional): set to True to drop the last incomplete
           batch, if the dataset size is not divisible by the batch size.
           If False and the size of dataset is not divisible by the batch size,
@@ -178,14 +180,21 @@ def get_dataloaders_ssl_single_train_set(
     Returns:
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
+    # Gets a subset of training data based on 'perc_labeled'
+    ROIs, _ = get_labeled_and_unlabeled_rois(
+        perc_labeled=perc_data, splits_path=splits_path
+    )
+
     dataset_train = MADLabeledAndUnlabeled(
         DataLoaderType.TRAIN_SET_SUP_AND_UNSUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
+        rois=ROIs,
         patches_path=patches_path,
         splits_path=splits_path,
-        weak_transform_unlabeled_version_one_train_set=weakly_transform
+        perc_labeled=perc_data,
+        weak_transform_unlabeled_version_one_train_set=weakly_transform,
     )
     dataset_val = MADLabeled(
         DataLoaderType.VAL_SET,
@@ -246,12 +255,12 @@ def get_dataloaders_ssl_separate_train_sets(
     training sets:
       - D_s: weakly-labeled dataset
       - D_u: unlabeled dataset
-    (D_s U D_u = D, i.e. the union of the 2 datasets is the full training 
+    (D_s U D_u = D, i.e. the union of the 2 datasets is the full training
     dataset).
     So:
      - Patches in D_s are used to compute the supervised loss.
      - Patches in D_u are used to compute the unsupervised loss.
-     
+
     Args:
         splits_path (str): path of the folder containing the splits files.
         patches_path (str): path of the folder containing the patches.
