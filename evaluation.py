@@ -2,7 +2,6 @@ import os
 import logging
 import rasterio
 import argparse
-import numpy as np
 from tqdm import tqdm
 from os.path import dirname
 
@@ -26,6 +25,9 @@ from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
+from marineanomalydetection.io.load_data import load_patch
+from marineanomalydetection.imageprocessing.normalize_img import normalize_img
+
 from marineanomalydetection.utils.seed import set_seed
 
 root_path = dirname(os.path.abspath(__file__))
@@ -66,7 +68,9 @@ def main(options):
     )
 
     test_loader = DataLoader(
-        dataset_test, batch_size=options["batch"], shuffle=False
+        dataset_test, 
+        batch_size=options["batch"], 
+        shuffle=False,
     )
     # Aggregate Distribution Mixed Water, Wakes, Cloud Shadows, Waves with Marine Water
     if options["aggregate_classes"] == CategoryAggregation.MULTI:
@@ -113,7 +117,7 @@ def main(options):
 
     y_true = []
     y_predicted = []
-
+    
     with torch.no_grad():
         for image, target in tqdm(test_loader, desc="testing"):
             if options["channel_to_mask"] is not None:
@@ -122,9 +126,9 @@ def main(options):
             
             image = image.to(device)
             target = target.to(device)
-
+            
             logits = model(image)
-
+                        
             # Accuracy metrics only on annotated pixels
             logits = torch.movedim(logits, (0, 1, 2, 3), (0, 3, 1, 2))
             logits = logits.reshape((-1, output_channels))
@@ -135,7 +139,7 @@ def main(options):
 
             probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
             target = target.cpu().numpy()
-
+            
             y_predicted += probs.argmax(1).tolist()
             y_true += target.tolist()
 
@@ -157,7 +161,7 @@ def main(options):
                 os.path.join(root_path, "data", "splits", "test_X.txt")
             )
 
-            impute_nan = np.tile(BANDS_MEAN, (256, 256, 1))
+            # impute_nan = np.tile(BANDS_MEAN, (256, 256, 1))
 
             for roi in tqdm(ROIs):
                 roi_folder = "_".join(
@@ -179,10 +183,12 @@ def main(options):
                 with rasterio.open(roi_file, mode="r") as src:
                     tags = src.tags().copy()
                     meta = src.meta
-                    image = src.read()
-                    image = np.moveaxis(image, (0, 1, 2), (2, 0, 1))
                     dtype = src.read(1).dtype
-
+                
+                image = load_patch(roi_file)
+                min_patch, max_patch = image.min(), image.max()
+                image = normalize_img(image, min_patch, max_patch)
+                
                 # Update meta to reflect the number of layers
                 meta.update(count=1)
                 if os.path.isfile(output_image):
@@ -190,10 +196,13 @@ def main(options):
                 # Write it
                 with rasterio.open(output_image, "w", **meta) as dst:
                     # Preprocessing before prediction
-                    nan_mask = np.isnan(image)
-                    image[nan_mask] = impute_nan[nan_mask]
+                    #nan_mask = np.isnan(image)
+                    #image[nan_mask] = impute_nan[nan_mask]
 
                     image = transform_test(image)
+                    image = torch.movedim(image, 1, 0)
+                    image = torch.movedim(image, 1, 2)
+                    image = image[None, :, :, :]
                     if standardization is not None:
                         image = standardization(image)
 
@@ -201,15 +210,16 @@ def main(options):
                     image = image.to(device)
 
                     # Predictions
-                    logits = model(image.unsqueeze(0))
-
+                    logits = model(image) #.unsqueeze(0))
+                    
                     probs = (
                         torch.nn.functional.softmax(logits.detach(), dim=1)
                         .cpu()
                         .numpy()
                     )
-
-                    probs = probs.argmax(1).squeeze() + 1
+                    
+                    probs = probs.argmax(1) + 1#.squeeze() + 1
+                    probs = probs[0]
 
                     # Write the mask with georeference
                     dst.write_band(
@@ -283,9 +293,9 @@ if __name__ == "__main__":
         default=os.path.join(
             "results",
             "trained_models",
-            "semi-supervised-one-train-set",
-            "2023_06_12_H_07_58_04_TRAIN_SSL_ONE_TRAIN_SET_MULTI_xu4zx56t_fragrant-sweep-3",
-            "1107",
+            "semi-supervised-two-train-sets",
+            "2023_10_04_H_17_22_20_TRAIN_SSL_TWO_TRAIN_SETS_MULTI_dcgmpgun_vibrant-sweep-3",
+            "1165",
             "model.pth",
         ),
         help="Path to trained model",
