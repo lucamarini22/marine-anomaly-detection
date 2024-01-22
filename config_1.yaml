@@ -1,0 +1,28 @@
+program: train.py
+method: grid 
+metric:
+  goal: maximize 
+  name: Max Val mIou 
+parameters:
+  # See the description of the following hyperparameters here: 
+  # https://github.com/lucamarini22/anomaly-marine-detection/blob/main/marineanomalydetection/parse_args_train.py 
+  mode:
+    value: TrainMode.TRAIN_SSL_ONE_TRAIN_SET
+  lr:
+    values: [0.0002]
+  threshold:
+    values: [0.999]
+  epochs:
+    value: 2000
+  batch:
+    values: [5]
+  seed:
+    values: [2]
+  reduce_lr_on_plateau:
+    values: [0]
+  lambda_coeff:
+    values: [1.0] #[0.25, 1]
+  only_supervised:
+    values: [False]
+  use_ce_in_unsup_component:
+    values: [True]
