@@ -19,7 +19,12 @@ class MADUnlabeled(MarineAnomalyDataset):
         for roi in tqdm(
             self.ROIs, desc="Load unlabeled train set to memory"
         ):
-            patch_path, _ = get_patch_tokens(self.patches_path, roi)                
+            patch_path, _ = get_patch_tokens(
+                use_l1c=self.use_l1c,
+                patches_path=self.patches_path, 
+                seg_maps_path=self.seg_maps_path,
+                patch_name=roi,
+            )                
             self._load_and_process_and_add_patch_to_dataset(
                 patch_path, 
                 self.X_u

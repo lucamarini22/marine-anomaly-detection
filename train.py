@@ -126,6 +126,7 @@ def main(options, wandb_logger):
         train_loader, val_loader = get_dataloaders_supervised(
             splits_path=options["splits_path"],
             patches_path=options["patches_path"],
+            seg_maps_path=options["seg_maps_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             standardization=standardization,
@@ -138,6 +139,7 @@ def main(options, wandb_logger):
             seed_worker_fn=set_seed_worker,
             generator=g,
             drop_last=True,
+            use_l1c=options["use_L1C"],
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
@@ -147,6 +149,7 @@ def main(options, wandb_logger):
         ) = get_dataloaders_ssl_separate_train_sets(
             splits_path=options["splits_path"],
             patches_path=options["patches_path"],
+            seg_maps_path=options["seg_maps_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             weakly_transform=weakly_transform,
@@ -162,11 +165,13 @@ def main(options, wandb_logger):
             perc_labeled=options["perc_labeled"],
             mu=options["mu"],
             drop_last=True,
+            use_l1c=options["use_L1C"],
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         train_loader, val_loader = get_dataloaders_ssl_single_train_set(
             splits_path=options["splits_path"],
             patches_path=options["patches_path"],
+            seg_maps_path=options["seg_maps_path"],
             transform_train=transform_train,
             transform_val=transform_val,
             weakly_transform=weakly_transform,  
@@ -179,7 +184,8 @@ def main(options, wandb_logger):
             persistent_workers=options["persistent_workers"],
             seed_worker_fn=set_seed_worker,
             generator=g,
-            drop_last=True
+            drop_last=True,
+            use_l1c=options["use_L1C"],
         )
     else:
         raise Exception("The specified mode option does not exist.")

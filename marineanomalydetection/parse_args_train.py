@@ -128,7 +128,7 @@ def parse_args_train():
         help="Load model from previous epoch. Specify path to the checkpoint.",
     )
     parser.add_argument(
-        "--input_channels", default=11, type=int, help="Number of input bands"
+        "--input_channels", default=13, type=int, help="Number of input bands"
     )
     parser.add_argument(
         "--hidden_channels",
@@ -139,12 +139,17 @@ def parse_args_train():
     parser.add_argument(
         "--patches_path", 
         help="path of the folder containing the patches", 
+        default=os.path.join("data", "l1c_data", "tif_final")
+    )
+    parser.add_argument(
+        "--seg_maps_path", 
+        help="path of the folder containing the segmentation maps", 
         default=os.path.join("data", "patches")
     )
     parser.add_argument(
         "--splits_path",
         help="path of the folder containing the splits files", 
-        default=os.path.join("data", "splits")
+        default=os.path.join("data", "l1c_data", "splits_l1c")
     )
     # Optimization
     parser.add_argument("--lr", type=float, help="learning rate")
@@ -213,6 +218,12 @@ def parse_args_train():
         type=str,
         help="Path of the log folder",
     )
+    parser.add_argument(
+        "--use_L1C",
+        default=True,
+        type=bool,
+        help="True to train on L1C data. False to train on MARIDA data (atmospherically corrected data).",
+    )
     args = parser.parse_args()
     args.today_str = today_str
     # convert to ordinary dict
@@ -221,18 +232,18 @@ def parse_args_train():
     options["run_name"] = wandb.run.name
     
     
-    """For Debugging
-    options["mode"] = "TrainMode.TRAIN_SSL_TWO_TRAIN_SETS" #TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_TWO_TRAIN_SETS" # TRAIN_SSL_ONE_TRAIN_SET" #
+    #"""For Debugging
+    options["mode"] = "TrainMode.TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_TWO_TRAIN_SETS" # TRAIN_SSL_ONE_TRAIN_SET" #
     options["lr"] = 2e-4
-    options["threshold"] = 0.0
-    options["epochs"] = 2000
+    options["threshold"] = 0.99
+    options["epochs"] = 50
     options["batch"] = 5
     options["seed"] = random.randint(0, 1000)
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1.0
-    options["mu"] = 5
-    options["perc_labeled"] = 0.01
-    """
+    #options["mu"] = 5
+    #options["perc_labeled"] = 1.0
+    #"""
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
     
