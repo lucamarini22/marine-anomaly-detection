@@ -37,8 +37,7 @@ def get_rois(
             DataLoaderType.TEST_SET: os.path.join(splits_path, "test_X.txt"),
         }
         roi = load_roi(file_to_load[mode])
-    else:
-        roi = roi
+
     log_patches(roi, logger_set)
 
     return roi

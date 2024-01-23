@@ -33,7 +33,7 @@ class MarineAnomalyDataset(Dataset, ABC):
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
         perc_labeled: float = None,
-        second_transform: transforms.Compose = None
+        weak_transform_unlabeled_version_one_train_set: transforms.Compose = None
     ):
         """Initializes the anomaly marine detection dataset.
 
@@ -58,34 +58,43 @@ class MarineAnomalyDataset(Dataset, ABC):
               consider. Defaults to None.
             perc_labeled (float): percentage of the labeled training set (wrt 
               the full training set).
-            second_transform (transforms.Compose, optional): transformation to 
-              apply to the patches that will be used in the unsupervised loss. 
-              Only to use when mode is TRAIN_SSL_SUP. In particular, the 
-              second_transform is only applied for the SSL case with one single
-              training set because the same patch will be used to compute:
-                - the supervised loss -> transform is applied to the patch.
-                - the unsupervised loss -> second_transform is applied to a 
-                  copy of the patch.
+            weak_transform_unlabeled_version_one_train_set (transforms.Compose, optional): 
+              weakly augmentation to apply to the patches that will be used in the 
+              unsupervised loss component when mode is TRAIN_SET_SUP_AND_UNSUP. 
+              In particular, weak_transform_unlabeled_version_one_train_set is only 
+              applied for the SSL case with one single training set because 
+              the same patch will be used to compute:
+                - the supervised loss -> 'transform' is applied to the patch.
+                - the unsupervised loss -> 'weak_transform_unlabeled_version_one_train_set' 
+                  is applied to a copy of the same patch.
+              weak_transform_unlabeled_version_one_train_set is only used when 
+              mode is TRAIN_SET_SUP_AND_UNSUP because in this case there is 
+              one single training set containing both labeled and unlabeled 
+              data. Therefore, two augmentations, one for labeled 
+              ('transform') and the other for unlabeled data 
+              ('weak_transform_unlabeled_version_one_train_set') need to be 
+              applied. In other modes there are either:
+                - only labeled data, 
+                - only unlabeled data,
+              so only one augmentation ('transform') is applied there. 
               Defaults to None.
-
-        Raises:
-            Exception: raises an exception if the specified Category 
-              Aggregation is TRAIN_SSL_SUP and second_transform is not None.
-            Exception: raises an exception if the specified Category 
-              Aggregation does not exist.
         """
         self.use_l1c = use_l1c
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
-        self.second_transform = second_transform
+        self.weak_transform_unlabeled_version_one_train_set = \
+            weak_transform_unlabeled_version_one_train_set
         self.patches_path = patches_path
         self.seg_maps_path = seg_maps_path
         self.splits_path = splits_path
         self.aggregate_classes = aggregate_classes
         self.perc_labeled = perc_labeled
         
-        self._check_second_transform(second_transform, mode)
+        self._check_weak_transform_unlabeled_version_one_train_set(
+            weak_transform_unlabeled_version_one_train_set, 
+            mode
+        )
         
         if mode == DataLoaderType.TRAIN_SET_SUP:
             # dict that will contain the number of labeled pixels for each 
@@ -141,29 +150,35 @@ class MarineAnomalyDataset(Dataset, ABC):
 
 
     @staticmethod
-    def _check_second_transform(
-        second_transform: transforms.Compose, 
+    def _check_weak_transform_unlabeled_version_one_train_set(
+        weak_transform_unlabeled_version_one_train_set: transforms.Compose, 
         mode: DataLoaderType
     ) -> None:
-        """Checks that the second transform is initialized only when having the
+        """Checks that the transformation to apply to the patches that will be 
+        used in the unsupervised loss component, particularly when mode is 
+        TRAIN_SET_SUP_AND_UNSUP, is initialized only when having the
         mode DataLoaderType.TRAIN_SET_SUP_AND_UNSUP. 
 
         Args:
-            second_transform (transforms.Compose): second transform.
+            transform_unlabeled_version_one_train_set (transforms.Compose): 
+              transformation to apply to the patches that will be used in the 
+              unsupervised loss component when mode is TRAIN_SET_SUP_AND_UNSUP.
             mode (DataLoaderType): mode.
 
         Raises:
-            Exception: raises an exception if the second_transform is not None
+            Exception: raises an exception if the 
+              weak_transform_unlabeled_version_one_train_set is not None
               and the mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP.
-            Exception: raises an exception if the second_transform is None and
+            Exception: raises an exception if the 
+              weak_transform_unlabeled_version_one_train_set is None and
               the mode is DataLoaderType.TRAIN_SET_SUP_AND_UNSUP.
         """
-        if second_transform is not None \
+        if weak_transform_unlabeled_version_one_train_set is not None \
         and mode is not DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
-            raise Exception("The second_transform has to be used only when training with SSL with only 1 training set.")
-        if second_transform is None \
+            raise Exception("The weak_transform_unlabeled_version_one_train_set has to be used only when training with SSL with only 1 training set.")
+        if weak_transform_unlabeled_version_one_train_set is None \
             and mode is DataLoaderType.TRAIN_SET_SUP_AND_UNSUP:
-            raise Exception("The second_transform should not be set to None with the chosen mode.")
+            raise Exception("The weak_transform_unlabeled_version_one_train_set should not be set to None with the chosen mode.")
 
 
     @staticmethod

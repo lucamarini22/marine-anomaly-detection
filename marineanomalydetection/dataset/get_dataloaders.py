@@ -202,7 +202,7 @@ def get_dataloaders_ssl_single_train_set(
         patches_path=patches_path,
         seg_maps_path=seg_maps_path,
         splits_path=splits_path,
-        second_transform=weakly_transform,
+        weak_transform_unlabeled_version_one_train_set=weakly_transform,
         use_l1c=use_l1c,
     )
     dataset_val = MADLabeled(
