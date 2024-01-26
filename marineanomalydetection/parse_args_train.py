@@ -139,10 +139,17 @@ def parse_args_train():
         type=int,
         help="Number of hidden features",
     )
+    # Data parameters
+    parser.add_argument(
+        "--use_l1c",
+        type=int,
+        help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
+        choices=[0, 1]
+    )
     parser.add_argument(
         "--patches_path", 
         help="path of the folder containing the patches", 
-        default=os.path.join("data", "patches") #"data", "l1c_data", "tif_final")
+        default=os.path.join("data", "l1c_data", "tif_final") #"data", "patches")
     )
     parser.add_argument(
         "--seg_maps_path", 
@@ -223,12 +230,6 @@ def parse_args_train():
         type=str,
         help="Path of the log folder",
     )
-    parser.add_argument(
-        "--use_l1c",
-        type=int,
-        help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
-        choices=[0, 1]
-    )
     args = parser.parse_args()
     args.today_str = today_str
     # convert to ordinary dict
@@ -246,7 +247,8 @@ def parse_args_train():
     options["seed"] = random.randint(0, 1000)
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1.0
-    options["use_l1c"] = 0
+    options["use_l1c"] = 1
+    options["input_channels"] = 13
     #options["mu"] = 5
     #options["perc_labeled"] = 1.0
     #"""
