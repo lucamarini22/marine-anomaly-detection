@@ -139,7 +139,7 @@ def main(options, wandb_logger):
             seed_worker_fn=set_seed_worker,
             generator=g,
             drop_last=True,
-            use_l1c=options["use_L1C"],
+            use_l1c=options["use_l1c"],
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         (
@@ -165,7 +165,7 @@ def main(options, wandb_logger):
             perc_labeled=options["perc_labeled"],
             mu=options["mu"],
             drop_last=True,
-            use_l1c=options["use_L1C"],
+            use_l1c=options["use_l1c"],
         )
     elif options["mode"] == TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
         train_loader, val_loader = get_dataloaders_ssl_single_train_set(
@@ -185,7 +185,7 @@ def main(options, wandb_logger):
             seed_worker_fn=set_seed_worker,
             generator=g,
             drop_last=True,
-            use_l1c=options["use_L1C"],
+            use_l1c=options["use_l1c"],
         )
     else:
         raise Exception("The specified mode option does not exist.")

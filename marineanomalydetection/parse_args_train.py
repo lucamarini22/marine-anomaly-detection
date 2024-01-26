@@ -8,6 +8,7 @@ from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
 from marineanomalydetection.trainmode import TrainMode
+from marineanomalydetection.utils.set_bool_flag import set_bool_flag
 
 
 def parse_args_train():
@@ -47,7 +48,7 @@ def parse_args_train():
     parser.add_argument(
         "--only_supervised",
         help=(
-            "Set to True to train only on the supervised commponent when "
+            "Set to 1 to train only on the supervised commponent when "
             "using a semi-supervised learnig scheme. This is done to make a "
             "fair comparison between a semi-supervised model and a " 
             "fully-supervised one. Only effective when --mode is one of the "
@@ -55,8 +56,9 @@ def parse_args_train():
             "  - TrainMode.TRAIN_SSL_TWO_TRAIN_SETS"
             "  - TrainMode.TRAIN_SSL_ONE_TRAIN_SET"
         ),
-        type=bool,
-        default=False
+        type=int,
+        choices=[0, 1],
+        default=0
     )
     
     # SSL hyperparameters
@@ -103,11 +105,12 @@ def parse_args_train():
     )
     parser.add_argument(
         "--use_ce_in_unsup_component",
-        default=True,
-        type=bool,
+        type=int,
+        choices=[0, 1],
+        default=1,
         help=("Only to consider when training with semi-supervised learning. "
-        "True to use the Cross Entropy loss in the unsupervised component "
-        "of the loss. False to use the Focal loss. The Focal loss is not "
+        "Set to 1 to use the Cross Entropy loss in the unsupervised component "
+        "of the loss. Set to 0 to use the Focal loss. The Focal loss is not "
         "ideal for the unsupervised component when used with a high "
         "probability threshold (--threshold) because the Focal loss gives "
         "more importance to predictions with a low probability, which are "
@@ -128,7 +131,7 @@ def parse_args_train():
         help="Load model from previous epoch. Specify path to the checkpoint.",
     )
     parser.add_argument(
-        "--input_channels", default=13, type=int, help="Number of input bands"
+        "--input_channels", default=11, type=int, help="Number of input bands"
     )
     parser.add_argument(
         "--hidden_channels",
@@ -139,7 +142,7 @@ def parse_args_train():
     parser.add_argument(
         "--patches_path", 
         help="path of the folder containing the patches", 
-        default=os.path.join("data", "l1c_data", "tif_final")
+        default=os.path.join("data", "patches") #"data", "l1c_data", "tif_final")
     )
     parser.add_argument(
         "--seg_maps_path", 
@@ -190,8 +193,9 @@ def parse_args_train():
     )
     parser.add_argument(
         "--pin_memory",
-        default=False,
-        type=bool,
+        type=int,
+        choices=[0, 1],
+        default=0,
         help="Use pinned memory or not",
     )
     parser.add_argument(
@@ -202,8 +206,9 @@ def parse_args_train():
     )
     parser.add_argument(
         "--persistent_workers",
-        default=True,
-        type=bool,
+        type=int,
+        choices=[0, 1],
+        default=1,
         help="This allows to maintain the workers Dataset instances alive.",
     )
     parser.add_argument(
@@ -219,10 +224,10 @@ def parse_args_train():
         help="Path of the log folder",
     )
     parser.add_argument(
-        "--use_L1C",
-        default=True,
-        type=bool,
-        help="True to train on L1C data. False to train on MARIDA data (atmospherically corrected data).",
+        "--use_l1c",
+        type=int,
+        help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
+        choices=[0, 1]
     )
     args = parser.parse_args()
     args.today_str = today_str
@@ -232,7 +237,7 @@ def parse_args_train():
     options["run_name"] = wandb.run.name
     
     
-    #"""For Debugging
+    """For Debugging
     options["mode"] = "TrainMode.TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_TWO_TRAIN_SETS" # TRAIN_SSL_ONE_TRAIN_SET" #
     options["lr"] = 2e-4
     options["threshold"] = 0.99
@@ -241,12 +246,24 @@ def parse_args_train():
     options["seed"] = random.randint(0, 1000)
     options["reduce_lr_on_plateau"] = 0
     options["lambda_coeff"] = 1.0
+    options["use_l1c"] = 0
     #options["mu"] = 5
     #options["perc_labeled"] = 1.0
     #"""
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
     
+    # Converts boolean args from [0, 1] to [False, True]
+    bool_args_names = [
+        "only_supervised", 
+        "use_ce_in_unsup_component", 
+        "pin_memory", 
+        "persistent_workers", 
+        "use_l1c"
+    ]
+    for bool_arg_name in bool_args_names:
+        options[bool_arg_name] = set_bool_flag(options[bool_arg_name])
+
     if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  
         options["mu"] = int(options["mu"])
         if options["perc_labeled"] <= 0.0 or options["perc_labeled"] >= 1.0:
