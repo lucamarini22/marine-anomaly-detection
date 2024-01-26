@@ -27,6 +27,9 @@ from marineanomalydetection.dataset.categoryaggregation import (
 )
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 from marineanomalydetection.utils.seed import set_seed
+from marineanomalydetection.utils.train_functions import get_model
+from marineanomalydetection.utils.set_bool_flag import set_bool_flag
+
 
 root_path = dirname(os.path.abspath(__file__))
 
@@ -57,7 +60,7 @@ def inference(options):
     else:
         device = torch.device("cpu")
 
-    model = UNet(
+    model = get_model(
         input_bands=options["input_channels"],
         output_classes=output_channels,
         hidden_channels=options["hidden_channels"],
@@ -79,13 +82,15 @@ def inference(options):
     model.eval()
 
     image = ...
+    image = image.to(device)
 
-    start = time.time()
+    with torch.no_grad():
+        start = time.time()
 
-    logits = model(image)
+        logits = model(image)
 
-    end = time.time()
-    print(end - start)
+        end = time.time()
+        print(end - start)
 
 
 if __name__ == "__main__":
@@ -124,6 +129,13 @@ if __name__ == "__main__":
         type=int,
         help="Number of hidden features",
     )
+    # Data parameters
+    parser.add_argument(
+        "--use_l1c",
+        type=int,
+        help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
+        choices=[0, 1]
+    )
     parser.add_argument(
         "--patches_path", 
         help="path of the folder containing the patches", 
@@ -151,8 +163,9 @@ if __name__ == "__main__":
     # Produce Predicted Masks
     parser.add_argument(
         "--predict_masks",
-        default=True,
-        type=bool,
+        type=int,
+        choices=[0, 1],
+        default=1,
         help="Generate test set prediction masks?",
     )
     parser.add_argument(
@@ -163,5 +176,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     options = vars(args)  # convert to ordinary dict
+        # Converts boolean args from [0, 1] to [False, True]
+    bool_args_names = [
+        "use_l1c",
+        "predict_masks"
+    ]
+    for bool_arg_name in bool_args_names:
+        options[bool_arg_name] = set_bool_flag(options[bool_arg_name])
 
     inference(options)
