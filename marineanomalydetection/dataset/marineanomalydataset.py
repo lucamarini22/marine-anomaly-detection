@@ -196,6 +196,8 @@ class MarineAnomalyDataset(Dataset, ABC):
         patch = load_patch(patch_path)
         min_patch, max_patch = patch.min(), patch.max()
         patch = normalize_img(patch, min_patch, max_patch)
+        # Uncomment to check patches with nan values 
+        # nan_mask = np.isnan(patch)
         list_patches.append(patch)
 
     

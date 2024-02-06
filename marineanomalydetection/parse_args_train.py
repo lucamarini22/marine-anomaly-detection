@@ -249,8 +249,9 @@ def parse_args_train():
     options["lambda_coeff"] = 1.0
     options["use_l1c"] = 1
     options["input_channels"] = 13
+    options["only_supervised"] = 1
     #options["mu"] = 5
-    #options["perc_labeled"] = 1.0
+    #options["perc_labeled"] = 0.9
     #"""
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
