@@ -14,7 +14,12 @@ from marineanomalydetection.dataset.augmentation.strongaugmentation import (
     StrongAugmentation,
 )
 from marineanomalydetection.trainmode import TrainMode
-from marineanomalydetection.utils.assets import labels, labels_binary, labels_multi, labels_11_classes
+from marineanomalydetection.utils.assets import (
+    labels,
+    labels_binary,
+    labels_multi,
+    labels_11_classes,
+)
 from marineanomalydetection.dataset.categoryaggregation import (
     CategoryAggregation,
 )
@@ -63,18 +68,18 @@ def train_step_supervised(
     # So, that's why the backward pass is skipped (this is the supervised loss)
     if loss.grad_fn is not None:
         loss.backward()
-        
+
     create_vars_to_visually_debug_imgs_and_preds(
         visual_debug=False,
         supervised=True,
-        img_x=image, 
+        img_x=image,
         seg_map=target,
         logits_x=logits,
         idx_batch=0,
         idx_band=3,
         idx_class=0,
     )
-    
+
     training_loss.append((loss.data * target.shape[0]).tolist())
     optimizer.step()
     return loss, training_loss
@@ -110,8 +115,8 @@ def train_step_semi_supervised_separate_batches(
 
     Args:
         only_supervised (bool): True to train only on the supervised commponent
-          of the loss.  This is done to make a fair comparison between a 
-          semi-supervised model and a fully-supervised one. 
+          of the loss.  This is done to make a fair comparison between a
+          semi-supervised model and a fully-supervised one.
           False to train on both supervised and unsupervised components.
         labeled_train_loader (DataLoader): dataloader for labeled training set.
         unlabeled_train_loader (DataLoader): dataloader for unlabeled training
@@ -122,9 +127,9 @@ def train_step_semi_supervised_separate_batches(
         criterion_unsup (nn.Module): unsupervised loss.
         training_loss (list[float]): list of semi-supervised training loss of
           batches.
-        supervised_component_loss (list[float]): list of supervised component 
+        supervised_component_loss (list[float]): list of supervised component
           of semi-supervised training loss of batches.
-        unsupervised_component_loss (list[float]): list of unsupervised 
+        unsupervised_component_loss (list[float]): list of unsupervised
           component of semi-supervised training loss of batches.
         model (nn.Module): model.
         optimizer (torch.optim): optimizer
@@ -138,12 +143,12 @@ def train_step_semi_supervised_separate_batches(
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
-        tuple[torch.Tensor, list[float], list[float], list[float]]: 
-          - last semi-superivsed loss, 
+        tuple[torch.Tensor, list[float], list[float], list[float]]:
+          - last semi-superivsed loss,
           - list of all semi-supervised losses of the current step,
           - list of all supervised components of the semi-supervised losses of
             the current step,
-          - list of all unsupervised components of the semi-supervised losses 
+          - list of all unsupervised components of the semi-supervised losses
             of the current step.
     """
     try:
@@ -164,15 +169,9 @@ def train_step_semi_supervised_separate_batches(
     randaugment = RandAugmentMC(n=2, m=10)
     # Get strong transform to apply to both pseudo-label map and
     # weakly augmented image
-    strong_transform = StrongAugmentation(
-        randaugment=randaugment, mean=None, std=None
-    )
+    strong_transform = StrongAugmentation(randaugment=randaugment, mean=None, std=None)
     # Applies strong augmentation on weakly augmented images
-    img_u_s = strong_aug_on_tensor(
-        img_u_w, 
-        strong_transform, 
-        out_as_torch_tensor=True
-    )
+    img_u_s = strong_aug_on_tensor(img_u_w, strong_transform, out_as_torch_tensor=True)
     # Moves data to device
     inputs = torch.cat((img_x, img_u_w, img_u_s)).to(device)
     seg_map = seg_map.to(device)
@@ -190,20 +189,16 @@ def train_step_semi_supervised_separate_batches(
     randaugment.use_cutout(False)
     randaugment.not_use_change_intensity_augs(True)
     # Applies strong augmentation to pseudo label map
-    tmp = strong_aug_on_tensor(
-        logits_u_w,
-        strong_transform,
-        out_as_torch_tensor=False
-    )
+    tmp = strong_aug_on_tensor(logits_u_w, strong_transform, out_as_torch_tensor=False)
     logits_u_w = tmp
     # Sets all pixels that were added due to padding to a
     # constant value to later ignore them when computing the loss
     logits_u_s = set_padding_pixels_to_val(
-        logits_u_w=logits_u_w, 
-        logits_u_s=logits_u_s, 
+        logits_u_w=logits_u_w,
+        logits_u_s=logits_u_s,
         padding_val=padding_val,
         device=device,
-        constant_val=IGNORE_INDEX
+        constant_val=IGNORE_INDEX,
     )
     # Moves new logits to device
     # Weak-aug ones
@@ -222,7 +217,7 @@ def train_step_semi_supervised_separate_batches(
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
     # Merge the two masks
     mask[padding_mask] = 0.0
-    
+
     # Unsupervised loss
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
@@ -242,11 +237,11 @@ def train_step_semi_supervised_separate_batches(
         loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
-    
+
     create_vars_to_visually_debug_imgs_and_preds(
         visual_debug=False,
         supervised=False,
-        img_x=img_x, 
+        img_x=img_x,
         seg_map=seg_map,
         logits_x=logits_x,
         idx_batch=0,
@@ -270,7 +265,9 @@ def train_step_semi_supervised_separate_batches(
 
     return loss, training_loss, supervised_component_loss, unsupervised_component_loss
 
+
 def train_step_semi_supervised_one_batch(
+    epoch: int,
     only_supervised: bool,
     image: torch.Tensor,
     seg_map: torch.Tensor,
@@ -293,16 +290,17 @@ def train_step_semi_supervised_one_batch(
     """Trains the model for one semi-supervised step.
     It computes:
       - Supervised loss on the labeled pixels of a batch of the training set.
-      - Unsupervised loss on the unlabeled pixels of the same batch used to 
+      - Unsupervised loss on the unlabeled pixels of the same batch used to
         compute the supervised loss.
     There is only one training set and:
       - Labeled pixels contribute only to the supervised loss.
       - Unlabeled pixels contribute only to the unsupervised loss.
 
     Args:
+        epoch (int): epoch number.
         only_supervised (bool): True to train only on the supervised commponent
-          of the loss.  This is done to make a fair comparison between a 
-          semi-supervised model and a fully-supervised one. 
+          of the loss.  This is done to make a fair comparison between a
+          semi-supervised model and a fully-supervised one.
           False to train on both supervised and unsupervised components.
         image (torch.Tensor): image.
         seg_map (torch.Tensor): segmentation map.
@@ -311,9 +309,9 @@ def train_step_semi_supervised_one_batch(
         criterion_unsup (nn.Module): unsupervised loss.
         training_loss (list[float]): list of supervised training loss of
           batches.
-        supervised_component_loss (list[float]): list of supervised component 
+        supervised_component_loss (list[float]): list of supervised component
           of semi-supervised training loss of batches.
-        unsupervised_component_loss (list[float]): list of unsupervised 
+        unsupervised_component_loss (list[float]): list of unsupervised
           component of semi-supervised training loss of batches.
         model (nn.Module): model.
         optimizer (torch.optim): optimizer.
@@ -327,12 +325,12 @@ def train_step_semi_supervised_one_batch(
         padding_val (int, optional): padding value. Defaults to PADDING_VAL.
 
     Returns:
-        tuple[torch.Tensor, list[float], list[float], list[float]]: 
-          - last semi-superivsed loss, 
+        tuple[torch.Tensor, list[float], list[float], list[float]]:
+          - last semi-superivsed loss,
           - list of all semi-supervised losses of the current step,
           - list of all supervised components of the semi-supervised losses of
             the current step,
-          - list of all unsupervised components of the semi-supervised losses 
+          - list of all unsupervised components of the semi-supervised losses
             of the current step.
     """
     # Initializes RandAugment with n random augmentations.
@@ -340,14 +338,10 @@ def train_step_semi_supervised_one_batch(
     randaugment = RandAugmentMC(n=2, m=10)
     # Get strong transform to apply to both pseudo-label map and
     # weakly augmented image
-    strong_transform = StrongAugmentation(
-        randaugment=randaugment, mean=None, std=None
-    )
+    strong_transform = StrongAugmentation(randaugment=randaugment, mean=None, std=None)
     # Applies strong augmentation on weakly augmented images
     img_u_s = strong_aug_on_tensor(
-        weak_aug_img, 
-        strong_transform, 
-        out_as_torch_tensor=True
+        weak_aug_img, strong_transform, out_as_torch_tensor=True
     )
     # Moves data to device
     inputs = torch.cat((image, weak_aug_img, img_u_s)).to(device)
@@ -368,20 +362,16 @@ def train_step_semi_supervised_one_batch(
     randaugment.use_cutout(False)
     randaugment.not_use_change_intensity_augs(True)
     # Applies strong augmentation to pseudo label map
-    tmp = strong_aug_on_tensor(
-        logits_u_w,
-        strong_transform,
-        out_as_torch_tensor=False
-    )
+    tmp = strong_aug_on_tensor(logits_u_w, strong_transform, out_as_torch_tensor=False)
     logits_u_w = tmp
     # Sets all pixels that were added due to padding to a
     # constant value to later ignore them when computing the loss
     logits_u_s = set_padding_pixels_to_val(
-        logits_u_w=logits_u_w, 
-        logits_u_s=logits_u_s, 
+        logits_u_w=logits_u_w,
+        logits_u_s=logits_u_s,
         padding_val=padding_val,
         device=device,
-        constant_val=IGNORE_INDEX
+        constant_val=IGNORE_INDEX,
     )
     # Moves new logits to device
     # Weak-aug ones
@@ -398,13 +388,13 @@ def train_step_semi_supervised_one_batch(
     mask = max_probs.ge(threshold).float()
     # Mask to ignore all padding pixels
     padding_mask = logits_u_s[:, 0, :, :] == IGNORE_INDEX
-    # Merges threshold mask and padding mask 
+    # Merges threshold mask and padding mask
     mask[padding_mask] = 0.0
-    # Ignores pixels that are labeled when computing the unsupervised loss 
+    # Ignores pixels that are labeled when computing the unsupervised loss
     unlabeled_pixels_mask = unlabeled_pixels_mask.float()
     # Merges labeled pixels mask and threshold + padding mask
     mask = torch.logical_and(mask, unlabeled_pixels_mask).float()
-    
+
     # Unsupervised loss
     # Multiplies the loss by the mask to ignore pixels
     loss_u = criterion_unsup(logits_u_s, targets_u) * torch.flatten(mask)
@@ -413,7 +403,9 @@ def train_step_semi_supervised_one_batch(
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
-    if only_supervised:
+    if (
+        only_supervised or epoch < 1000
+    ):  # TODO: put this number as parameter or use another technqiue, such as early stopping
         Lu = torch.tensor(0.0)
     log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
@@ -424,11 +416,11 @@ def train_step_semi_supervised_one_batch(
         loss = Lx + lambda_v * Lu
     if Lx != 0.0 or Lu != 0.0:
         loss.backward()
-    
+
     create_vars_to_visually_debug_imgs_and_preds(
         visual_debug=False,
         supervised=False,
-        img_x=image, 
+        img_x=image,
         seg_map=seg_map,
         logits_x=logits_x,
         idx_batch=0,
@@ -451,6 +443,7 @@ def train_step_semi_supervised_one_batch(
     optimizer.step()
 
     return loss, training_loss, supervised_component_loss, unsupervised_component_loss
+
 
 def eval_step(
     image: torch.Tensor,
@@ -518,8 +511,8 @@ def get_criterion(
           False to return unsupervised criterion.
         alphas (list[float]): alpha coefficients of the Focal loss.
         device (torch.device): device.
-        use_ce_in_unsup_comp (bool): Only to consider when 'supervised' is 
-          False. Set it to True to use the Cross Entropy loss in the 
+        use_ce_in_unsup_comp (bool): Only to consider when 'supervised' is
+          False. Set it to True to use the Cross Entropy loss in the
           unsupervised component of the loss. To False to use the Focal loss.
         gamma (float): gamma coefficient of the Focal loss.
 
@@ -547,9 +540,7 @@ def get_criterion(
     return criterion
 
 
-def get_optimizer(
-    model: nn.Module, lr: float, weight_decay: float
-) -> torch.optim:
+def get_optimizer(model: nn.Module, lr: float, weight_decay: float) -> torch.optim:
     """Gets the optimizer.
 
     Args:
@@ -560,9 +551,7 @@ def get_optimizer(
     Returns:
         torch.optim: optimizer.
     """
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=lr, weight_decay=weight_decay
-    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     return optimizer
 
 
@@ -680,9 +669,7 @@ def get_output_channels(aggregate_classes: CategoryAggregation) -> int:
     elif aggregate_classes == CategoryAggregation.ALL:
         output_channels = len(labels)
     else:
-        raise Exception(
-            "The specified aggregated_classes does not exist"
-        )
+        raise Exception("The specified aggregated_classes does not exist")
     return output_channels
 
 
@@ -700,7 +687,9 @@ def update_checkpoint_path(mode: TrainMode, checkpoint_path: str) -> str:
         str: the updated path of the checkpoint.
     """
     if mode is TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
-        checkpoint_path = os.path.join(checkpoint_path, "semi-supervised-two-train-sets")
+        checkpoint_path = os.path.join(
+            checkpoint_path, "semi-supervised-two-train-sets"
+        )
     elif mode is TrainMode.TRAIN:
         checkpoint_path = os.path.join(checkpoint_path, "supervised")
     elif mode is TrainMode.TRAIN_SSL_ONE_TRAIN_SET:
@@ -728,14 +717,14 @@ def check_checkpoint_path_exist(checkpoint_path: str):
 def strong_aug_on_tensor(
     tensor: torch.Tensor,
     strong_transform: StrongAugmentation,
-    out_as_torch_tensor: bool
+    out_as_torch_tensor: bool,
 ) -> torch.Tensor:
-    """Applies strong augmentations on a tensor. 
+    """Applies strong augmentations on a tensor.
 
     Args:
         img_w (torch.Tensor): tensor.
         strong_transform (StrongAugmentation): strong augmentation.
-        out_as_torch_tensor (bool): True to return the output as a 
+        out_as_torch_tensor (bool): True to return the output as a
           Torch.tensor. False to return it as a np.ndarray.
 
     Returns:
@@ -755,11 +744,11 @@ def strong_aug_on_tensor(
 
 
 def set_padding_pixels_to_val(
-    logits_u_w: np.ndarray, 
-    logits_u_s: np.ndarray, 
+    logits_u_w: np.ndarray,
+    logits_u_s: np.ndarray,
     padding_val: int,
     device: torch.device,
-    constant_val: int = IGNORE_INDEX
+    constant_val: int = IGNORE_INDEX,
 ) -> torch.Tensor:
     """Sets all pixels that were added due to padding to a constant value to
     later ignore them when computing the loss.
@@ -767,49 +756,46 @@ def set_padding_pixels_to_val(
     Args:
         logits_u_w (np.ndarray): strongly-augmented logits of the prediction of
           the model on a weakly-augmented image. Shape: (img_h, img_w).
-        logits_u_s (np.ndarray): logits of the prediction of the model on a 
+        logits_u_s (np.ndarray): logits of the prediction of the model on a
           strongly augmented image.
         padding_val (int): value of padding pixels.
         device: device.
         constant_val (int, optional): Constant. Defaults to IGNORE_INDEX.
-    
+
     Returns:
-        torch.Tensor: logits of the prediction of the model on a 
+        torch.Tensor: logits of the prediction of the model on a
           strongly augmented image with added padding pixels.
     """
     batch_size = logits_u_w.shape[0]
     num_categories = logits_u_w.shape[1]
-    
+
     logits_u_s_copy = logits_u_s.clone()
-    
+
     for idx_b in range(batch_size):
         for idx_cat in range(num_categories):
             logits_u_w_patch = logits_u_w[idx_b, idx_cat, :, :]
             logits_u_s_patch = logits_u_s[idx_b, idx_cat, :, :]
-            
+
             idxs_padding_pixels = logits_u_w_patch == padding_val
             idxs_padding_pixels = torch.from_numpy(idxs_padding_pixels)
             idxs_padding_pixels = idxs_padding_pixels.to(device)
-            
+
             logits_u_s_patch_added_padding = torch.where(
-                idxs_padding_pixels, 
-                constant_val, 
-                other=logits_u_s_patch
+                idxs_padding_pixels, constant_val, other=logits_u_s_patch
             )
-            
-            logits_u_s_copy[idx_b, idx_cat, :, :] = \
-                logits_u_s_patch_added_padding
-    
+
+            logits_u_s_copy[idx_b, idx_cat, :, :] = logits_u_s_patch_added_padding
+
     return logits_u_s_copy
 
 
 def update_min_val_loss(
-    val_losses_avg_all_epochs: list[float], 
+    val_losses_avg_all_epochs: list[float],
     min_val_loss_among_epochs: float,
     epoch_min_val_loss: int,
-    epoch: int
+    epoch: int,
 ) -> tuple[float, int]:
-    """Updates the minimum value of the loss on the validation set and the 
+    """Updates the minimum value of the loss on the validation set and the
     epoch at which it was reached.
 
     Args:
@@ -822,7 +808,7 @@ def update_min_val_loss(
         tuple[float, int]: updated:
           - minimum val loss that was reached,
           - epoch at which the min val loss was reached.
-          
+
     """
     if min(val_losses_avg_all_epochs) < min_val_loss_among_epochs:
         min_val_loss_among_epochs = min(val_losses_avg_all_epochs)
@@ -831,10 +817,7 @@ def update_min_val_loss(
 
 
 def update_max_val_miou(
-    eval: dict, 
-    max_val_miou_among_epochs: float,
-    epoch_max_val_miou: int,
-    epoch: int
+    eval: dict, max_val_miou_among_epochs: float, epoch_max_val_miou: int, epoch: int
 ) -> tuple[float, int]:
     """Updates the maximum value of mIoU on the validation set and the epoch at
     which it was reached.
@@ -849,7 +832,7 @@ def update_max_val_miou(
         tuple[float, int]: updated:
           - maximum val mIoU that was reached,
           - epoch at which the max val mIoU was reached.
-          
+
     """
     if eval["IoU"] > max_val_miou_among_epochs:
         max_val_miou_among_epochs = eval["IoU"]
@@ -858,17 +841,18 @@ def update_max_val_miou(
 
 
 def init_max_val_mIoU() -> float:
-    """Initializes the max mIoU reached on the validation set. 
+    """Initializes the max mIoU reached on the validation set.
 
     Returns:
         float: starting max val mIoU score.
     """
     return 0.0
 
+
 def create_vars_to_visually_debug_imgs_and_preds(
     visual_debug: bool,
     supervised: bool,
-    img_x: torch.Tensor, 
+    img_x: torch.Tensor,
     seg_map: torch.Tensor,
     logits_x: torch.Tensor,
     idx_batch: int,
@@ -886,27 +870,27 @@ def create_vars_to_visually_debug_imgs_and_preds(
 
     Args:
         visual_debug (bool): True to create the variables. False otherwise.
-        supervised (bool): True with fully-supervised training. False with 
+        supervised (bool): True with fully-supervised training. False with
           semi-supervised training.
         img_x (torch.Tensor): batch of images.
         seg_map (torch.Tensor): batch of segmentation maps.
         logits_x (torch.Tensor): batch of predictions of the images.
         img_u_w (torch.Tensor): batch of weakly-augmented images.
         img_u_s (torch.Tensor): batch of strongly-augmented images.
-        logits_u_w (torch.Tensor): batch of predictions of weakly-augmented 
+        logits_u_w (torch.Tensor): batch of predictions of weakly-augmented
           images.
-        logits_u_s (torch.Tensor): batch of predictions of strongly-augmented 
+        logits_u_s (torch.Tensor): batch of predictions of strongly-augmented
           images.
         pseudo_map (torch.Tensor): pseudo-labels.0
-        padd_mask (torch.Tensor): padding mask (i.e. pixels to be ignored due 
+        padd_mask (torch.Tensor): padding mask (i.e. pixels to be ignored due
           to padding when computing the loss using the pseudo-labels).
-        final_mask (torch.Tensor): final mask that ignores both pixels due to 
+        final_mask (torch.Tensor): final mask that ignores both pixels due to
           padding and pixels whose probability is less than a threshold when
           computing the unsupervised component of the semi-supervised loss.
         idx_batch (int, optional): index of the batch.
-        idx_band (int, optional): index of the band to visualize of the 
+        idx_band (int, optional): index of the band to visualize of the
           multispectral image.
-        idx_class (int, optional): index of the predictions of the class to 
+        idx_class (int, optional): index of the predictions of the class to
           visualize.
     """
     if visual_debug:
@@ -918,7 +902,7 @@ def create_vars_to_visually_debug_imgs_and_preds(
             img_x_viz = img_x[idx_batch, idx_band, :, :]
             seg_map_viz = seg_map[idx_batch, :, :]
             log_x_viz = logits_x[idx_batch, idx_class, :, :]
-            
+
             img_u_w_viz = img_u_w[idx_batch, idx_band, :, :]
             img_u_s_viz = img_u_s[idx_batch, idx_band, :, :]
             log_u_w_viz = logits_u_w[idx_batch, idx_class, :, :]

@@ -34,8 +34,8 @@ def parse_args_train():
             "multi (Marine Water, Algae/OrganicMaterial, Marine Debris, Ship, and Cloud); "
             "binary (Marine Debris and Other); "
             "eleven (Marine Debris, Dense Sargassum, Sparse Sargassum, "
-                "Natural Organic Material, Ship, Clouds, Marine Water, "
-                "Sediment-Laden Water, Foam, Turbid Water, Shallow Water); " 
+            "Natural Organic Material, Ship, Clouds, Marine Water, "
+            "Sediment-Laden Water, Foam, Turbid Water, Shallow Water); "
             "None (keep the original 15 classes)"
         ),
     )
@@ -44,13 +44,13 @@ def parse_args_train():
         "--mode",
         help="Mode",
     )
-    
+
     parser.add_argument(
         "--only_supervised",
         help=(
             "Set to 1 to train only on the supervised commponent when "
             "using a semi-supervised learnig scheme. This is done to make a "
-            "fair comparison between a semi-supervised model and a " 
+            "fair comparison between a semi-supervised model and a "
             "fully-supervised one. Only effective when --mode is one of the "
             "following: "
             "  - TrainMode.TRAIN_SSL_TWO_TRAIN_SETS"
@@ -58,9 +58,9 @@ def parse_args_train():
         ),
         type=int,
         choices=[0, 1],
-        default=0
+        default=0,
     )
-    
+
     # SSL hyperparameters
     parser.add_argument(
         "--perc_labeled",
@@ -92,14 +92,16 @@ def parse_args_train():
         "--gamma",
         default=2.0,
         type=float,
-        help=("Gamma coefficient of the focal loss of only the supervised "
-              "component of the loss. The unsupervised component of the loss "
-              "has gamma = 0, which correspond to computing the weighted " 
-              "cross-entropy."),
+        help=(
+            "Gamma coefficient of the focal loss of only the supervised "
+            "component of the loss. The unsupervised component of the loss "
+            "has gamma = 0, which correspond to computing the weighted "
+            "cross-entropy."
+        ),
     )
     parser.add_argument(
         "--alphas",
-        default=[1.0, 1.0, 1.0, 1.0, 1.0], #[0.50, 0.125, 0.125, 0.125, 0.125],
+        default=[1.0, 1.0, 1.0, 1.0, 1.0],  # [0.50, 0.125, 0.125, 0.125, 0.125],
         type=list[float],
         help="Alpha coefficients of the focal loss.",
     )
@@ -108,13 +110,14 @@ def parse_args_train():
         type=int,
         choices=[0, 1],
         default=1,
-        help=("Only to consider when training with semi-supervised learning. "
-        "Set to 1 to use the Cross Entropy loss in the unsupervised component "
-        "of the loss. Set to 0 to use the Focal loss. The Focal loss is not "
-        "ideal for the unsupervised component when used with a high "
-        "probability threshold (--threshold) because the Focal loss gives "
-        "more importance to predictions with a low probability, which are "
-        "ignored when having a high confidence (probability) threshold."
+        help=(
+            "Only to consider when training with semi-supervised learning. "
+            "Set to 1 to use the Cross Entropy loss in the unsupervised component "
+            "of the loss. Set to 0 to use the Focal loss. The Focal loss is not "
+            "ideal for the unsupervised component when used with a high "
+            "probability threshold (--threshold) because the Focal loss gives "
+            "more importance to predictions with a low probability, which are "
+            "ignored when having a high confidence (probability) threshold."
         ),
     )
     # Training hyperparameters
@@ -144,22 +147,22 @@ def parse_args_train():
         "--use_l1c",
         type=int,
         help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
-        choices=[0, 1]
+        choices=[0, 1],
     )
     parser.add_argument(
-        "--patches_path", 
-        help="path of the folder containing the patches", 
-        default=os.path.join("data", "l1c_data", "tif_final") #"data", "patches")
+        "--patches_path",
+        help="path of the folder containing the patches",
+        default=os.path.join("data", "l1c_data", "tif_final"),  # "data", "patches")
     )
     parser.add_argument(
-        "--seg_maps_path", 
-        help="path of the folder containing the segmentation maps", 
-        default=os.path.join("data", "patches")
+        "--seg_maps_path",
+        help="path of the folder containing the segmentation maps",
+        default=os.path.join("data", "patches"),
     )
     parser.add_argument(
         "--splits_path",
-        help="path of the folder containing the splits files", 
-        default=os.path.join("data", "l1c_data", "splits_l1c")
+        help="path of the folder containing the splits files",
+        default=os.path.join("data", "l1c_data", "splits_l1c"),
     )
     # Optimization
     parser.add_argument("--lr", type=float, help="learning rate")
@@ -236,8 +239,7 @@ def parse_args_train():
     options = vars(args)
     options["run_id"] = wandb.run.id
     options["run_name"] = wandb.run.name
-    
-    
+
     """For Debugging
     options["mode"] = "TrainMode.TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_ONE_TRAIN_SET" #TRAIN_SSL_TWO_TRAIN_SETS" # TRAIN_SSL_ONE_TRAIN_SET" #
     options["lr"] = 2e-4
@@ -255,22 +257,24 @@ def parse_args_train():
     #"""
 
     options["mode"] = TrainMode[str(options["mode"]).split(".")[-1]]
-    
+
     # Converts boolean args from [0, 1] to [False, True]
     bool_args_names = [
-        "only_supervised", 
-        "use_ce_in_unsup_component", 
-        "pin_memory", 
-        "persistent_workers", 
-        "use_l1c"
+        "only_supervised",
+        "use_ce_in_unsup_component",
+        "pin_memory",
+        "persistent_workers",
+        "use_l1c",
     ]
     for bool_arg_name in bool_args_names:
         options[bool_arg_name] = set_bool_flag(options[bool_arg_name])
 
-    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:  
+    if options["mode"] == TrainMode.TRAIN_SSL_TWO_TRAIN_SETS:
         options["mu"] = int(options["mu"])
         if options["perc_labeled"] <= 0.0 or options["perc_labeled"] >= 1.0:
-            raise Exception("The parameter 'perc_labeled' should have a value in the interval ]0.0, 1.0[")
+            raise Exception(
+                "The parameter 'perc_labeled' should have a value in the interval ]0.0, 1.0["
+            )
 
     if options["perc_labeled"] == 0.9:
         options["seed"] = 498
@@ -295,10 +299,10 @@ def parse_args_train():
     elif options["perc_labeled"] == 0.01:
         options["seed"] = 606
 
-    #with open("/data/anomaly-marine-detection/data/splits/seed.txt", "a") as myfile:
+    # with open("/data/anomaly-marine-detection/data/splits/seed.txt", "a") as myfile:
     #    myfile.write(str(options["seed"]) + "\n")
-    #print(options["seed"])    
-    
+    # print(options["seed"])
+
     options["batch"] = int(options["batch"])
 
     return options
