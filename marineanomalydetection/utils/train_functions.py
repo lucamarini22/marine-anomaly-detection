@@ -231,6 +231,8 @@ def train_step_semi_supervised_separate_batches(
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
+    if only_supervised:
+        Lu = torch.tensor(0.0)
     log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss
@@ -411,6 +413,8 @@ def train_step_semi_supervised_one_batch(
     else:
         Lu = (loss_u).sum() / torch.flatten(mask).sum()
 
+    if only_supervised:
+        Lu = torch.tensor(0.0)
     log_ssl_loss_components(Lx, Lu, max_probs, mask, logger_ssl_loss)
 
     # Final loss

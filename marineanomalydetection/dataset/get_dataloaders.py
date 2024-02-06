@@ -25,11 +25,13 @@ from marineanomalydetection.dataset.get_labeled_and_unlabeled_rois import (
 def get_dataloaders_supervised(
     splits_path: str,
     patches_path: str,
+    seg_maps_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
+    use_l1c: bool,
     num_workers: int,
     pin_memory: bool,
     prefetch_factor: int,
@@ -43,6 +45,8 @@ def get_dataloaders_supervised(
     Args:
         splits_path (str): path of the folder containing the splits files.
         patches_path (str): path of the folder containing the patches.
+        seg_maps_path (str): path of the folder containing the segmentation 
+          maps.
         transform_train (transforms.Compose): transformations to be applied
           to training set.
         transform_val (transforms.Compose): transformations to be applied
@@ -50,6 +54,8 @@ def get_dataloaders_supervised(
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
+        use_l1c (bool): True to train on L1C data. False to train on MARIDA 
+          data (atmospherically corrected data).
         num_workers (int, optional): how many subprocesses to use for data
           loading. ``0`` means that the data will be loaded in the main
           process.
@@ -76,20 +82,24 @@ def get_dataloaders_supervised(
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
     dataset_train = MADLabeled(
-        DataLoaderType.TRAIN_SET_SUP,
+        mode=DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
+        use_l1c=use_l1c,
     )
     dataset_val = MADLabeled(
-        DataLoaderType.VAL_SET,
+        mode=DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
+        use_l1c=use_l1c,
     )
 
     train_loader = DataLoader(
@@ -122,12 +132,14 @@ def get_dataloaders_supervised(
 def get_dataloaders_ssl_single_train_set(
     splits_path: str,
     patches_path: str,
+    seg_maps_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     weakly_transform:transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
+    use_l1c: bool,
     num_workers: int,
     pin_memory: bool,
     prefetch_factor: int,
@@ -144,6 +156,8 @@ def get_dataloaders_ssl_single_train_set(
     Args:
         splits_path (str): path of the folder containing the splits files.
         patches_path (str): path of the folder containing the patches.
+        seg_maps_path (str): path of the folder containing the segmentation
+          maps.
         transform_train (transforms.Compose): transformations to be applied
           to training set for the supervised loss.
         transform_val (transforms.Compose): transformations to be applied
@@ -153,6 +167,8 @@ def get_dataloaders_ssl_single_train_set(
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
+        use_l1c (bool): True to train on L1C data. False to train on MARIDA 
+          data (atmospherically corrected data).
         num_workers (int, optional): how many subprocesses to use for data
           loading. ``0`` means that the data will be loaded in the main
           process.
@@ -179,21 +195,25 @@ def get_dataloaders_ssl_single_train_set(
         tuple[DataLoader, DataLoader]: training and validation dataloaders.
     """
     dataset_train = MADLabeledAndUnlabeled(
-        DataLoaderType.TRAIN_SET_SUP_AND_UNSUP,
+        mode=DataLoaderType.TRAIN_SET_SUP_AND_UNSUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
-        weak_transform_unlabeled_version_one_train_set=weakly_transform
+        weak_transform_unlabeled_version_one_train_set=weakly_transform,
+        use_l1c=use_l1c,
     )
     dataset_val = MADLabeled(
-        DataLoaderType.VAL_SET,
+        mode=DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
+        use_l1c=use_l1c,
     )
 
     train_loader = DataLoader(
@@ -226,12 +246,14 @@ def get_dataloaders_ssl_single_train_set(
 def get_dataloaders_ssl_separate_train_sets(
     splits_path: str,
     patches_path: str,
+    seg_maps_path: str,
     transform_train: transforms.Compose,
     transform_val: transforms.Compose,
     weakly_transform: transforms.Compose,
     standardization: transforms.Normalize,
     aggregate_classes: CategoryAggregation,
     batch: int,
+    use_l1c: bool,
     num_workers: int,
     pin_memory: bool,
     prefetch_factor: int,
@@ -255,6 +277,8 @@ def get_dataloaders_ssl_separate_train_sets(
     Args:
         splits_path (str): path of the folder containing the splits files.
         patches_path (str): path of the folder containing the patches.
+        seg_maps_path (str): path of the folder containing the segmentation
+          maps.
         transform_train (transforms.Compose): transformations to be applied
           to the D_s training set.
         transform_val (transforms.Compose): transformations to be applied
@@ -264,6 +288,8 @@ def get_dataloaders_ssl_separate_train_sets(
         standardization (transforms.Normalize): standardization.
         aggregate_classes (CategoryAggregation): type of classes aggregation.
         batch (int): size of batch.
+        use_l1c (bool): True to train on L1C data. False to train on MARIDA 
+          data (atmospherically corrected data).
         num_workers (int, optional): how many subprocesses to use for data
           loading. ``0`` means that the data will be loaded in the main
           process.
@@ -299,31 +325,37 @@ def get_dataloaders_ssl_separate_train_sets(
 
     # TODO: update (e.g. transformations and other)
     labeled_dataset_train = MADLabeled(
-        DataLoaderType.TRAIN_SET_SUP,
+        mode=DataLoaderType.TRAIN_SET_SUP,
         transform=transform_train,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
         perc_labeled=perc_labeled,
+        use_l1c=use_l1c,
     )
     unlabeled_dataset_train = MADUnlabeled(
-        DataLoaderType.TRAIN_SET_UNSUP,
+        mode=DataLoaderType.TRAIN_SET_UNSUP,
         transform=weakly_transform,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         rois=ROIs_u,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
+        use_l1c=use_l1c,
     )
     dataset_val = MADLabeled(
-        DataLoaderType.VAL_SET,
+        mode=DataLoaderType.VAL_SET,
         transform=transform_val,
         standardization=standardization,
         aggregate_classes=aggregate_classes,
         patches_path=patches_path,
+        seg_maps_path=seg_maps_path,
         splits_path=splits_path,
+        use_l1c=use_l1c,
     )
     labeled_train_loader = DataLoader(
         labeled_dataset_train,

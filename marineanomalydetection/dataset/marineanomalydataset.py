@@ -23,10 +23,12 @@ from marineanomalydetection.dataset.update_count_labeled_pixels import update_co
 class MarineAnomalyDataset(Dataset, ABC):
     def __init__(
         self,
+        use_l1c: bool,
         mode: DataLoaderType = DataLoaderType.TRAIN_SET_SUP,
         transform: transforms.Compose = None,
         standardization : transforms.Normalize = None,
         patches_path: str = None,
+        seg_maps_path: str = None,
         splits_path: str = None,
         aggregate_classes: CategoryAggregation = CategoryAggregation.MULTI,
         rois: list[str] = None,
@@ -36,6 +38,8 @@ class MarineAnomalyDataset(Dataset, ABC):
         """Initializes the anomaly marine detection dataset.
 
         Args:
+            use_l1c (bool): True to train on L1C data. False to train on MARIDA
+              data (atmospherically corrected data).
             mode (DataLoaderType, optional): data loader mode.
               Defaults to DataLoaderType.TRAIN_SET_SUP.
             transform (transforms.Compose, optional): transformation to apply
@@ -43,6 +47,8 @@ class MarineAnomalyDataset(Dataset, ABC):
             standardization (transforms.Normalize, optional): standardization.
               Defaults to None.
             patches_path (str): path of the folder containing the patches.
+            seg_maps_path (str): path of the folder containing the segmentation
+              maps.
             splits_path (str, optional): path of the folder containing the 
               splits files.
             aggregate_classes (CategoryAggregation, optional): type
@@ -73,12 +79,14 @@ class MarineAnomalyDataset(Dataset, ABC):
               so only one augmentation ('transform') is applied there. 
               Defaults to None.
         """
+        self.use_l1c = use_l1c
         self.mode = mode
         self.transform = transform
         self.standardization = standardization
         self.weak_transform_unlabeled_version_one_train_set = \
             weak_transform_unlabeled_version_one_train_set
         self.patches_path = patches_path
+        self.seg_maps_path = seg_maps_path
         self.splits_path = splits_path
         self.aggregate_classes = aggregate_classes
         self.perc_labeled = perc_labeled
@@ -188,6 +196,8 @@ class MarineAnomalyDataset(Dataset, ABC):
         patch = load_patch(patch_path)
         min_patch, max_patch = patch.min(), patch.max()
         patch = normalize_img(patch, min_patch, max_patch)
+        # Uncomment to check patches with nan values 
+        # nan_mask = np.isnan(patch)
         list_patches.append(patch)
 
     

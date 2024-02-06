@@ -4,6 +4,7 @@ import rasterio
 import argparse
 from tqdm import tqdm
 from os.path import dirname
+import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
@@ -27,8 +28,10 @@ from marineanomalydetection.dataset.categoryaggregation import (
 from marineanomalydetection.dataset.dataloadertype import DataLoaderType
 from marineanomalydetection.io.load_data import load_patch
 from marineanomalydetection.imageprocessing.normalize_img import normalize_img
+from marineanomalydetection.utils.set_bool_flag import set_bool_flag
 
 from marineanomalydetection.utils.seed import set_seed
+
 
 root_path = dirname(os.path.abspath(__file__))
 
@@ -59,11 +62,13 @@ def main(options):
     # Construct Data loader
 
     dataset_test = MADLabeled(
-        DataLoaderType.TEST_SET,
+        use_l1c=options["use_l1c"],
+        mode=DataLoaderType.TEST_SET,
         transform=transform_test,
         standardization=standardization,
         aggregate_classes=options["aggregate_classes"],
         patches_path=options["patches_path"],
+        seg_maps_path=options["seg_maps_path"],
         splits_path=options["splits_path"],
     )
 
@@ -94,6 +99,7 @@ def main(options):
     else:
         device = torch.device("cpu")
 
+    #TODO: use get_model instead of UNet
     model = UNet(
         input_bands=options["input_channels"],
         output_classes=output_channels,
@@ -277,15 +283,28 @@ if __name__ == "__main__":
         type=int,
         help="Number of hidden features",
     )
+    # Data parameters
+    parser.add_argument(
+        "--use_l1c",
+        type=int,
+        help="0 to train on L1C data. 1 to train on MARIDA data (atmospherically corrected data).",
+        choices=[0, 1],
+        default=0
+    )
     parser.add_argument(
         "--patches_path", 
         help="path of the folder containing the patches", 
+        default=os.path.join("data", "patches") #"data", "l1c_data", "tif_final") #"data", "patches")
+    )
+    parser.add_argument(
+        "--seg_maps_path", 
+        help="path of the folder containing the segmentation maps", 
         default=os.path.join("data", "patches")
     )
     parser.add_argument(
         "--splits_path",
         help="path of the folder containing the splits files", 
-        default=os.path.join("data", "splits")
+        default=os.path.join("data", "l1c_data", "splits_l1c")
     )
     # Unet model path
     parser.add_argument(
@@ -293,9 +312,9 @@ if __name__ == "__main__":
         default=os.path.join(
             "results",
             "trained_models",
-            "semi-supervised-two-train-sets",
-            "2023_10_04_H_17_22_20_TRAIN_SSL_TWO_TRAIN_SETS_MULTI_dcgmpgun_vibrant-sweep-3",
-            "1165",
+            "semi-supervised-one-train-set",
+            "2024_01_29_H_14_21_40_TRAIN_SSL_ONE_TRAIN_SET_MULTI_pb165n5h_kind-sweep-1",
+            "1733",
             "model.pth",
         ),
         help="Path to trained model",
@@ -304,8 +323,9 @@ if __name__ == "__main__":
     # Produce Predicted Masks
     parser.add_argument(
         "--predict_masks",
-        default=True,
-        type=bool,
+        type=int,
+        choices=[0, 1],
+        default=0,
         help="Generate test set prediction masks?",
     )
     parser.add_argument(
@@ -313,7 +333,7 @@ if __name__ == "__main__":
         default=os.path.join(root_path, "data", "predicted_unet"),
         help="Path to where to produce store predictions",
     )
-    
+
     parser.add_argument(
         "--log_folder",
         default="logs",
@@ -329,5 +349,12 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     options = vars(args)  # convert to ordinary dict
+    # Converts boolean args from [0, 1] to [False, True]
+    bool_args_names = [
+        "use_l1c",
+        "predict_masks"
+    ]
+    for bool_arg_name in bool_args_names:
+        options[bool_arg_name] = set_bool_flag(options[bool_arg_name])
 
     main(options)
