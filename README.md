@@ -1,3 +1,5 @@
+[Report](https://github.com/lucamarini22/marine-anomaly-detection/blob/main/Semi-supervised%20learning%20for%20marine%20anomaly%20detection%20on%20board%20satellites.pdf)
+
 <!-- TABLE OF CONTENTS -->
 <details open="open">
   <summary>Table of Contents</summary>
